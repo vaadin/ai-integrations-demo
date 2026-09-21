@@ -1,0 +1,15 @@
+# Build output
+target/
+
+# Vaadin's generated frontend; package.json and the lock file are committed
+node_modules/
+src/main/frontend/generated/
+src/main/bundles/
+vite.generated.ts
+
+# Local tool configuration
+.idea/
+*.iml
+.vscode/
+.claude/
+.DS_Store

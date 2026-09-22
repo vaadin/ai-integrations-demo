@@ -1,0 +1,937 @@
+id,claim_id,order_line_id,product_id,quantity_affected,pallet_number,amount,issue_note
+1,1,74,2157,1,1,89.90,Carton crushed
+2,1,73,2902,3,1,66.00,Product surface scratched
+3,2,104,2769,3,1,81.66,zip slider broke after a few uses
+4,2,102,22,6,1,1361.40,buckle cracked in the cold
+5,3,149,884,1,,6.30,Unit price disputed
+6,4,231,1481,4,,54.20,Inner pack incomplete
+7,4,232,1620,1,,2.23,Carton missing
+8,5,236,1801,2,,367.80,Wrong colour
+9,6,259,1542,1,,3.68,Inner pack incomplete
+10,6,258,582,1,,14.80,Inner pack incomplete
+11,7,477,1553,1,,126.00,colour bleeding after first wash
+12,7,476,1298,1,,182.90,stitching failed on the shoulder strap
+13,9,575,2041,2,,1233.00,Inner pack incomplete
+14,11,656,2974,4,2,39.56,Wrong size
+15,12,662,2645,2,1,311.80,Short against packing list
+16,13,701,1372,4,,49.40,Wrong size
+17,14,760,1502,3,,27.78,Short against packing list
+18,15,985,2000,12,,1162.80,Wet packaging
+19,16,1063,2465,3,,50.10,pole segment split at the joint
+20,17,1237,1729,15,1,598.20,Torn outer wrap
+21,18,1308,1662,12,1,802.80,Torn outer wrap
+22,19,1374,2443,1,,50.50,colour bleeding after first wash
+23,20,1398,1164,10,3,679.00,Carton missing
+24,21,1420,764,2,,68.88,Carton missing
+25,23,1473,1620,1,,2.23,Unsold stock
+26,24,1475,2491,4,,184.32,Carton missing
+27,24,1474,1216,6,,1143.00,Inner pack incomplete
+28,25,1485,1336,6,1,2.70,Unit price disputed
+29,27,1628,2678,2,,1.41,Unit price disputed
+30,28,1802,1504,12,,212.16,pole segment split at the joint
+31,29,1846,1626,2,,122.00,Carton crushed
+32,30,1859,1439,1,,59.90,stitching failed on the shoulder strap
+33,31,1948,1292,1,1,210.90,zip slider broke after a few uses
+34,32,1991,1391,6,1,208.20,Wet packaging
+35,32,1993,631,6,1,1151.40,Wet packaging
+36,33,1997,935,12,1,9802.80,Contents leaked
+37,34,2273,2370,12,2,5554.80,Contents leaked
+38,36,2348,659,1,1,155.00,Product surface scratched
+39,37,2388,1898,5,,70.20,Unit price disputed
+40,38,2415,585,2,,15.56,"valve leaks, mat deflates overnight"
+41,41,2558,846,1,,135.50,Torn outer wrap
+42,42,2652,2180,1,,256.90,Torn outer wrap
+43,43,2674,2630,6,,492.00,Torn outer wrap
+44,44,2699,1090,12,1,2326.80,Wrong size
+45,45,2722,151,6,1,695.40,Inner pack incomplete
+46,46,2750,3128,3,1,233.70,Torn outer wrap
+47,46,2753,2553,5,4,619.50,Contents leaked
+48,47,2791,368,6,,51.66,Wrong model
+49,49,2815,1406,4,,83.16,Contents leaked
+50,50,2853,1932,1,,16.45,Contents leaked
+51,52,2890,2819,2,1,48.48,Unsold stock
+52,54,3216,1755,2,,24.22,Unit price disputed
+53,55,3333,790,30,,14.69,Unit price disputed
+54,56,3374,2651,6,1,599.40,Wrong size
+55,56,3373,3184,18,1,238.68,Wrong colour
+56,57,3385,2715,5,,11.95,stitching failed on the shoulder strap
+57,58,3408,2186,1,,131.00,Inner pack incomplete
+58,58,3409,2615,10,,669.00,Inner pack incomplete
+59,59,3442,2446,6,,2343.00,Carton crushed
+60,61,3678,200,1,,188.90,Torn outer wrap
+61,62,3724,3109,10,,71.88,Unit price disputed
+62,63,3727,1517,1,,50.90,Carton missing
+63,63,3732,435,2,,506.00,Short against packing list
+64,63,3731,2228,1,,6.43,Short against packing list
+65,64,3769,2680,1,,77.00,Unsold stock
+66,66,3878,1902,12,,155.04,Wet packaging
+67,66,3881,1004,5,,387.50,Carton crushed
+68,67,3891,589,15,1,205.20,Carton crushed
+69,68,4057,385,10,,40.70,Product surface scratched
+70,69,4105,2123,4,,266.00,Inner pack incomplete
+71,69,4104,1746,8,,559.20,Carton missing
+72,69,4111,1173,2,,64.98,Inner pack incomplete
+73,70,4128,1792,1,1,172.50,Inner pack incomplete
+74,70,4127,2337,10,1,112.80,Carton missing
+75,71,4131,1725,2,,101.80,Product surface scratched
+76,72,4248,1384,24,,1123.68,Contents leaked
+77,73,4313,702,1,,183.00,Product surface scratched
+78,73,4314,1919,2,,47.66,Wet packaging
+79,74,4348,762,4,1,419.60,Contents leaked
+80,76,4393,1792,6,,1035.00,Carton crushed
+81,76,4395,1751,1,,136.50,Carton crushed
+82,76,4394,2500,10,,39.60,Contents leaked
+83,77,4462,1931,3,1,47.16,Wet packaging
+84,77,4463,1440,5,1,189.50,Contents leaked
+85,77,4464,193,1,1,99.50,Contents leaked
+86,78,4581,1372,1,1,12.35,Carton missing
+87,79,4625,1825,20,,3258.00,Carton crushed
+88,79,4626,205,2,,297.00,Contents leaked
+89,80,4710,1318,3,,219.00,Torn outer wrap
+90,80,4709,2083,36,,1159.20,Torn outer wrap
+91,81,4722,274,3,1,908.70,Carton missing
+92,81,4721,2766,2,1,87.96,Inner pack incomplete
+93,83,4888,1403,1,,10.06,zip slider broke after a few uses
+94,84,4953,41,3,,182.70,Inner pack incomplete
+95,86,4972,2226,48,,375.84,Wrong colour
+96,90,5054,1642,18,1,1656.00,Carton missing
+97,92,5121,1669,1,,86.90,"valve leaks, mat deflates overnight"
+98,93,5235,3100,6,1,4931.40,Carton missing
+99,94,5380,476,12,,756.00,Contents leaked
+100,95,5428,1734,1,,131.00,Short against packing list
+101,97,5531,631,1,,191.90,Unsold stock
+102,97,5530,6,10,,7759.00,Unsold stock
+103,98,5548,846,20,,325.20,Unit price disputed
+104,99,5565,1920,4,1,100.40,Short against packing list
+105,100,5666,489,12,,125.14,Unit price disputed
+106,101,5678,1952,2,1,62.36,Carton missing
+107,101,5679,263,10,1,367.50,Inner pack incomplete
+108,102,5827,167,2,,261.80,Product surface scratched
+109,103,5830,2422,1,,37.27,Wet packaging
+110,103,5832,906,20,,157.40,Carton crushed
+111,103,5829,368,2,,17.22,Wet packaging
+112,104,5946,131,3,2,583.50,Inner pack incomplete
+113,105,6025,1572,2,,8.40,Unit price disputed
+114,106,6055,1158,18,,690.48,sole separating from the upper
+115,107,6064,1742,12,,934.80,Torn outer wrap
+116,108,6069,1485,6,1,1284.00,Wrong size
+117,109,6102,2831,2,1,191.80,Torn outer wrap
+118,109,6101,428,7,1,2757.30,Wet packaging
+119,111,6136,1406,12,,29.94,Unit price disputed
+120,112,6148,671,24,1,1111.20,Wet packaging
+121,114,6361,481,2,1,64.40,Wrong size
+122,115,6410,539,5,1,254.50,Carton missing
+123,115,6408,3164,48,1,6475.20,Carton missing
+124,117,6602,210,48,1,3643.20,Wrong model
+125,117,6603,412,12,1,3718.80,Wrong colour
+126,117,6601,1920,4,1,100.40,Wrong size
+127,118,6637,1215,4,,703.60,Product surface scratched
+128,119,6695,2852,1,,73.90,Product surface scratched
+129,119,6696,227,1,,7.91,Torn outer wrap
+130,121,6876,193,1,,99.50,Torn outer wrap
+131,122,7221,1231,4,2,447.60,Carton missing
+132,122,7215,2553,3,1,371.70,Carton missing
+133,122,7217,462,2,1,114.00,Carton missing
+134,123,7359,428,24,,9453.60,Contents leaked
+135,123,7360,2865,1,,31.53,Torn outer wrap
+136,125,7455,274,12,1,3634.80,Torn outer wrap
+137,126,7497,2089,2,,99.90,buckle cracked in the cold
+138,126,7496,1542,1,,3.68,buckle cracked in the cold
+139,128,7588,1902,15,1,193.80,Contents leaked
+140,128,7591,488,6,1,570.00,Product surface scratched
+141,130,7654,2525,5,,13.25,Wrong colour
+142,131,7663,2928,24,,608.40,buckle cracked in the cold
+143,132,7786,2627,30,,4455.00,Wrong colour
+144,133,7839,665,24,1,8637.60,Unsold stock
+145,134,7849,1392,1,,2.55,Carton missing
+146,135,7918,1871,24,1,194.88,Carton crushed
+147,135,7914,2570,12,1,898.80,Carton crushed
+148,136,8044,1626,10,,610.00,Wrong size
+149,137,8102,2890,12,,97.78,Unit price disputed
+150,138,8113,419,6,,749.40,Wrong colour
+151,140,8242,2547,12,1,5.98,Unit price disputed
+152,143,8596,1108,6,,389.40,Inner pack incomplete
+153,144,8686,1557,12,,708.00,Wrong size
+154,145,8707,1481,20,,32.52,Unit price disputed
+155,146,8708,2707,48,,378.72,Unsold stock
+156,146,8709,944,2,,49.76,Unsold stock
+157,147,8745,419,2,1,249.80,Wrong colour
+158,147,8748,1233,30,1,3267.00,Wrong size
+159,148,8908,731,4,,419.60,Carton crushed
+160,148,8911,2766,1,,43.98,Torn outer wrap
+161,150,9023,360,18,,172.62,Wrong size
+162,152,9122,2548,2,1,211.80,Carton crushed
+163,152,9119,1158,12,1,460.32,Contents leaked
+164,154,9326,2617,4,,109.68,Unit price disputed
+165,156,9343,2594,6,,425.40,Torn outer wrap
+166,158,9638,17,1,,319.90,Wrong colour
+167,159,9727,1398,1,,11.32,Carton missing
+168,160,9794,2587,5,,1014.50,Short against packing list
+169,161,9838,171,6,,317.40,Wrong size
+170,162,9846,2586,2,,411.80,Wrong colour
+171,163,9847,2414,10,,1249.00,Inner pack incomplete
+172,164,9848,1146,4,,234.00,stitching failed on the shoulder strap
+173,167,10144,1481,1,,13.55,Product surface scratched
+174,167,10147,715,6,,182.88,Product surface scratched
+175,167,10145,2645,1,,155.90,Contents leaked
+176,169,10457,3157,10,,214.10,Contents leaked
+177,169,10460,3158,3,,61.14,Carton crushed
+178,170,10477,367,2,,4.76,Product surface scratched
+179,171,10499,1137,5,,216.95,buckle cracked in the cold
+180,172,10583,183,9,,322.92,Carton crushed
+181,175,10889,1633,6,,41.40,Inner pack incomplete
+182,175,10890,98,3,,102.06,Inner pack incomplete
+183,176,10960,1167,10,,331.70,Wet packaging
+184,177,10963,2463,24,,10428.00,Wrong size
+185,179,11078,2506,4,,64.68,Product surface scratched
+186,179,11081,1831,1,,267.90,Product surface scratched
+187,182,11474,920,5,,114.20,Contents leaked
+188,183,11529,1199,7,,1176.00,buckle cracked in the cold
+189,184,11555,2779,2,,169.80,pole segment split at the joint
+190,185,11574,3184,30,,47.74,Unit price disputed
+191,186,11627,1117,24,1,1149.36,Wet packaging
+192,187,11651,350,1,1,30.84,Short against packing list
+193,187,11655,1009,5,1,562.50,Short against packing list
+194,188,11757,2380,2,,147.00,Wet packaging
+195,189,11791,2347,1,,21.92,Inner pack incomplete
+196,191,11805,3152,6,,719.40,Torn outer wrap
+197,191,11804,800,1,,21.85,Torn outer wrap
+198,194,12003,1040,4,1,886.00,Carton missing
+199,195,12059,846,20,,2710.00,Product surface scratched
+200,196,12076,148,3,,213.00,Product surface scratched
+201,197,12081,2530,20,,58.60,Wrong size
+202,197,12080,2784,5,,85.30,Wrong model
+203,198,12102,2698,30,,71.10,Short against packing list
+204,202,12198,1,2,1,214.00,Short against packing list
+205,202,12199,973,96,1,16128.00,Short against packing list
+206,203,12217,478,12,,84.82,Unit price disputed
+207,205,12398,1730,3,1,203.70,Product surface scratched
+208,206,12451,1485,6,1,154.08,Unit price disputed
+209,207,12491,2426,1,,34.92,Carton missing
+210,208,12553,244,4,,134.35,Unit price disputed
+211,209,12563,2553,2,,247.80,Product surface scratched
+212,209,12565,113,1,,160.90,Torn outer wrap
+213,209,12564,1520,8,,18.24,Torn outer wrap
+214,211,12666,3134,5,,384.50,Inner pack incomplete
+215,213,12871,884,1,1,52.50,Short against packing list
+216,213,12872,1885,96,1,12720.00,Short against packing list
+217,214,12917,2210,1,,62.50,Contents leaked
+218,215,12942,1553,1,1,126.00,Unsold stock
+219,215,12943,682,24,1,1704.00,Unsold stock
+220,215,12944,1034,1,1,149.90,Unsold stock
+221,217,13042,948,10,,1859.00,Wet packaging
+222,217,13043,2304,4,,35.36,Carton crushed
+223,218,13069,2378,12,1,924.00,Carton crushed
+224,218,13068,789,1,1,112.50,Torn outer wrap
+225,219,13135,3164,24,,3237.60,Wrong size
+226,219,13133,464,2,,24.68,Wrong model
+227,220,13145,381,1,,2.26,Inner pack incomplete
+228,222,13202,1738,12,1,1138.80,stitching failed on the shoulder strap
+229,222,13201,3037,2,1,38.62,zip slider broke after a few uses
+230,223,13220,286,12,,163.68,Torn outer wrap
+231,225,13332,752,9,,530.10,Carton crushed
+232,226,13381,2193,5,,632.50,colour bleeding after first wash
+233,226,13382,779,1,,4.07,"valve leaks, mat deflates overnight"
+234,227,13407,1164,6,,48.89,Unit price disputed
+235,228,13547,2256,1,,26.67,Carton crushed
+236,229,13576,2571,20,1,1598.00,Wrong model
+237,230,13649,2575,4,,1208.00,pole segment split at the joint
+238,232,13709,3032,1,,33.45,Product surface scratched
+239,232,13710,1001,24,,2253.60,Contents leaked
+240,232,13711,380,1,,2.24,Carton crushed
+241,233,13883,126,10,,99.48,Unit price disputed
+242,234,13976,442,96,1,1365.12,Unit price disputed
+243,235,14101,224,48,1,3355.20,zip slider broke after a few uses
+244,235,14103,1824,1,1,152.00,"valve leaks, mat deflates overnight"
+245,236,14179,1808,3,1,1028.70,Wet packaging
+246,236,14177,566,1,1,3.18,Carton crushed
+247,237,14228,2394,1,,39.44,Contents leaked
+248,237,14226,2553,5,,619.50,Wet packaging
+249,237,14227,1153,20,,1300.00,Product surface scratched
+250,239,14292,1071,6,,666.00,Wrong colour
+251,240,14395,907,3,,6.78,Product surface scratched
+252,241,14455,1227,2,,477.80,Carton crushed
+253,242,14461,1206,3,,627.00,stitching failed on the shoulder strap
+254,244,14628,883,1,,57.50,Product surface scratched
+255,244,14626,1410,12,,234.48,Contents leaked
+256,245,14639,968,12,1,672.34,Unit price disputed
+257,246,14649,2384,1,1,29.50,sole separating from the upper
+258,246,14648,203,6,1,1163.40,stitching failed on the shoulder strap
+259,247,14655,823,30,1,630.00,Inner pack incomplete
+260,247,14656,811,2,1,38.72,Short against packing list
+261,247,14654,629,24,1,9165.60,Short against packing list
+262,248,14713,1721,1,,6.57,Carton crushed
+263,248,14714,416,9,,863.10,Torn outer wrap
+264,249,14715,1133,3,,165.00,buckle cracked in the cold
+265,249,14716,1535,6,,419.40,pole segment split at the joint
+266,250,14799,1520,2,1,4.56,Short against packing list
+267,250,14795,1578,1,1,66.90,Inner pack incomplete
+268,251,14811,2526,20,,15.43,Unit price disputed
+269,252,14824,1032,3,1,190.50,Torn outer wrap
+270,255,15012,2083,18,,579.60,Contents leaked
+271,256,15030,1253,4,,243.60,Product surface scratched
+272,257,15149,167,5,1,654.50,Carton crushed
+273,258,15170,1818,1,1,177.00,Wet packaging
+274,258,15168,796,12,1,31.08,Torn outer wrap
+275,259,15186,739,8,,872.00,Wrong model
+276,259,15185,2946,1,,77.90,Wrong size
+277,260,15430,377,30,,47.88,Unit price disputed
+278,261,15455,757,1,,61.50,Carton crushed
+279,266,16146,1591,1,,5.80,Torn outer wrap
+280,266,16149,372,1,,16.08,Product surface scratched
+281,267,16307,1071,2,,222.00,Torn outer wrap
+282,268,16350,944,3,,74.64,seam tape peeling on the inside
+283,269,16442,2723,10,,36.10,Wet packaging
+284,270,16469,2766,1,,43.98,Carton missing
+285,271,16543,167,1,,130.90,Carton missing
+286,272,16558,239,6,,719.40,Inner pack incomplete
+287,273,16624,1628,9,1,62.64,Torn outer wrap
+288,274,16625,433,3,1,490.50,Product surface scratched
+289,274,16627,2378,9,1,693.00,Torn outer wrap
+290,275,16842,2335,2,,23.26,colour bleeding after first wash
+291,275,16844,896,18,,1834.20,sole separating from the upper
+292,275,16843,1114,9,,639.00,stitching failed on the shoulder strap
+293,276,16926,223,10,,535.00,pole segment split at the joint
+294,277,16935,2188,12,,1738.80,Wrong colour
+295,278,16973,1752,1,,124.90,Product surface scratched
+296,279,17018,1863,2,,101.80,buckle cracked in the cold
+297,279,17019,1764,1,,129.00,"valve leaks, mat deflates overnight"
+298,280,17038,480,18,,872.10,Product surface scratched
+299,280,17037,3128,1,,77.90,Product surface scratched
+300,280,17035,2329,12,,161.04,Contents leaked
+301,281,17078,462,3,,171.00,"valve leaks, mat deflates overnight"
+302,282,17119,2997,1,,6.27,Short against packing list
+303,282,17120,1248,2,,417.80,Carton missing
+304,283,17286,2600,3,,109.89,zip slider broke after a few uses
+305,284,17296,1284,12,,744.00,Contents leaked
+306,284,17298,2970,1,,8.96,Torn outer wrap
+307,285,17321,216,1,,50.90,Wet packaging
+308,285,17318,671,1,,46.30,Wet packaging
+309,285,17320,2953,1,,4.64,Torn outer wrap
+310,287,17583,735,20,,818.80,Wrong model
+311,288,17748,2397,18,,5031.00,Product surface scratched
+312,288,17745,946,1,,161.90,Torn outer wrap
+313,289,17938,3184,6,1,79.56,Carton crushed
+314,292,18154,3046,2,,7.50,Carton missing
+315,292,18155,1726,1,,37.90,Inner pack incomplete
+316,293,18254,2571,6,,479.40,seam tape peeling on the inside
+317,294,18272,1485,24,,616.32,Unit price disputed
+318,295,18341,193,1,,99.50,Carton missing
+319,295,18339,2124,6,,395.40,Inner pack incomplete
+320,295,18340,1161,6,,465.00,Carton missing
+321,296,18368,1439,5,1,299.50,sole separating from the upper
+322,296,18369,594,24,1,211.68,pole segment split at the joint
+323,299,18908,1002,2,1,235.00,Inner pack incomplete
+324,300,18933,1003,1,,314.90,Carton crushed
+325,301,18935,767,6,,198.36,Carton missing
+326,302,18962,693,2,1,173.80,seam tape peeling on the inside
+327,302,18959,2628,1,1,83.90,sole separating from the upper
+328,302,18955,730,4,1,444.00,"valve leaks, mat deflates overnight"
+329,303,19140,262,3,,113.88,Wrong model
+330,304,19148,837,2,,27.30,Carton crushed
+331,306,19307,271,1,1,7.21,Product surface scratched
+332,307,19325,2720,6,,53.70,Wrong size
+333,307,19326,76,10,,1630.00,Wrong model
+334,308,19461,2519,1,,11.72,Carton missing
+335,308,19463,1626,1,,61.00,Carton missing
+336,309,19611,1948,30,,13.25,Unit price disputed
+337,310,19675,784,4,,24.80,Torn outer wrap
+338,310,19679,3037,4,,77.24,Torn outer wrap
+339,311,19722,2782,12,,22.55,Unit price disputed
+340,312,19866,2630,3,,246.00,Carton missing
+341,312,19868,2505,1,,6.29,Inner pack incomplete
+342,313,19959,1034,3,,53.96,Unit price disputed
+343,314,19987,2310,15,1,177.75,Short against packing list
+344,314,19991,55,5,1,297.50,Inner pack incomplete
+345,315,20000,3125,10,1,959.00,Carton crushed
+346,317,20071,1583,48,1,10848.00,Short against packing list
+347,317,20072,901,1,1,9.11,Inner pack incomplete
+348,318,20126,2610,15,1,1290.00,colour bleeding after first wash
+349,319,20202,1176,1,2,83.50,Product surface scratched
+350,320,20263,2645,8,,149.66,Unit price disputed
+351,321,20313,2394,12,1,473.28,Wrong model
+352,322,20400,2413,1,,101.90,Product surface scratched
+353,322,20399,1631,5,,324.50,Contents leaked
+354,323,20403,2715,5,,11.95,Wrong colour
+355,323,20402,1067,4,,751.60,Wrong size
+356,324,20447,288,1,,11.18,zip slider broke after a few uses
+357,325,20454,1899,24,,550.32,seam tape peeling on the inside
+358,328,20562,1925,3,,17.04,Product surface scratched
+359,329,20598,2272,30,,81.60,Contents leaked
+360,329,20600,2061,5,,480.00,Torn outer wrap
+361,330,20618,171,4,,211.60,Torn outer wrap
+362,331,20706,997,2,,167.80,zip slider broke after a few uses
+363,333,20938,1975,12,,1150.80,"valve leaks, mat deflates overnight"
+364,335,21070,1622,5,,70.20,Wrong colour
+365,335,21069,488,6,,591.00,Wrong model
+366,336,21127,666,1,,254.90,Contents leaked
+367,336,21128,2031,6,,575.40,Torn outer wrap
+368,337,21199,271,6,,45.84,Short against packing list
+369,337,21200,2464,12,,5082.00,Carton missing
+370,338,21212,2901,20,,465.40,Inner pack incomplete
+371,338,21213,1263,1,,118.00,Carton missing
+372,338,21214,1246,7,,1536.50,Short against packing list
+373,339,21309,1485,3,1,642.00,zip slider broke after a few uses
+374,339,21310,676,18,1,3076.20,colour bleeding after first wash
+375,340,21319,1485,6,,1284.00,Wrong model
+376,341,21454,2900,3,1,60.60,Product surface scratched
+377,341,21456,1214,4,1,815.60,Torn outer wrap
+378,342,21770,1371,1,,13.62,Torn outer wrap
+379,342,21772,2221,1,,41.88,Wet packaging
+380,344,21803,2310,1,1,11.85,Short against packing list
+381,344,21811,1080,12,1,2364.00,Carton missing
+382,345,21833,1315,8,,60.48,Unit price disputed
+383,346,21837,3036,7,1,146.51,seam tape peeling on the inside
+384,347,21910,229,3,1,31.35,Contents leaked
+385,348,22129,964,2,,167.80,Short against packing list
+386,348,22130,2701,3,,81.60,Short against packing list
+387,348,22128,880,1,,16.40,Inner pack incomplete
+388,349,22289,793,1,,117.50,Carton missing
+389,349,22290,2075,1,,80.50,Short against packing list
+390,350,22365,2518,1,1,2.47,Inner pack incomplete
+391,351,22420,2662,1,,69.50,Carton missing
+392,352,22422,3092,12,1,5134.80,Unsold stock
+393,352,22421,202,1,1,170.90,Unsold stock
+394,352,22424,1295,6,1,462.00,Unsold stock
+395,353,22448,999,1,,45.45,colour bleeding after first wash
+396,354,22451,462,2,,114.00,Inner pack incomplete
+397,354,22452,1388,1,,4.99,Short against packing list
+398,355,22474,2630,9,,738.00,Short against packing list
+399,357,22501,2796,1,1,11.72,Wrong colour
+400,358,22533,722,9,,611.10,Product surface scratched
+401,358,22536,1282,1,,54.00,Contents leaked
+402,358,22535,2195,1,,109.90,Carton crushed
+403,359,22623,731,6,,79.92,Unit price disputed
+404,360,22716,926,3,,1394.70,colour bleeding after first wash
+405,360,22715,2906,12,,1530.00,stitching failed on the shoulder strap
+406,361,22751,3176,20,1,184.60,Wrong size
+407,362,22813,3156,1,,122.00,Product surface scratched
+408,362,22814,491,3,,124.77,Wet packaging
+409,363,22817,2766,2,1,87.96,Wrong colour
+410,363,22818,2944,48,1,4267.20,Wrong colour
+411,365,22890,713,1,,97.50,Carton missing
+412,366,22998,1789,4,,843.60,Wrong model
+413,366,23000,344,18,,40.86,Wrong model
+414,366,22997,1084,5,,1314.50,Wrong colour
+415,367,23018,2533,1,1,6.52,Inner pack incomplete
+416,367,23010,2891,30,1,1800.00,Carton missing
+417,368,23033,1516,10,,525.00,Carton crushed
+418,369,23045,1946,1,,4.08,Torn outer wrap
+419,371,23091,1986,9,1,1358.10,Carton missing
+420,372,23129,560,2,,12.62,Wrong model
+421,373,23179,14,5,,136.20,Unit price disputed
+422,374,23220,183,3,,109.80,buckle cracked in the cold
+423,374,23218,563,10,,60.70,sole separating from the upper
+424,374,23219,346,2,,4.14,"valve leaks, mat deflates overnight"
+425,375,23238,2977,1,,12.31,Contents leaked
+426,376,23373,99,6,1,192.60,sole separating from the upper
+427,377,23380,2564,5,1,929.50,Contents leaked
+428,377,23385,1204,9,1,1525.50,Torn outer wrap
+429,377,23384,3107,2,1,1417.80,Wet packaging
+430,379,23434,2468,12,,1020.00,Wet packaging
+431,381,23545,339,1,,5.75,Contents leaked
+432,383,23830,983,24,1,3612.00,zip slider broke after a few uses
+433,383,23833,2521,9,1,226.35,pole segment split at the joint
+434,383,23829,2645,3,1,467.70,sole separating from the upper
+435,384,23957,684,2,,75.56,Wrong model
+436,385,23985,644,2,,117.80,Wet packaging
+437,386,23986,469,15,1,662.85,Unsold stock
+438,390,24127,3184,18,,238.68,Wrong size
+439,391,24132,293,1,,100.90,Unsold stock
+440,391,24131,2509,3,,245.70,Unsold stock
+441,392,24202,2114,24,1,426.96,Short against packing list
+442,393,24227,1553,6,,90.72,Unit price disputed
+443,394,24433,1510,6,1,329.40,Wet packaging
+444,394,24434,2999,6,1,183.72,Product surface scratched
+445,395,24704,742,1,1,71.00,Unsold stock
+446,395,24705,1885,48,1,6360.00,Unsold stock
+447,396,24883,660,4,1,628.00,Product surface scratched
+448,398,24987,2645,1,,155.90,Torn outer wrap
+449,399,24991,2501,1,,10.92,Wrong colour
+450,399,24990,327,36,,444.24,Wrong model
+451,399,24988,1461,5,,232.95,Wrong colour
+452,400,25252,1660,2,,809.00,Product surface scratched
+453,400,25250,1184,3,,124.32,Torn outer wrap
+454,400,25251,2527,3,,29.43,Wet packaging
+455,401,25359,2251,8,1,64.64,Wrong colour
+456,402,25388,1015,6,,390.00,Wrong colour
+457,402,25389,510,24,,1245.60,Wrong colour
+458,403,25426,3073,20,1,4678.00,sole separating from the upper
+459,403,25425,593,15,1,404.85,colour bleeding after first wash
+460,405,25505,2827,4,,323.60,Wet packaging
+461,405,25504,3003,10,,1290.00,Carton crushed
+462,405,25502,2041,1,,616.50,Contents leaked
+463,406,25523,193,1,,101.90,Wet packaging
+464,408,25591,2716,9,,40.59,seam tape peeling on the inside
+465,410,25604,2360,3,1,227.70,Product surface scratched
+466,410,25608,1633,15,1,108.75,Carton crushed
+467,410,25607,1198,3,1,533.70,Torn outer wrap
+468,411,25639,445,1,,138.90,Unsold stock
+469,412,25841,1354,1,,22.69,Inner pack incomplete
+470,413,25987,1880,24,1,6285.60,Wrong colour
+471,413,25989,481,20,1,656.80,Wrong size
+472,414,26092,492,3,1,154.50,Carton missing
+473,415,26450,2766,2,,10.56,Unit price disputed
+474,416,26454,2946,3,,243.00,sole separating from the upper
+475,417,26464,179,1,1,132.50,buckle cracked in the cold
+476,417,26465,2651,10,1,999.00,zip slider broke after a few uses
+477,418,26542,2272,36,,97.92,stitching failed on the shoulder strap
+478,418,26540,458,12,,132.36,seam tape peeling on the inside
+479,420,26597,3114,4,,432.00,Contents leaked
+480,421,26691,2871,3,,95.07,Product surface scratched
+481,421,26688,1633,3,,21.75,Torn outer wrap
+482,424,27063,832,2,,27.00,Unit price disputed
+483,425,27123,843,1,1,163.00,Torn outer wrap
+484,425,27121,1065,36,1,5544.00,Torn outer wrap
+485,427,27179,519,10,,199.00,Product surface scratched
+486,427,27177,498,12,,934.80,Carton crushed
+487,429,27232,2112,3,,53.70,Wet packaging
+488,429,27234,2948,5,,529.50,Wet packaging
+489,429,27233,2867,24,,1044.00,Torn outer wrap
+490,430,27360,3164,18,1,2428.20,Contents leaked
+491,431,27410,2219,96,1,4634.88,Wrong size
+492,432,27448,2944,3,,266.70,Carton missing
+493,434,27520,671,12,,572.28,Wet packaging
+494,437,27678,1312,12,,139.54,Unit price disputed
+495,438,27698,116,1,1,285.50,Carton missing
+496,439,27718,2620,24,1,5112.00,Wrong size
+497,440,27754,141,6,1,389.40,Short against packing list
+498,440,27750,1398,1,1,11.32,Short against packing list
+499,441,27844,2645,1,,18.71,Unit price disputed
+500,442,27889,2860,4,,178.60,Unsold stock
+501,443,27907,2251,2,,16.16,Wrong size
+502,444,27987,2986,1,,73.90,Unsold stock
+503,444,27988,205,3,,463.50,Unsold stock
+504,444,27989,202,4,,683.60,Unsold stock
+505,445,28016,1362,12,,32.04,Carton crushed
+506,445,28017,1199,24,,4152.00,Contents leaked
+507,447,28047,1181,3,,54.90,Torn outer wrap
+508,447,28046,3131,12,,1834.80,Carton crushed
+509,447,28044,1894,30,,726.30,Carton crushed
+510,448,28071,2069,24,,432.96,Wrong size
+511,449,28142,2464,6,,2541.00,Unsold stock
+512,450,28144,1739,7,,742.00,Torn outer wrap
+513,451,28173,2610,24,1,260.64,Unit price disputed
+514,453,28334,2163,2,1,253.80,Inner pack incomplete
+515,454,28360,1224,3,,580.50,Wet packaging
+516,455,28364,563,2,,12.14,Wrong colour
+517,455,28363,2771,3,,100.92,Wrong colour
+518,455,28362,672,12,,658.80,Wrong model
+519,456,28381,2975,9,,64.62,Carton crushed
+520,457,28398,2434,2,,239.00,Wrong size
+521,458,28413,830,2,,54.12,Wet packaging
+522,458,28412,906,10,,81.50,Torn outer wrap
+523,459,28681,2800,24,1,277.92,Short against packing list
+524,459,28678,924,10,1,2059.00,Short against packing list
+525,460,28689,3090,4,1,1411.60,Contents leaked
+526,460,28690,274,3,1,908.70,Contents leaked
+527,463,28772,2890,1,,64.90,Wet packaging
+528,463,28773,2338,6,,62.10,Wet packaging
+529,464,28800,1692,2,1,12.44,Carton missing
+530,467,29017,513,2,1,22.98,Torn outer wrap
+531,467,29021,1211,1,1,158.00,Contents leaked
+532,468,29041,1612,1,,10.09,stitching failed on the shoulder strap
+533,469,29208,944,1,,24.88,Wrong model
+534,470,29284,271,5,,38.20,Unsold stock
+535,470,29286,2642,12,,1026.00,Unsold stock
+536,471,29287,381,3,,6.78,Wrong colour
+537,472,29289,286,6,1,77.76,Unsold stock
+538,473,29324,719,24,1,1845.60,Wet packaging
+539,473,29319,503,3,1,40.35,Product surface scratched
+540,474,29350,249,2,1,12.36,Unit price disputed
+541,476,29528,894,12,,32.28,Torn outer wrap
+542,477,29584,292,1,,85.00,Carton missing
+543,478,29654,244,2,1,559.80,Unsold stock
+544,479,29670,410,48,1,12264.00,Carton missing
+545,479,29666,131,4,1,810.00,Short against packing list
+546,479,29667,839,1,1,11.56,Carton missing
+547,480,29738,2944,12,,852.00,Contents leaked
+548,480,29737,2645,10,,1559.00,Contents leaked
+549,481,29851,2946,2,,162.00,Wrong size
+550,481,29850,3134,6,,461.40,Wrong colour
+551,482,29915,1555,3,,479.70,Carton missing
+552,484,30159,771,24,,441.60,Carton crushed
+553,485,30165,593,48,,1295.52,Short against packing list
+554,486,30166,710,24,,358.08,buckle cracked in the cold
+555,487,30291,673,4,,239.60,Wet packaging
+556,487,30292,343,5,,111.90,Wet packaging
+557,489,30488,3157,1,1,22.16,Contents leaked
+558,490,30526,1118,24,1,1519.20,Unit price disputed
+559,491,30615,1368,2,1,9.50,Wrong colour
+560,492,30716,1485,3,,642.00,Inner pack incomplete
+561,493,30724,560,10,,63.10,Wrong size
+562,493,30726,1728,18,,714.96,Wrong size
+563,494,30762,805,2,,61.76,Unsold stock
+564,498,31141,2586,2,1,411.80,Wrong size
+565,501,31373,1171,96,,3618.24,Product surface scratched
+566,502,31411,1493,6,,3.49,Unit price disputed
+567,503,31426,235,18,,1618.20,Short against packing list
+568,503,31427,832,1,,112.50,Inner pack incomplete
+569,505,31567,733,1,,19.56,Contents leaked
+570,506,31568,1499,1,,11.58,zip slider broke after a few uses
+571,507,31571,2277,9,1,666.00,Carton missing
+572,507,31572,205,24,1,3708.00,Short against packing list
+573,508,31587,183,12,,439.20,Inner pack incomplete
+574,509,31673,2954,2,,1.24,Unit price disputed
+575,510,31698,1609,8,,77.84,Wrong colour
+576,510,31697,1902,24,,317.76,Wrong colour
+577,511,31711,1602,1,,2.04,Carton crushed
+578,511,31709,1373,9,,95.85,Contents leaked
+579,512,31868,2669,12,,826.80,Carton crushed
+580,513,31944,2272,6,1,16.32,seam tape peeling on the inside
+581,513,31942,2922,6,1,413.40,buckle cracked in the cold
+582,514,31988,1398,5,,56.60,Product surface scratched
+583,515,32158,224,12,,798.00,"valve leaks, mat deflates overnight"
+584,516,32237,115,12,,3570.00,Wrong colour
+585,517,32238,2697,1,,2.63,Unsold stock
+586,518,32255,2023,12,1,1092.00,Contents leaked
+587,518,32259,1957,18,1,499.86,Contents leaked
+588,518,32260,2891,1,1,60.00,Product surface scratched
+589,520,32442,177,4,,538.00,seam tape peeling on the inside
+590,520,32445,1504,1,,18.21,sole separating from the upper
+591,520,32443,459,1,,6.80,"valve leaks, mat deflates overnight"
+592,521,32481,2768,48,,1205.76,Contents leaked
+593,522,32491,2738,3,1,31.92,Wrong model
+594,523,32502,779,5,,20.35,Wrong model
+595,524,32504,1715,4,1,52.20,sole separating from the upper
+596,524,32507,2257,2,1,58.54,zip slider broke after a few uses
+597,526,32645,1986,12,,1810.80,Carton missing
+598,526,32644,839,4,,46.24,Carton missing
+599,527,32717,1555,2,,319.80,Contents leaked
+600,527,32719,1303,5,,770.00,Torn outer wrap
+601,529,32830,386,1,1,3.73,Short against packing list
+602,529,32828,2037,4,1,823.60,Short against packing list
+603,531,32871,1479,1,,11.53,Torn outer wrap
+604,532,32884,224,2,,133.00,Carton crushed
+605,536,33155,58,3,,1397.70,Product surface scratched
+606,536,33154,2944,3,,213.00,Product surface scratched
+607,536,33156,601,24,,136.56,Carton crushed
+608,537,33173,2974,5,,51.45,Wrong colour
+609,538,33233,846,1,,135.50,Carton crushed
+610,538,33234,368,10,,86.10,Wet packaging
+611,539,33290,2720,1,,8.95,Wrong size
+612,540,33319,852,24,1,1797.60,seam tape peeling on the inside
+613,540,33320,1096,24,1,7056.00,seam tape peeling on the inside
+614,541,33454,2021,2,,164.00,Wet packaging
+615,542,33505,1807,1,1,347.50,Inner pack incomplete
+616,543,33511,1353,6,,127.56,Unsold stock
+617,544,33537,1517,8,1,431.20,Wrong model
+618,545,33567,1485,3,,642.00,Short against packing list
+619,548,33914,1559,4,,436.00,Wet packaging
+620,549,33941,1227,1,,248.90,Carton crushed
+621,550,33973,2070,4,,86.20,Carton missing
+622,551,34002,1997,3,,148.11,Carton crushed
+623,551,34001,779,2,,8.14,Wet packaging
+624,551,34003,660,12,,1884.00,Torn outer wrap
+625,552,34109,1313,1,1,81.90,Wet packaging
+626,552,34113,1199,12,1,2076.00,Wet packaging
+627,554,34229,2672,6,,151.56,Unit price disputed
+628,555,34232,1916,1,,14.31,Inner pack incomplete
+629,556,34240,876,24,,122.40,Product surface scratched
+630,557,34269,2132,1,,32.61,Inner pack incomplete
+631,558,34336,839,2,,23.12,Inner pack incomplete
+632,559,34382,2954,1,1,5.15,Carton crushed
+633,560,34428,409,5,,885.00,Product surface scratched
+634,560,34430,2846,6,,55.44,Carton crushed
+635,561,34442,1380,3,,138.27,Carton crushed
+636,561,34441,513,1,,11.49,Contents leaked
+637,562,34486,585,1,,8.01,Product surface scratched
+638,563,34594,577,12,,298.44,Inner pack incomplete
+639,565,34740,1216,9,1,1773.00,Short against packing list
+640,565,34739,488,12,1,1182.00,Short against packing list
+641,566,34754,2089,5,,249.75,Unsold stock
+642,566,34756,520,2,,37.22,Unsold stock
+643,567,34812,1367,12,,61.56,Short against packing list
+644,567,34811,1374,1,,11.39,Carton missing
+645,568,34877,100,36,,1179.00,Carton missing
+646,568,34878,1520,1,,2.28,Inner pack incomplete
+647,570,35009,2251,1,,8.08,Torn outer wrap
+648,571,35074,488,10,,118.20,Unit price disputed
+649,572,35207,148,1,,73.90,Inner pack incomplete
+650,572,35205,2194,5,,522.50,Inner pack incomplete
+651,573,35322,3128,12,,115.06,Unit price disputed
+652,574,35414,1220,1,,208.00,Unsold stock
+653,574,35416,1371,1,,13.62,Unsold stock
+654,574,35415,1853,6,,71.46,Unsold stock
+655,575,35440,2272,24,,65.28,stitching failed on the shoulder strap
+656,576,35447,3088,6,,2369.40,"valve leaks, mat deflates overnight"
+657,577,35678,2114,15,,266.85,Wet packaging
+658,578,35775,726,4,,22.32,Unit price disputed
+659,581,36044,1443,9,,103.86,buckle cracked in the cold
+660,582,36059,42,10,,580.00,stitching failed on the shoulder strap
+661,583,36079,1307,2,,475.00,Contents leaked
+662,583,36080,2442,2,,118.00,Product surface scratched
+663,583,36078,520,1,,18.61,Wet packaging
+664,586,36248,552,18,,205.56,Carton missing
+665,587,36309,1691,24,1,513.12,Contents leaked
+666,588,36464,2837,1,,10.02,Wet packaging
+667,588,36465,1912,5,,159.25,Carton crushed
+668,588,36468,2638,12,,1338.00,Contents leaked
+669,590,36716,2964,1,,12.66,Short against packing list
+670,591,36757,2766,12,,527.76,Wrong size
+671,591,36756,1475,2,,16.14,Wrong colour
+672,592,36821,720,20,,1318.00,Wrong model
+673,593,36854,1553,2,1,252.00,Wrong colour
+674,593,36856,2389,12,1,68.04,Wrong colour
+675,594,36882,1157,1,,36.76,Product surface scratched
+676,594,36881,1170,1,,38.85,Product surface scratched
+677,595,36895,2500,5,1,19.80,Wrong model
+678,595,36902,2661,12,1,912.00,Wrong colour
+679,595,36894,1021,6,1,231.96,Wrong model
+680,596,37002,585,1,,8.01,Contents leaked
+681,597,37014,2267,4,,41.64,stitching failed on the shoulder strap
+682,599,37089,1940,15,,1020.00,Carton crushed
+683,599,37088,1543,24,,234.96,Carton crushed
+684,600,37118,3051,10,,610.00,Wet packaging
+685,601,37271,676,6,,873.00,zip slider broke after a few uses
+686,601,37272,963,10,,759.00,zip slider broke after a few uses
+687,602,37276,3019,20,,486.00,pole segment split at the joint
+688,603,37325,710,2,1,29.84,Product surface scratched
+689,603,37323,2474,10,1,4880.00,Product surface scratched
+690,603,37324,1911,2,1,189.80,Wet packaging
+691,605,37408,462,2,,114.00,Inner pack incomplete
+692,607,37583,3131,2,,305.80,Torn outer wrap
+693,608,37616,200,2,1,377.80,buckle cracked in the cold
+694,609,37622,1896,6,,801.00,Product surface scratched
+695,609,37620,2888,1,,69.90,Product surface scratched
+696,610,37662,2195,1,1,109.90,Contents leaked
+697,610,37658,1652,1,1,574.90,Carton crushed
+698,610,37659,2718,24,1,196.56,Carton crushed
+699,611,37707,1362,9,,24.03,colour bleeding after first wash
+700,612,37854,1504,1,,18.21,Product surface scratched
+701,612,37855,1406,6,,124.74,Wet packaging
+702,613,37882,465,1,,13.31,Contents leaked
+703,614,38021,2026,2,1,1670.00,Wrong model
+704,615,38030,1373,7,,74.55,Carton missing
+705,616,38050,2964,4,,50.64,"valve leaks, mat deflates overnight"
+706,616,38044,551,1,,10.60,stitching failed on the shoulder strap
+707,616,38047,41,1,,60.90,sole separating from the upper
+708,617,38076,480,12,,564.00,Product surface scratched
+709,617,38075,2838,1,,10.66,Carton crushed
+710,619,38189,1482,8,,88.80,Carton missing
+711,620,38192,2902,24,1,559.68,Carton crushed
+712,620,38194,1165,12,1,730.80,Torn outer wrap
+713,621,38279,1946,20,1,81.60,Wrong size
+714,623,38364,3070,6,,1617.00,Short against packing list
+715,623,38365,2128,1,,132.00,Inner pack incomplete
+716,623,38363,2860,1,,44.65,Inner pack incomplete
+717,624,38368,2500,6,,23.76,Wrong colour
+718,627,38427,1311,1,1,225.50,Inner pack incomplete
+719,628,38499,713,1,,97.50,Wet packaging
+720,629,38508,1407,6,,128.70,Wrong colour
+721,630,38571,1634,6,,282.78,Inner pack incomplete
+722,631,38640,524,1,,12.04,Short against packing list
+723,632,38707,949,12,1,5382.00,Wrong size
+724,632,38706,1299,10,1,1719.00,Wrong model
+725,632,38703,381,20,1,45.20,Wrong colour
+726,633,38714,1156,30,1,2205.00,Unsold stock
+727,634,38718,1605,2,,9.14,Unsold stock
+728,635,38720,292,5,,425.00,stitching failed on the shoulder strap
+729,636,38758,3065,5,1,934.50,Wrong model
+730,637,38807,2087,10,,434.50,seam tape peeling on the inside
+731,637,38809,1181,1,,18.30,zip slider broke after a few uses
+732,637,38808,122,3,,220.50,seam tape peeling on the inside
+733,638,38828,1318,6,,465.00,Wet packaging
+734,640,38926,1057,48,,639.36,Unit price disputed
+735,641,38931,1919,1,1,23.83,seam tape peeling on the inside
+736,641,38935,1485,1,1,214.00,buckle cracked in the cold
+737,641,38932,2664,1,1,102.50,colour bleeding after first wash
+738,643,38955,883,5,,287.50,sole separating from the upper
+739,645,39106,2242,12,1,660.00,Wrong model
+740,645,39108,2272,96,1,261.12,Wrong size
+741,645,39111,412,24,1,7437.60,Wrong size
+742,646,39144,468,48,,2167.68,Product surface scratched
+743,647,39161,1162,24,,218.59,Unit price disputed
+744,648,39342,2527,4,2,39.24,Wrong size
+745,648,39343,2272,60,2,163.20,Wrong size
+746,649,39370,295,2,1,205.80,Carton crushed
+747,651,39448,3008,12,1,477.00,Carton missing
+748,651,39451,539,5,1,241.75,Carton missing
+749,651,39454,3088,12,1,4738.80,Inner pack incomplete
+750,652,39464,35,1,,33.95,Inner pack incomplete
+751,653,39483,3058,48,1,5232.00,Inner pack incomplete
+752,653,39474,3088,1,1,394.90,Short against packing list
+753,655,39804,1946,1,,4.08,Short against packing list
+754,657,39832,1254,4,,32.59,Unit price disputed
+755,658,39842,2177,3,,974.70,Product surface scratched
+756,659,39904,2401,6,1,519.00,Product surface scratched
+757,660,40048,209,2,,110.00,Carton missing
+758,661,40124,2072,10,1,589.00,Wrong size
+759,661,40122,337,5,1,44.40,Wrong colour
+760,661,40125,1164,10,1,679.00,Wrong colour
+761,663,40238,1693,1,,6.66,Product surface scratched
+762,664,40270,930,6,,146.81,Unit price disputed
+763,665,40316,1863,10,,519.00,Wet packaging
+764,666,40416,1363,12,1,31.08,Wrong colour
+765,667,40436,812,6,,56.58,Wrong model
+766,668,40460,2226,9,,70.47,sole separating from the upper
+767,670,40510,2042,1,1,574.90,Carton crushed
+768,674,40764,731,48,1,5328.00,Wrong size
+769,674,40765,2415,60,1,2848.80,Wrong size
+770,674,40766,3134,1,1,76.90,Wrong colour
+771,675,40844,1164,2,1,135.80,Inner pack incomplete
+772,676,40858,1918,1,,23.29,Contents leaked
+773,676,40857,1945,3,,13.14,Carton crushed
+774,677,40893,2534,12,,3.54,Unit price disputed
+775,679,40965,1738,30,1,2847.00,Wrong colour
+776,682,41146,2885,1,,19.39,Carton missing
+777,683,41174,2057,6,,4727.40,Product surface scratched
+778,683,41175,3190,2,,81.90,Product surface scratched
+779,684,41230,41,2,,121.80,colour bleeding after first wash
+780,685,41256,2482,1,,16.96,Carton missing
+781,688,41491,731,30,1,399.60,Unit price disputed
+782,689,41496,563,2,,12.14,Carton crushed
+783,691,41629,2777,6,,603.00,Contents leaked
+784,694,41705,1365,18,1,1647.00,Product surface scratched
+785,694,41704,1218,48,1,9624.00,Contents leaked
+786,695,41839,1373,6,,7.67,Unit price disputed
+787,697,41987,1413,3,,253.50,colour bleeding after first wash
+788,700,42103,2683,10,,56.00,Carton missing
+789,701,42154,2623,4,1,278.00,Carton crushed
+790,701,42153,60,1,1,424.00,Product surface scratched
+791,702,42201,2750,12,,75.96,Wet packaging
+792,703,42340,2400,48,,4392.00,Wrong colour
+793,705,42505,542,3,,147.24,Inner pack incomplete
+794,706,42516,198,2,,218.00,Torn outer wrap
+795,706,42515,385,1,,4.07,Contents leaked
+796,707,42533,790,30,,122.40,stitching failed on the shoulder strap
+797,708,42612,271,1,,7.64,pole segment split at the joint
+798,711,42768,1256,5,,784.50,Inner pack incomplete
+799,711,42770,293,8,,807.20,Short against packing list
+800,712,42789,365,9,,20.61,Product surface scratched
+801,712,42790,299,1,,24.20,Torn outer wrap
+802,713,42802,2954,3,,15.45,Inner pack incomplete
+803,714,42852,2900,12,,242.40,Wrong size
+804,715,42900,1440,10,,284.20,Wrong size
+805,716,42903,133,9,,1754.10,sole separating from the upper
+806,717,42914,1175,5,1,384.50,Carton missing
+807,719,43050,1797,1,,418.90,Carton missing
+808,720,43100,2527,20,,196.20,colour bleeding after first wash
+809,721,43159,2764,1,1,45.74,Carton missing
+810,722,43207,665,48,1,17275.20,Wet packaging
+811,723,43227,2680,1,,77.00,Short against packing list
+812,723,43225,1414,1,,81.50,Carton missing
+813,726,43581,2996,8,,19.06,Unit price disputed
+814,727,43791,253,2,,49.66,Wrong model
+815,727,43792,938,3,,563.70,Wrong model
+816,728,43837,1967,30,,3567.00,Torn outer wrap
+817,729,43866,2645,2,,311.80,Wrong model
+818,730,43986,520,1,,18.05,Inner pack incomplete
+819,730,43988,2698,24,,61.92,Carton missing
+820,731,44074,271,2,,15.28,Short against packing list
+821,734,44304,520,12,,216.60,Wrong model
+822,734,44303,2766,5,,219.90,Wrong colour
+823,735,44305,3116,1,,286.00,Unsold stock
+824,735,44306,44,1,,202.50,Unsold stock
+825,736,44329,1896,1,,133.50,buckle cracked in the cold
+826,737,44361,3131,2,,315.80,Unsold stock
+827,737,44360,2836,1,,10.70,Unsold stock
+828,740,44621,1763,30,,5070.00,Wrong model
+829,740,44622,779,6,,24.42,Wrong colour
+830,742,44766,1539,3,,78.45,seam tape peeling on the inside
+831,743,44824,2698,2,,5.16,Short against packing list
+832,744,45077,530,5,1,54.75,Inner pack incomplete
+833,745,45095,647,12,,76.32,Unit price disputed
+834,746,45174,94,1,,26.52,Carton crushed
+835,746,45177,2545,1,,11.43,Contents leaked
+836,746,45176,481,1,,33.99,Product surface scratched
+837,747,45211,1876,10,1,267.20,Wet packaging
+838,748,45215,2320,1,,46.05,zip slider broke after a few uses
+839,749,45244,2256,1,,26.67,Torn outer wrap
+840,750,45298,2279,1,1,76.90,Torn outer wrap
+841,751,45313,801,1,,7.63,Carton missing
+842,751,45311,259,18,,494.10,Inner pack incomplete
+843,751,45310,2977,1,,12.31,Carton missing
+844,753,45453,2974,2,,19.96,Wrong model
+845,753,45452,2269,2,,23.22,Wrong colour
+846,754,45457,2738,1,1,10.11,Product surface scratched
+847,754,45456,2050,10,1,1795.00,Torn outer wrap
+848,756,45491,832,2,1,225.00,Torn outer wrap
+849,756,45496,535,1,1,46.40,Wet packaging
+850,757,45577,488,2,,23.64,Unit price disputed
+851,758,45633,652,3,,545.70,pole segment split at the joint
+852,759,45761,1288,1,1,198.90,Contents leaked
+853,759,45762,1485,6,1,1311.00,Product surface scratched
+854,760,45785,1397,8,,16.48,Carton missing
+855,762,45856,671,24,1,1184.64,Unsold stock
+856,763,45881,488,3,,295.50,Wet packaging
+857,766,46022,3017,4,,89.64,Inner pack incomplete
+858,768,46205,2031,10,1,959.00,Wrong size
+859,768,46207,737,6,1,153.72,Wrong model
+860,769,46208,2964,1,,13.04,Product surface scratched
+861,771,46307,1834,12,,850.80,Wrong size
+862,772,46308,901,30,,273.30,Wrong model
+863,772,46310,964,4,,335.60,Wrong model
+864,774,46391,1094,1,,274.50,Contents leaked
+865,774,46389,2281,6,,395.40,Contents leaked
+866,775,46393,1758,1,,73.50,Contents leaked
+867,776,46395,944,3,1,70.92,Carton missing
+868,776,46400,2002,1,1,104.90,Short against packing list
+869,776,46394,629,6,1,2349.00,Carton missing
+870,777,46443,737,12,,307.44,Wrong model
+871,777,46442,2087,20,,890.80,Wrong colour
+872,778,46468,2536,48,,639.36,Torn outer wrap
+873,778,46471,2888,1,,69.90,Product surface scratched
+874,779,46515,3003,5,,645.00,Short against packing list
+875,779,46516,3085,2,,135.80,Inner pack incomplete
+876,780,46519,1371,20,,272.40,Inner pack incomplete
+877,782,46548,2813,2,,145.00,Torn outer wrap
+878,782,46544,1834,1,,70.90,Contents leaked
+879,786,46748,2079,60,,2538.00,Wrong colour
+880,787,46773,455,1,,90.90,Product surface scratched
+881,788,46777,1775,1,1,231.50,colour bleeding after first wash
+882,788,46778,510,3,1,161.70,"valve leaks, mat deflates overnight"
+883,790,46873,846,1,,135.50,Inner pack incomplete
+884,790,46872,1707,3,,68.16,Carton missing
+885,792,47050,1599,1,,82.90,Unsold stock
+886,792,47049,927,1,,25.12,Unsold stock
+887,793,47096,2299,5,1,17.80,Short against packing list
+888,793,47098,2246,1,1,53.90,Inner pack incomplete
+889,795,47238,1775,10,1,2315.00,Wrong model
+890,795,47240,2309,1,1,12.58,Wrong size
+891,797,47627,2964,5,1,7.82,Unit price disputed
+892,798,47895,2069,12,,216.48,Carton crushed
+893,798,47896,2850,2,,495.80,Carton crushed
+894,800,48112,163,12,1,1446.00,seam tape peeling on the inside
+895,801,48122,1937,1,,4.30,Unsold stock
+896,805,48492,2651,4,,379.60,Contents leaked
+897,806,48502,2926,1,1,7.97,Short against packing list
+898,806,48498,485,2,1,108.00,Carton missing
+899,807,48542,2976,2,1,20.56,Carton crushed
+900,807,48540,665,48,1,17275.20,Torn outer wrap
+901,807,48541,193,6,1,629.40,Product surface scratched
+902,808,48555,2132,5,,158.15,Carton missing
+903,809,48597,3088,1,,394.90,Torn outer wrap
+904,810,48611,2272,24,1,67.68,Unsold stock
+905,810,48618,510,12,1,646.80,Unsold stock
+906,811,48628,1199,30,,5505.00,Wrong model
+907,812,48631,907,48,,112.32,Wrong size
+908,813,48636,911,20,,66.22,Unit price disputed
+909,815,48731,1752,2,,249.80,Torn outer wrap
+910,817,48777,2616,12,,110.74,Unit price disputed
+911,820,49082,276,2,1,439.00,Carton missing
+912,822,49249,253,5,1,124.15,Unsold stock
+913,822,49247,1503,12,1,209.64,Unsold stock
+914,823,49270,2112,1,1,18.35,Inner pack incomplete
+915,825,49391,3017,1,1,22.41,Contents leaked
+916,825,49392,2538,1,1,64.00,Torn outer wrap
+917,826,49535,3141,6,1,1311.00,Carton crushed
+918,828,49595,3079,12,1,8412.00,Torn outer wrap
+919,830,49648,1230,6,,617.40,Contents leaked
+920,831,49679,759,1,,21.25,Product surface scratched
+921,831,49677,241,9,,2209.50,Carton crushed
+922,832,49777,437,1,1,254.90,Short against packing list
+923,832,49774,774,48,1,619.68,Carton missing
+924,833,49797,481,1,,33.99,Product surface scratched
+925,834,49972,2174,1,1,151.50,Torn outer wrap
+926,837,50198,2691,60,,3780.00,Torn outer wrap
+927,837,50196,582,1,,14.80,Product surface scratched
+928,838,50201,632,6,1,1127.40,Inner pack incomplete
+929,838,50199,1803,4,1,764.00,Inner pack incomplete
+930,838,50200,1263,3,1,354.00,Inner pack incomplete
+931,839,50230,1111,1,1,61.90,Inner pack incomplete
+932,840,50345,174,4,,35.44,Torn outer wrap
+933,842,50680,1625,6,,389.40,Product surface scratched
+934,842,50681,193,6,,629.40,Wet packaging
+935,842,50682,3003,1,,129.00,Product surface scratched
+936,844,50748,3134,10,1,749.00,Carton crushed

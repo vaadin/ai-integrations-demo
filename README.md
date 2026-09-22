@@ -5,6 +5,12 @@ application people recognise: the back office of **Nordic Supply**, a fictional 
 business cases, each a view of its own: a self-service dashboard where a question becomes a widget, a claim form the
 assistant fills from a customer's message, and a supervised bulk change of the product catalogue.
 
+## Data
+
+The dataset ships with the application under `src/main/resources/data/nordic_supply`: thousands of customers, orders,
+products and shipments and more than a year of history, generated rather than hand-written. At start-up it is loaded
+into an in-memory H2 database, which takes a few seconds; every start begins from the same data.
+
 ## Run
 
 Requirements: Java 21 or newer, Maven 3.9.
@@ -24,4 +30,3 @@ mvn verify                                # unit tests plus the Spotless format 
 
 Java is formatted with Spotless and Palantir Java Format; `mvn spotless:apply` formats before a commit. The
 `build` workflow runs `mvn verify` on every pull request and on every push to `main`.
-# ai-integrations-demo

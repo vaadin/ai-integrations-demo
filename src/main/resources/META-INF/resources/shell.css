@@ -1,0 +1,147 @@
+/*
+ * The application shell: the rail, and the page heading with its watermark.
+ */
+html {
+  --aura-app-layout-inset: 0px;
+
+  --vaadin-side-nav-item-font-weight: var(--aura-font-weight-semibold);
+
+  --vaadin-side-nav-item-padding: var(--vaadin-padding-block-container) var(--vaadin-padding-m);
+  --vaadin-side-nav-items-gap: var(--vaadin-gap-s);
+}
+
+vaadin-app-layout {
+  &::part(content) {
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  &:not([overlay]) vaadin-drawer-toggle {
+    display: none;
+  }
+}
+
+/* ---- the rail (drawer) ---- */
+.drawer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--vaadin-padding-xl);
+  gap: var(--vaadin-side-nav-items-gap);
+  min-width: 14rem;
+
+  vaadin-scroller {
+    flex: 1;
+    margin-inline: calc(var(--vaadin-padding-xl) * -1);
+    --vaadin-scroller-padding-block: var(--vaadin-padding-s);
+    --vaadin-scroller-padding-inline: var(--vaadin-padding-xl);
+    --vaadin-scroller-overflow-indicator-top-opacity: 1;
+    --vaadin-scroller-overflow-indicator-bottom-opacity: 1;
+    outline-offset: -2px;
+  }
+}
+
+vaadin-side-nav-item[current] {
+  &::part(content) {
+    --aura-surface-opacity: 0.7;
+    --vaadin-side-nav-item-text-color: var(--vaadin-text-color);
+    background-clip: border-box;
+  }
+
+  > vaadin-icon[slot=prefix] {
+    color: var(--aura-accent-text-color);
+  }
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-side-nav-items-gap);
+  padding: var(--vaadin-side-nav-item-padding);
+}
+
+.wordmark .mark {
+  flex: none;
+  border-radius: var(--vaadin-radius-m);
+  background: var(--aura-accent-color);
+  color: var(--aura-accent-contrast-color);
+}
+
+.wordmark .name {
+  width: min-content;
+  font-weight: 800;
+  font-style: italic;
+  font-stretch: 90%;
+  font-width: 90%;
+  font-size: 0.95rem;
+  line-height: 0.9;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: var(--vaadin-text-color);
+  text-indent: 0.2em;
+}
+
+/* ---- pages: the heading, and the watermark behind it ---- */
+.intro {
+  color: var(--vaadin-text-color-secondary);
+  margin: 0;
+  max-width: 80ch;
+}
+
+.page-heading {
+  display: grid;
+  line-height: 1.05;
+}
+
+.page-title {
+  grid-column: 2;
+  line-height: inherit;   /* the heading's own line height, not Aura's h1 */
+  font-size: 1.7rem;
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.page-subtitle {
+  grid-column: 2;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--aura-accent-text-color);
+}
+
+/* a page clips the watermark, which is wider than it, and scrolls when a window is shorter than its content; its
+   children are lifted above the watermark, which sits inside the heading */
+.page {
+  position: relative;
+  overflow-x: hidden;
+}
+
+.page > * {
+  position: relative;
+  z-index: 1;
+}
+
+.watermark {
+  position: absolute;
+  top: -0.32em;
+  left: 1.5rem;
+  font-size: 11rem;
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--aura-accent-color);
+  opacity: 0.1;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 0;
+}

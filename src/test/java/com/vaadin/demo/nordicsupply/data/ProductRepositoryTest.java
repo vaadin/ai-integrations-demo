@@ -17,11 +17,6 @@ class ProductRepositoryTest {
     private ProductRepository products;
 
     @Test
-    void countsTheActiveProducts() {
-        assertThat(products.countByActiveTrue()).isEqualTo(3_060);
-    }
-
-    @Test
     void anEmptyTermMatchesEveryProductWithItsCurrentPrice() {
         var rows = products.search("", ALL).getContent();
 

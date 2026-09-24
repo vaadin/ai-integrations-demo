@@ -17,11 +17,6 @@ class CustomerRepositoryTest {
     private CustomerRepository customers;
 
     @Test
-    void countsTheActiveCustomers() {
-        assertThat(customers.countByActiveTrue()).isEqualTo(2_283);
-    }
-
-    @Test
     void anEmptyTermMatchesEveryCustomer() {
         assertThat(customers.search("", PageRequest.of(0, 1)).getTotalElements())
                 .isEqualTo(2_400);

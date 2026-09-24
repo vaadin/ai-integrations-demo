@@ -1,0 +1,10 @@
+@import "aura/aura.css" layer(aura);
+
+:root {
+  color-scheme: dark;
+  --aura-background-color-dark: #000;
+  --aura-accent-color-dark: #FFD13B;
+  --aura-base-radius: 8;
+  --aura-surface-level: -2;
+  --aura-app-background: radial-gradient(70% 70% at 50% 100%, rgba(59, 59, 59, 0.513333) 0%, rgba(0, 0, 0, 0.7) 100%), #000000;
+}

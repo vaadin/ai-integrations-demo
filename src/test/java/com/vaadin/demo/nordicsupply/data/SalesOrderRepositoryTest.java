@@ -2,8 +2,6 @@ package com.vaadin.demo.nordicsupply.data;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.LocalDate;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,13 +15,6 @@ class SalesOrderRepositoryTest {
 
     @Autowired
     private SalesOrderRepository orders;
-
-    @Test
-    void countsTheOrdersPlacedSinceADay() {
-        assertThat(orders.countByPlacedAtGreaterThanEqual(
-                        LocalDate.of(2026, 9, 1).atStartOfDay()))
-                .isEqualTo(55);
-    }
 
     @Test
     void anEmptyTermMatchesEveryOrder() {

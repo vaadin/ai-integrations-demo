@@ -8,10 +8,8 @@ import org.springframework.data.repository.query.Param;
 
 import com.vaadin.demo.nordicsupply.domain.Customer;
 
-/** Customers: the list view and the customers tile. */
+/** Customers: the list view. */
 public interface CustomerRepository extends JpaRepository<Customer, Integer> {
-
-    long countByActiveTrue();
 
     /** Rows of the Customers list. */
     record Row(

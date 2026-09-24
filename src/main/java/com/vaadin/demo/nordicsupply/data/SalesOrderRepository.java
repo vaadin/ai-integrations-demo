@@ -12,10 +12,8 @@ import org.springframework.data.repository.query.Param;
 
 import com.vaadin.demo.nordicsupply.domain.SalesOrder;
 
-/** Sales orders: the list view and the orders-this-month tile. */
+/** Sales orders: the list view. */
 public interface SalesOrderRepository extends JpaRepository<SalesOrder, Integer> {
-
-    long countByPlacedAtGreaterThanEqual(LocalDateTime from);
 
     /** Rows of the Orders list. */
     record Row(

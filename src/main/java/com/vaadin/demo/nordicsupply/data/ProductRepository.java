@@ -10,10 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 import com.vaadin.demo.nordicsupply.domain.Product;
 
-/** Products: the list view and the active-products tile. */
+/** Products: the list view. */
 public interface ProductRepository extends JpaRepository<Product, Integer> {
-
-    long countByActiveTrue();
 
     /** Rows of the Products list; the list price is the one in force today, from the current-price view. */
     record Row(

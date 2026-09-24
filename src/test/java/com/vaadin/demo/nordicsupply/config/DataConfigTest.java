@@ -2,16 +2,15 @@ package com.vaadin.demo.nordicsupply.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.Closeable;
 import java.util.Map;
-import javax.sql.DataSource;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** The data source comes back with the dataset loaded: every table holds the rows the dataset was generated with. */
+/** The application's data source comes up with the dataset loaded: every table holds the rows it was generated with. */
+@SpringBootTest
 class DataConfigTest {
 
     /** The row count of every table the loader fills, as generated on 2026-09-07. */
@@ -40,25 +39,8 @@ class DataConfigTest {
             Map.entry("stock_movements", 77_081),
             Map.entry("saved_widgets", 2));
 
-    private static DataSource dataSource;
-    private static JdbcTemplate jdbc;
-
-    @BeforeAll
-    static void loadTheDataset() throws Exception {
-        dataSource = new DataConfig().dataSource(new PackData());
-        jdbc = new JdbcTemplate(dataSource);
-    }
-
-    /** The in-memory database outlives its connections; shutting it down leaves nothing behind for other tests. */
-    @AfterAll
-    static void dropTheDatabase() throws Exception {
-        if (jdbc != null) {
-            jdbc.execute("SHUTDOWN");
-        }
-        if (dataSource instanceof Closeable pool) {
-            pool.close();
-        }
-    }
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     void everyTableHoldsTheRowsTheDatasetWasGeneratedWith() {

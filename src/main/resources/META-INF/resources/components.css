@@ -10,9 +10,7 @@
 }
 
 .about-title {
-  margin: 0;
   font-size: 1.15rem;
-  font-weight: 600;
   line-height: 1.3;
 }
 
@@ -22,7 +20,9 @@
 
 /* ---- Home: where to start, as cards ---- */
 .section-title {
+  margin: 0;
   font-size: 0.78rem;
+  font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--vaadin-text-color-secondary);

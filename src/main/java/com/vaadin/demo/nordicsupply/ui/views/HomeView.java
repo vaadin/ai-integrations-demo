@@ -4,6 +4,7 @@ import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.AnchorTarget;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -37,7 +38,7 @@ public class HomeView extends VerticalLayout {
         var about = new Div(aboutTitle, intro);
         about.addClassName("about");
 
-        var readMore = new Span("Read more");
+        var readMore = new H3("Read more");
         readMore.addClassName("section-title");
         var docs = new Div(
                 card("AI support in Vaadin Flow", "The documentation of Vaadin's AI components.", DOCS),

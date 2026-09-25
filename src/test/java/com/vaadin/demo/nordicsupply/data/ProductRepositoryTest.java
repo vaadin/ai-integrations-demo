@@ -27,6 +27,16 @@ class ProductRepositoryTest {
         });
     }
 
+    /** Its price changes on 1 October; the list keeps the price of the dataset's day, whatever the calendar says. */
+    @Test
+    void theListPriceIsThePriceOnTheDatasetsDay() {
+        var rows = products.search(SearchTerms.like("AUR-ACC-0023"), ALL).getContent();
+
+        assertThat(rows)
+                .singleElement()
+                .satisfies(row -> assertThat(row.listPrice()).isEqualByComparingTo("19.65"));
+    }
+
     @Test
     void aTermMatchesTheSku() {
         var rows = products.search(SearchTerms.like("ALV-KIT-0001"), ALL).getContent();

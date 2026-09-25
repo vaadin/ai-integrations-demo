@@ -11,7 +11,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 /**
- * An item of the catalogue. Its price is not a column here: the price in force today is read from
+ * An item of the catalogue. Its price is not a column here: the price in force on the dataset's day is read from
  * {@link ProductCurrentPrice}.
  */
 @Entity

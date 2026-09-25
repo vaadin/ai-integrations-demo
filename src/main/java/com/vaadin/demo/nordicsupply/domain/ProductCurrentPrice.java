@@ -9,7 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Immutable;
 
-/** The database view of the price in force today, one row per product. */
+/** The database view of the price in force on the dataset's day, one row per product. */
 @Entity
 @Table(name = "product_current_prices")
 @Immutable

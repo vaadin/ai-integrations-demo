@@ -19,4 +19,11 @@ class SearchTermsTest {
         assertThat(SearchTerms.like(" Umeå ")).isEqualTo("%umeå%");
         assertThat(SearchTerms.like("SO-2026")).isEqualTo("%so-2026%");
     }
+
+    @Test
+    void theLikeWildcardsAndTheEscapeAreOrdinaryCharacters() {
+        assertThat(SearchTerms.like("50%")).isEqualTo("%50\\%%");
+        assertThat(SearchTerms.like("PARTIALLY_SHIPPED")).isEqualTo("%partially\\_shipped%");
+        assertThat(SearchTerms.like("a\\b")).isEqualTo("%a\\\\b%");
+    }
 }

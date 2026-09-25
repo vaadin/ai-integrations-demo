@@ -27,8 +27,8 @@ public interface CustomerRepository extends JpaRepository<Customer, Integer> {
             select new com.vaadin.demo.nordicsupply.data.CustomerRepository$Row(
                 c.customerNumber, c.name, c.chainName, c.segment, c.city, c.country, c.paymentTermsDays, c.active)
             from Customer c
-            where :term = '' or lower(c.name) like :term or lower(c.customerNumber) like :term
-               or lower(c.city) like :term
+            where :term = '' or lower(c.name) like :term escape '\\' or lower(c.customerNumber) like :term escape '\\'
+               or lower(c.city) like :term escape '\\'
             """)
     Page<Row> search(@Param("term") String term, Pageable pageable);
 }

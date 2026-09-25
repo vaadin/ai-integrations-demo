@@ -30,8 +30,8 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Integer>
             select new com.vaadin.demo.nordicsupply.data.SalesOrderRepository$Row(
                 o.orderNumber, c.name, o.placedAt, o.status, o.promisedDeliveryDate, o.channel, o.totalNet)
             from SalesOrder o join o.customer c
-            where :term = '' or lower(o.orderNumber) like :term or lower(c.name) like :term
-               or lower(o.status) like :term
+            where :term = '' or lower(o.orderNumber) like :term escape '\\' or lower(c.name) like :term escape '\\'
+               or lower(o.status) like :term escape '\\'
             """)
     Page<Row> search(@Param("term") String term, Pageable pageable);
 }

@@ -3,7 +3,6 @@ package com.vaadin.demo.nordicsupply.ui.components;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Div;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,14 +16,14 @@ class HelpTest {
     /** A view with a readme, as the list views are. */
     private static class ReadmeView extends Div implements HasReadme {
 
-        private final Readme readme;
+        private final String readme;
 
-        ReadmeView(String title) {
-            readme = new Readme(title, "The " + title + " list.");
+        ReadmeView(String name) {
+            readme = "The " + name + " list.";
         }
 
         @Override
-        public Readme readme() {
+        public String readme() {
             return readme;
         }
     }
@@ -46,10 +45,10 @@ class HelpTest {
     }
 
     @Test
-    void aViewsReadmeOpensByItselfOnItsFirstVisit() {
+    void aViewsReadmeOpensByItselfOnItsFirstVisitUnderTheViewsTitle() {
         var help = new Help(session, dialog);
 
-        help.follow(new ReadmeView("Orders"));
+        help.follow(new ReadmeView("Orders"), "Orders");
 
         assertThat(dialog.isOpened()).isTrue();
         assertThat(dialog.getHeaderTitle()).isEqualTo("Orders");
@@ -59,10 +58,10 @@ class HelpTest {
     @Test
     void theReadmeStaysClosedOnALaterVisitInTheSameSession() {
         var firstTab = new Help(session, new ReadmeDialog());
-        firstTab.follow(new ReadmeView("Orders"));
+        firstTab.follow(new ReadmeView("Orders"), "Orders");
 
         var secondTab = new Help(session, dialog);
-        secondTab.follow(new ReadmeView("Orders"));
+        secondTab.follow(new ReadmeView("Orders"), "Orders");
 
         assertThat(dialog.isOpened()).isFalse();
         assertThat(secondTab.isVisible()).isTrue();
@@ -71,10 +70,10 @@ class HelpTest {
     @Test
     void eachViewsReadmeOpensOnItsOwnFirstVisit() {
         var help = new Help(session, dialog);
-        help.follow(new ReadmeView("Orders"));
+        help.follow(new ReadmeView("Orders"), "Orders");
         dialog.close();
 
-        help.follow(new ReadmeView("Customers"));
+        help.follow(new ReadmeView("Customers"), "Customers");
 
         assertThat(dialog.isOpened()).isTrue();
         assertThat(dialog.getHeaderTitle()).isEqualTo("Customers");
@@ -83,10 +82,10 @@ class HelpTest {
     @Test
     void theButtonOpensTheCurrentViewsReadmeAgain() {
         var help = new Help(session, dialog);
-        help.follow(new ReadmeView("Orders"));
+        help.follow(new ReadmeView("Orders"), "Orders");
         dialog.close();
 
-        button(help).click();
+        help.click();
 
         assertThat(dialog.isOpened()).isTrue();
         assertThat(dialog.getHeaderTitle()).isEqualTo("Orders");
@@ -96,7 +95,7 @@ class HelpTest {
     void aViewWithoutAReadmeOpensNothingAndHidesHelp() {
         var help = new Help(session, dialog);
 
-        help.follow(new Div());
+        help.follow(new Div(), "Home");
 
         assertThat(dialog.isOpened()).isFalse();
         assertThat(help.isVisible()).isFalse();
@@ -105,9 +104,9 @@ class HelpTest {
     @Test
     void helpReturnsWithTheNextViewThatHasAReadme() {
         var help = new Help(session, dialog);
-        help.follow(new Div());
+        help.follow(new Div(), "Home");
 
-        help.follow(new ReadmeView("Orders"));
+        help.follow(new ReadmeView("Orders"), "Orders");
 
         assertThat(help.isVisible()).isTrue();
     }
@@ -115,15 +114,10 @@ class HelpTest {
     @Test
     void aReadmeStillOpenClosesWhenTheViewChanges() {
         var help = new Help(session, dialog);
-        help.follow(new ReadmeView("Orders"));
+        help.follow(new ReadmeView("Orders"), "Orders");
 
-        help.follow(new Div());
+        help.follow(new Div(), "Home");
 
         assertThat(dialog.isOpened()).isFalse();
-    }
-
-    private static Button button(Help help) {
-        return (Button)
-                help.getChildren().filter(Button.class::isInstance).findFirst().orElseThrow();
     }
 }

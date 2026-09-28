@@ -22,7 +22,6 @@ import org.springframework.data.domain.Sort;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.ProductRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
-import com.vaadin.demo.nordicsupply.ui.components.Readme;
 
 /**
  * Each list view asks its repository for its rows in the order the view promises, aligns its amounts, and carries a
@@ -71,15 +70,13 @@ class ListViewsTest {
     }
 
     @Test
-    void eachListCarriesAReadmeNamedAfterItThatSaysWhatItListsAndWhatTheSearchMatches() {
+    void eachListCarriesAReadmeThatSaysWhatItListsAndWhatTheSearchMatches() {
         var readmes = List.of(
                 new OrdersView(mock(SalesOrderRepository.class)).readme(),
                 new CustomersView(mock(CustomerRepository.class)).readme(),
                 new ProductsView(mock(ProductRepository.class)).readme());
 
-        assertThat(readmes).extracting(Readme::title).containsExactly("Orders", "Customers", "Products");
         assertThat(readmes)
-                .extracting(Readme::body)
                 .satisfiesExactly(
                         orders -> assertThat(orders).contains("one row per sales order", "Search by"),
                         customers -> assertThat(customers).contains("One row per retail customer", "Search by"),

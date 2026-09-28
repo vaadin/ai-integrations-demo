@@ -6,7 +6,7 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.markdown.Markdown;
 
 /**
- * The dialog a {@link Readme} is read in: the title as the header, the Markdown as the body, a Close button in the
+ * The dialog a readme is read in: the view's title as the header, the Markdown as the body, a Close button in the
  * footer. {@link Help} keeps one and shows the current view's readme in it.
  */
 public class ReadmeDialog extends Dialog {
@@ -22,10 +22,10 @@ public class ReadmeDialog extends Dialog {
         getFooter().add(close);
     }
 
-    /** Opens the dialog on this readme. */
-    public void show(Readme readme) {
-        setHeaderTitle(readme.title());
-        body.setContent(readme.body());
+    /** Opens the dialog on a readme, under the title of the view it belongs to. */
+    public void show(String title, String readme) {
+        setHeaderTitle(title);
+        body.setContent(readme);
         open();
     }
 }

@@ -10,11 +10,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** The dialog shows the readme it is given and closes from its button. */
+/** The dialog shows the readme it is given under the view's title and closes from its button. */
 class ReadmeDialogTest {
 
-    private static final Readme ORDERS = new Readme("Orders", "The order list.");
-    private static final Readme PRODUCTS = new Readme("Products", "The catalogue.");
+    private static final String ORDERS = "The order list.";
+    private static final String PRODUCTS = "The catalogue.";
 
     private final ReadmeDialog dialog = new ReadmeDialog();
 
@@ -33,26 +33,26 @@ class ReadmeDialogTest {
 
     @Test
     void showOpensTheDialogOnTheReadmesTitleAndText() {
-        dialog.show(ORDERS);
+        dialog.show("Orders", ORDERS);
 
         assertThat(dialog.isOpened()).isTrue();
         assertThat(dialog.getHeaderTitle()).isEqualTo("Orders");
-        assertThat(markdown().getContent()).isEqualTo(ORDERS.body());
+        assertThat(markdown().getContent()).isEqualTo(ORDERS);
     }
 
     @Test
     void showingAnotherReadmeReplacesTheTitleAndText() {
-        dialog.show(ORDERS);
+        dialog.show("Orders", ORDERS);
 
-        dialog.show(PRODUCTS);
+        dialog.show("Products", PRODUCTS);
 
         assertThat(dialog.getHeaderTitle()).isEqualTo("Products");
-        assertThat(markdown().getContent()).isEqualTo(PRODUCTS.body());
+        assertThat(markdown().getContent()).isEqualTo(PRODUCTS);
     }
 
     @Test
     void theCloseButtonClosesTheDialog() {
-        dialog.show(ORDERS);
+        dialog.show("Orders", ORDERS);
 
         closeButton().click();
 

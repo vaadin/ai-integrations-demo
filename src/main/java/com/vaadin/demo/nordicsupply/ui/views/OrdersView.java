@@ -9,7 +9,6 @@ import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository.Row;
 import com.vaadin.demo.nordicsupply.ui.components.DataTable;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
-import com.vaadin.demo.nordicsupply.ui.components.Readme;
 
 /** Sales orders, newest first, read-only. */
 @Route("orders")
@@ -17,11 +16,11 @@ import com.vaadin.demo.nordicsupply.ui.components.Readme;
 @Menu(title = "Orders", order = 3, icon = "icons/truck.svg")
 public class OrdersView extends PageView implements HasReadme {
 
-    private static final Readme README = new Readme("Orders", """
+    private static final String README = """
             The order list every order desk has: one row per sales order with the customer, when it was placed, its
             status, the promised delivery date, the channel it came in through and the net value, newest first.
             Search by order number, customer name or status; the search matches anywhere in the text.
-            """);
+            """;
 
     public OrdersView(SalesOrderRepository orders) {
         super("Orders", "Sales orders");
@@ -41,7 +40,7 @@ public class OrdersView extends PageView implements HasReadme {
     }
 
     @Override
-    public Readme readme() {
+    public String readme() {
         return README;
     }
 }

@@ -58,9 +58,10 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         addToDrawer(wordmark, scroller, help, powered);
     }
 
-    /** Help follows the view that navigation has just shown. */
+    /** Help follows the view that navigation has just shown, under its page title. */
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
-        help.follow(getContent());
+        var view = getContent();
+        help.follow(view, MenuConfiguration.getPageHeader(view).orElse(""));
     }
 }

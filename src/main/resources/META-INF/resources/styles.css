@@ -1,6 +1,7 @@
 /*
  * The demo's styles on top of Aura: the theme tokens, the app shell (the rail, and the page heading with its
- * watermark), and the reusable pieces (the Home page's about block and cards, and the rail's footer).
+ * watermark), and the reusable pieces (the read-only data table, the Home page's about block and cards, and the
+ * rail's footer).
  */
 
 /* ---- the theme: gold on black, the whole page one surface ---- */
@@ -158,6 +159,13 @@ vaadin-side-nav-item[current] {
   user-select: none;
   white-space: nowrap;
   z-index: 0;
+}
+
+/* ---- read-only tables: the table takes the rest of the page and the grid scrolls inside it ---- */
+.page > .data-table {
+  flex: 1;
+  align-self: stretch;
+  min-height: 0;   /* a flex item stops shrinking at its content's height, which would push the grid past the page */
 }
 
 /* ---- Home: what the demo is, and the cards to start from ---- */

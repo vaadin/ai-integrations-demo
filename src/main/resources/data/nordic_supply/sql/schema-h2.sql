@@ -503,10 +503,11 @@ CREATE INDEX ix_claims_status ON claims(status, opened_at);
 CREATE INDEX ix_claim_lines_claim ON claim_lines(claim_id);
 
 -- Convenience views for the AI schema. They avoid the most error-prone joins.
+-- The price on the dataset's day, 2026-09-07, not the machine's date: the list must not change with the calendar.
 CREATE VIEW product_current_prices AS
 SELECT p.id AS product_id, p.sku, p.name, p.category_id, p.supplier_id, ph.list_price, ph.valid_from
 FROM products p JOIN price_history ph ON ph.product_id = p.id
-WHERE ph.valid_from <= CURRENT_DATE AND (ph.valid_to IS NULL OR ph.valid_to >= CURRENT_DATE);
+WHERE ph.valid_from <= DATE '2026-09-07' AND (ph.valid_to IS NULL OR ph.valid_to >= DATE '2026-09-07');
 
 CREATE VIEW late_shipments AS
 SELECT s.id AS shipment_id, s.shipment_number, o.id AS order_id, o.order_number, o.customer_id,

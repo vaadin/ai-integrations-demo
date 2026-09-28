@@ -45,4 +45,15 @@ class SalesOrderRepositoryTest {
 
         assertThat(rows).isNotEmpty().allSatisfy(row -> assertThat(row.status()).isEqualTo("PARTIALLY_SHIPPED"));
     }
+
+    @Test
+    void aWildcardInTheTermMatchesOnlyItself() {
+        var underscore = orders.search(SearchTerms.like("_"), ALL).getContent();
+        var percent = orders.search(SearchTerms.like("%"), ALL).getContent();
+
+        assertThat(underscore)
+                .hasSize(142)
+                .allSatisfy(row -> assertThat(row.status()).isEqualTo("PARTIALLY_SHIPPED"));
+        assertThat(percent).isEmpty();
+    }
 }

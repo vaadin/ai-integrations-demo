@@ -7,27 +7,30 @@ import org.springframework.data.domain.Sort;
 
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository.Row;
+import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.ui.components.DataTable;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 
-/** Sales orders, newest first, read-only. */
+/** The sales orders of the signed-in user's region, newest first, read-only. */
 @Route("orders")
 @PageTitle("Orders")
 @Menu(title = "Orders", order = 3, icon = "icons/truck.svg")
 public class OrdersView extends PageView implements HasReadme {
 
     private static final String README = """
-            The order list every order desk has: one row per sales order with the customer, when it was placed, its
-            status, the promised delivery date, the channel it came in through and the net value, newest first.
-            Search by order number, customer name or status; the search matches anywhere in the text.
+            The order list every order desk has: one row per sales order of a customer in your region, with the
+            customer, when it was placed, its status, the promised delivery date, the channel it came in through and
+            the net value, newest first. Search by order number, customer name or status; the search matches anywhere
+            in the text.
             """;
 
-    public OrdersView(SalesOrderRepository orders) {
+    public OrdersView(SalesOrderRepository orders, CurrentUser currentUser) {
         super("Orders", "Sales orders");
+        var countries = currentUser.get().scope().countries();
         var table = new DataTable<Row>(
                 "Orders",
                 Sort.by(Sort.Direction.DESC, "placedAt", "id"),
-                orders::search,
+                (term, page) -> orders.search(term, countries, page),
                 "Search order number, customer or status");
         table.text("Order", Row::orderNumber);
         table.text("Customer", Row::customer);

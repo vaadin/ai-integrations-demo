@@ -19,12 +19,14 @@ import com.vaadin.demo.nordicsupply.data.ClaimRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.ProductRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
+import com.vaadin.demo.nordicsupply.data.ScopeAssignmentRepository;
 import com.vaadin.demo.nordicsupply.data.ShipmentRepository;
+import com.vaadin.demo.nordicsupply.data.StaffRepository;
 
 /**
- * Every entity maps a table or view the dataset creates. Hibernate is told never to touch the schema, so nothing
- * validates the mappings at start-up; this test does, by reading a row of every entity, which selects every column,
- * and by checking that each association reaches the row the foreign key names.
+ * Every entity maps a table or view that the dataset or a set-up script creates. Hibernate is told never to touch
+ * the schema, so nothing validates the mappings at start-up; this test does, by reading a row of every entity,
+ * which selects every column, and by checking that each association reaches the row the foreign key names.
  */
 @SpringBootTest
 class EntityMappingTest {
@@ -45,6 +47,12 @@ class EntityMappingTest {
     private ProductRepository products;
 
     @Autowired
+    private StaffRepository staff;
+
+    @Autowired
+    private ScopeAssignmentRepository assignments;
+
+    @Autowired
     private EntityManager entityManager;
 
     @Autowired
@@ -61,6 +69,8 @@ class EntityMappingTest {
         aggregates.put("Shipment", shipments);
         aggregates.put("Claim", claims);
         aggregates.put("Product", products);
+        aggregates.put("Staff", staff);
+        aggregates.put("ScopeAssignment", assignments);
         aggregates.forEach((name, repository) -> assertThat(
                         repository.findAll(PageRequest.of(0, 1)).getContent())
                 .as(name)
@@ -120,7 +130,9 @@ class EntityMappingTest {
                 ProductCurrentPrice.class,
                 SalesOrder.class,
                 Shipment.class,
-                Claim.class)) {
+                Claim.class,
+                Staff.class,
+                ScopeAssignment.class)) {
             var loaded = entityManager.find(type, 1);
 
             transactions.executeWithoutResult(status -> {

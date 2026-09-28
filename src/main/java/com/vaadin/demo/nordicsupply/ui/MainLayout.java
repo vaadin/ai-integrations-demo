@@ -15,15 +15,18 @@ import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.Layout;
 import com.vaadin.flow.server.menu.MenuConfiguration;
 
+import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.ShownReadmes;
 import com.vaadin.demo.nordicsupply.ui.components.Help;
 import com.vaadin.demo.nordicsupply.ui.components.ReadmeDialog;
+import com.vaadin.demo.nordicsupply.ui.components.UserSwitcher;
 
 /**
  * The app shell, the layout of every view: a left rail with the Nordic Supply wordmark, the views that list
- * themselves with {@code @Menu} in the order they are to be tried, Help, and the Vaadin mark at its foot. No top
- * bar: each view carries its own heading. Help opens the current view's readme, which also opens by itself on the
- * view's first visit in a session; Home has none, it is the readme, so Help is not shown there.
+ * themselves with {@code @Menu} in the order they are to be tried, Help, the signed-in user, and the Vaadin mark at
+ * its foot. No top bar: each view carries its own heading. Help opens the current view's readme, which also opens
+ * by itself on the view's first visit in a session; Home has none, it is the readme, so Help is not shown there. The
+ * user entry switches between the demo's users.
  */
 @Layout
 public class MainLayout extends AppLayout implements AfterNavigationObserver {
@@ -33,7 +36,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
     private final Help help;
 
-    public MainLayout(ShownReadmes shownReadmes) {
+    public MainLayout(ShownReadmes shownReadmes, CurrentUser currentUser) {
         var mark = new Div(new SvgIcon("icons/compass.svg"));
         mark.addClassName("mark");
         var name = new Span(COMPANY);
@@ -55,7 +58,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         powered.setTarget(AnchorTarget.BLANK);
         powered.addClassName("powered-by");
 
-        addToDrawer(wordmark, scroller, help, powered);
+        addToDrawer(wordmark, scroller, help, new UserSwitcher(currentUser), powered);
     }
 
     /** Help follows the view that navigation has just shown, under its page title. */

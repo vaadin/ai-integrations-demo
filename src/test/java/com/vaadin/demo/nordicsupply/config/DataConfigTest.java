@@ -9,7 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** The application's data source comes up with the dataset loaded: every table holds the rows it was generated with. */
+/**
+ * The application's data source comes up with the dataset loaded, every table holding the rows it was generated with,
+ * and the application's own set-up scripts run after it.
+ */
 @SpringBootTest
 class DataConfigTest {
 
@@ -47,6 +50,13 @@ class DataConfigTest {
         ROWS.forEach((table, rows) -> assertThat(jdbc.queryForObject("select count(*) from " + table, Integer.class))
                 .as(table)
                 .isEqualTo(rows));
+    }
+
+    /** The application's own set-up scripts run after the dataset. */
+    @Test
+    void theSetUpScriptsHaveRun() {
+        assertThat(jdbc.queryForList("select user_id from scope_assignment order by user_id", Integer.class))
+                .containsExactly(1, 8, 9, 10);
     }
 
     @Test

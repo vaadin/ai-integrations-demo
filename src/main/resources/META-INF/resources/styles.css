@@ -16,6 +16,7 @@
   --aura-app-layout-border-width: 0px;
   --vaadin-app-layout-drawer-width: 14rem;
 
+  --vaadin-button-font-weight: var(--aura-font-weight-semibold);
   --vaadin-side-nav-item-font-weight: var(--aura-font-weight-semibold);
   --vaadin-side-nav-item-padding: var(--vaadin-padding-block-container) var(--vaadin-padding-m);
   --vaadin-side-nav-items-gap: var(--vaadin-gap-s);
@@ -77,6 +78,28 @@ vaadin-side-nav-item[current] {
 
   > vaadin-icon[slot=prefix] {
     color: var(--aura-accent-text-color);
+  }
+}
+
+/* Help, between the navigation and the foot, laid out like a navigation item */
+.rail-help {
+  margin: var(--vaadin-gap-s) var(--vaadin-padding-xl) 0;
+}
+
+/* a rail button, laid out like a navigation item. The drawer slot, the element and the theme in the selector outweigh
+   Aura's own rules, which trim the inline padding of a tertiary button and of one with a prefix icon (that one weighs
+   two attributes and two elements through its :has()), and shrink a pressed one that is not disabled */
+[slot=drawer] vaadin-button.rail-button[theme~=tertiary] {
+  justify-content: flex-start;
+  width: 100%;
+  padding: var(--vaadin-side-nav-item-padding);
+
+  &:hover {
+    color: var(--vaadin-text-color);
+  }
+
+  &[active]:not([disabled]) {
+    scale: 1;
   }
 }
 

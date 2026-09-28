@@ -65,6 +65,23 @@ class CustomerRepositoryTest {
                 .allSatisfy(row -> assertThat(row.country()).isIn("FI", "EE"));
     }
 
+    /** Counted as the list counts its rows, by the query for one row. */
+    @Test
+    void eachRegionCountsOnlyItsOwnCustomers() {
+        assertThat(customers
+                        .search("", Scopes.FI_EE.countries(), PageRequest.of(0, 1))
+                        .getTotalElements())
+                .isEqualTo(805);
+        assertThat(customers
+                        .search("", Scopes.SE_NO.countries(), PageRequest.of(0, 1))
+                        .getTotalElements())
+                .isEqualTo(1_163);
+        assertThat(customers
+                        .search("", Scopes.DK_DE.countries(), PageRequest.of(0, 1))
+                        .getTotalElements())
+                .isEqualTo(432);
+    }
+
     @Test
     void aCustomerOutsideTheRegionIsInvisibleEvenWhenSearchedFor() {
         assertThat(customers

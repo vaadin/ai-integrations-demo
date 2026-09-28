@@ -1,7 +1,9 @@
 package com.vaadin.demo.nordicsupply.ui.components;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,6 +14,8 @@ import com.vaadin.flow.component.listbox.ListBox;
 import com.vaadin.flow.component.page.Page;
 import com.vaadin.flow.component.popover.Popover;
 import com.vaadin.flow.router.AfterNavigationEvent;
+import com.vaadin.flow.router.BeforeLeaveEvent;
+import com.vaadin.flow.router.Location;
 import org.junit.jupiter.api.Test;
 
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
@@ -118,6 +122,40 @@ class UserSwitcherTest {
 
         verify(currentUser).set(LARS);
         verify(page).reload();
+    }
+
+    /**
+     * The views read the session's user when they are built, so a tab left behind would show the new user's rows
+     * under the old name after its next navigation. It holds that navigation back and loads the view afresh instead.
+     */
+    @Test
+    void aTabLeftBehindLoadsItsNextViewAfreshAsTheSessionsUser() {
+        var switcher = switcher(TEST_USER);
+        when(currentUser.get()).thenReturn(LARS);
+        var leaving = leavingFor("customers");
+
+        switcher.beforeLeave(leaving);
+
+        verify(leaving).postpone();
+        verify(page).setLocation("customers");
+    }
+
+    @Test
+    void aTabStillOnTheSessionsUserNavigatesAsUsual() {
+        var switcher = switcher(LARS);
+        var leaving = leavingFor("customers");
+
+        switcher.beforeLeave(leaving);
+
+        verify(leaving, never()).postpone();
+        verify(page, never()).setLocation(anyString());
+    }
+
+    /** The event Flow sends the page's components before it leaves the view for the one at this location. */
+    private static BeforeLeaveEvent leavingFor(String location) {
+        var event = mock(BeforeLeaveEvent.class);
+        when(event.getLocation()).thenReturn(new Location(location));
+        return event;
     }
 
     /** The list's popover, which Flow adds to the page once the entry is on it. */

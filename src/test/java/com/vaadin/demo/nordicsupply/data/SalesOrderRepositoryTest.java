@@ -78,4 +78,15 @@ class SalesOrderRepositoryTest {
                         .getTotalElements())
                 .isEqualTo(2_367);
     }
+
+    /** Of the 96 orders of the Arcticstore customers, the 42 of the Finnish and Estonian ones. */
+    @Test
+    void aSearchFindsOnlyTheRegionsOrders() {
+        var rows = orders.search(SearchTerms.like("arcticstore"), Scopes.FI_EE.countries(), ALL)
+                .getContent();
+
+        assertThat(rows)
+                .hasSize(42)
+                .allSatisfy(row -> assertThat(row.customer()).startsWith("Arcticstore"));
+    }
 }

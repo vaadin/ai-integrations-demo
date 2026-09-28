@@ -3,22 +3,32 @@ package com.vaadin.demo.nordicsupply.ui.components;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridNoneSelectionModel;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.provider.DataChangeEvent;
 import com.vaadin.flow.data.provider.DataProvider;
+import com.vaadin.flow.data.provider.KeyMapper;
 import com.vaadin.flow.data.provider.Query;
+import com.vaadin.flow.dom.Element;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import tools.jackson.databind.ObjectMapper;
+
+import com.vaadin.demo.nordicsupply.config.DisplayLocale;
 
 /**
  * The table asks its query for the page the grid shows, in the view's sort, with the search box's text as the term,
@@ -32,6 +42,23 @@ class DataTableTest {
             IntStream.rangeClosed(1, 120).mapToObj(i -> new Row("Row " + i)).toList();
     private final List<String> terms = new ArrayList<>();
     private final List<Pageable> pages = new ArrayList<>();
+
+    /**
+     * The table takes its locale from the UI it is built in; held here, since the current UI is kept only weakly
+     * and a garbage collection would otherwise clear it mid-test.
+     */
+    private final UI ui = new UI();
+
+    @BeforeEach
+    void aUiInTheDisplayLocale() {
+        ui.setLocale(DisplayLocale.LOCALE);
+        UI.setCurrent(ui);
+    }
+
+    @AfterEach
+    void noUi() {
+        UI.setCurrent(null);
+    }
 
     /** A query over 120 rows that records what it is asked and filters like the repositories do. */
     private Page<Row> fetch(String term, Pageable page) {
@@ -47,8 +74,9 @@ class DataTableTest {
     }
 
     private DataTable<Row> table() {
-        return new DataTable<>(
-                "Rows", List.of(DataTable.Col.text("Name", Row::name)), Sort.by("name"), this::fetch, "Search name");
+        var table = new DataTable<Row>("Rows", Sort.by("name"), this::fetch, "Search name");
+        table.text("Name", Row::name);
+        return table;
     }
 
     @Test
@@ -120,19 +148,47 @@ class DataTableTest {
     }
 
     @Test
-    void numbersAlignToTheEndAndEverythingElseToTheStart() {
-        var table = new DataTable<Row>(
-                "Rows",
-                List.of(
-                        DataTable.Col.text("Name", Row::name),
-                        DataTable.Col.number("Length", row -> row.name().length())),
-                Sort.by("name"),
-                this::fetch,
-                "Search name");
+    void amountsAndCountsAlignToTheEndAndEverythingElseToTheStart() {
+        var table = new DataTable<Row>("Rows", Sort.by("name"), this::fetch, "Search name");
+        table.text("Name", Row::name);
+        table.date("Since", row -> LocalDate.of(2026, 8, 28));
+        table.money("Net", row -> new BigDecimal("9034.5"));
+        table.number("Length", row -> row.name().length());
+        table.flag("Named", row -> true);
 
         assertThat(grid(table).getColumns())
                 .extracting(Grid.Column::getHeaderText, Grid.Column::getTextAlign)
-                .containsExactly(tuple("Name", ColumnTextAlign.START), tuple("Length", ColumnTextAlign.END));
+                .containsExactly(
+                        tuple("Name", ColumnTextAlign.START),
+                        tuple("Since", ColumnTextAlign.START),
+                        tuple("Net", ColumnTextAlign.END),
+                        tuple("Length", ColumnTextAlign.END),
+                        tuple("Named", ColumnTextAlign.START));
+    }
+
+    @Test
+    void amountsAreGroupedWithTwoDecimalsInTheUisLocaleAndDatesStayIso() {
+        var table = new DataTable<Row>("Rows", Sort.by("name"), this::fetch, "Search name");
+        table.money("Net", row -> new BigDecimal("9034.5"));
+        table.number("Count", row -> 12426);
+        table.date("Since", row -> LocalDate.of(2026, 8, 28));
+
+        assertThat(rendered(table, new Row("Row 1"))).containsExactly("9\u00a0034,50", "12\u00a0426", "2026-08-28");
+    }
+
+    /** What the grid's renderers write into a row's cells, column by column. */
+    private static List<String> rendered(DataTable<Row> table, Row row) {
+        return grid(table).getColumns().stream()
+                .map(column -> {
+                    var json = new ObjectMapper().createObjectNode();
+                    column.getRenderer()
+                            .render(new Element("div"), new KeyMapper<>())
+                            .getDataGenerator()
+                            .orElseThrow()
+                            .generateData(row, json);
+                    return json.properties().iterator().next().getValue().asString();
+                })
+                .toList();
     }
 
     private static Query<Row, Void> query(int offset, int limit) {

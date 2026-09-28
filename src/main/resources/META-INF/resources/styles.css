@@ -168,10 +168,6 @@ vaadin-side-nav-item[current] {
   min-height: 0;   /* a flex item stops shrinking at its content's height, which would push the grid past the page */
 }
 
-.data-table vaadin-text-field {
-  width: 360px;   /* wide enough for the longest placeholder */
-}
-
 /* ---- Home: what the demo is, and the cards to start from ---- */
 .about {
   display: grid;

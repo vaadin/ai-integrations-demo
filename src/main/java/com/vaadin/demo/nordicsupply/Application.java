@@ -4,6 +4,8 @@ import java.util.Locale;
 
 import com.vaadin.flow.component.dependency.StyleSheet;
 import com.vaadin.flow.component.page.AppShellConfigurator;
+import com.vaadin.flow.component.page.ColorScheme;
+import com.vaadin.flow.theme.aura.Aura;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -13,9 +15,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * a view of its own.
  */
 @SpringBootApplication
-@StyleSheet("theme.css")
-@StyleSheet("shell.css")
-@StyleSheet("components.css")
+@StyleSheet(Aura.STYLESHEET)
+@StyleSheet("styles.css")
+@ColorScheme(ColorScheme.Value.DARK)
 public class Application implements AppShellConfigurator {
 
     static {

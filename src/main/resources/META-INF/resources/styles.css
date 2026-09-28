@@ -1,0 +1,216 @@
+/*
+ * The demo's styles on top of Aura: the theme tokens, the app shell (the rail, and the page heading with its
+ * watermark), and the reusable pieces (the Home page's about block and cards, and the rail's footer).
+ */
+
+/* ---- the theme: gold on black, the whole page one surface ---- */
+:root {
+  --aura-background-color-dark: #000;
+  --aura-accent-color-dark: #FFD13B;
+  --aura-base-radius: 8;
+  --aura-surface-level: -2;
+  --aura-app-background: radial-gradient(70% 70% at 50% 100%, rgba(59, 59, 59, 0.513333) 0%, rgba(0, 0, 0, 0.7) 100%), #000000;
+
+  --aura-app-layout-inset: 0px;
+  --aura-app-layout-border-width: 0px;
+  --vaadin-app-layout-drawer-width: 14rem;
+
+  --vaadin-side-nav-item-font-weight: var(--aura-font-weight-semibold);
+  --vaadin-side-nav-item-padding: var(--vaadin-padding-block-container) var(--vaadin-padding-m);
+  --vaadin-side-nav-items-gap: var(--vaadin-gap-s);
+}
+
+vaadin-app-layout {
+  &::part(content) {
+    background: transparent;
+  }
+
+  &:not([overlay]) vaadin-drawer-toggle {
+    display: none;
+  }
+}
+
+/* ---- the rail: the wordmark, the navigation in a scroller, the Vaadin mark ---- */
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-side-nav-items-gap);
+  margin: var(--vaadin-padding-xl) var(--vaadin-padding-xl) var(--vaadin-gap-s);
+  padding: var(--vaadin-side-nav-item-padding);
+}
+
+.wordmark .mark {
+  flex: none;
+  border-radius: var(--vaadin-radius-m);
+  background: var(--aura-accent-color);
+  color: var(--aura-accent-contrast-color);
+}
+
+/* the company name as a two-line lockup; its sizes are drawn, not taken from the type scale */
+.wordmark .name {
+  width: min-content;
+  font-weight: 700;
+  font-style: italic;
+  font-stretch: 90%;
+  font-width: 90%;
+  font-size: 0.95rem;
+  line-height: 0.9;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: var(--vaadin-text-color);
+  text-indent: 0.2em;
+}
+
+/* the navigation keeps the rail's inset on both sides, not the scroller's own */
+vaadin-app-layout > vaadin-scroller.rail-nav[slot=drawer] {
+  --vaadin-scroller-padding-inline: var(--vaadin-padding-xl);
+  padding-inline-start: var(--vaadin-padding-xl);
+}
+
+vaadin-side-nav-item[current] {
+  &::part(content) {
+    --aura-surface-opacity: 0.7;
+    --vaadin-side-nav-item-text-color: var(--vaadin-text-color);
+    background-clip: border-box;
+  }
+
+  > vaadin-icon[slot=prefix] {
+    color: var(--aura-accent-text-color);
+  }
+}
+
+/* "Powered by Vaadin" at the foot of the rail */
+.powered-by {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-gap-s);
+  margin: var(--vaadin-gap-s) var(--vaadin-padding-xl) var(--vaadin-padding-xl);
+  padding: var(--vaadin-side-nav-item-padding);
+  color: var(--vaadin-text-color-secondary);
+  font-size: var(--aura-font-size-s);
+  text-decoration: none;
+  --vaadin-icon-size: 1.1rem;
+}
+
+.powered-by:hover {
+  color: var(--vaadin-text-color);
+}
+
+/* ---- pages: the heading, and the watermark behind it ---- */
+/* a page is a column that clips the watermark, which is wider than it, and scrolls when a window is shorter than its
+   content; its children are lifted above the watermark, which sits inside the heading */
+.page {
+  position: relative;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;   /* each block as wide as its content; a block that wants the width says so */
+  gap: var(--vaadin-gap-s);
+  padding: var(--vaadin-padding-l);
+  box-sizing: border-box;
+}
+
+.page > * {
+  position: relative;
+  z-index: 1;
+}
+
+.page-heading {
+  display: grid;
+  line-height: 1.05;
+}
+
+/* the title and the watermark are display type; their sizes are drawn, not taken from the type scale */
+.page-title {
+  grid-column: 2;
+  line-height: inherit;   /* the heading's own line height, not Aura's h1 */
+  font-size: 1.7rem;
+  font-weight: 700;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.page-subtitle {
+  grid-column: 2;
+  font-size: var(--aura-font-size-xs);
+  font-weight: 700;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--aura-accent-text-color);
+}
+
+.watermark {
+  position: absolute;
+  top: -0.32em;
+  left: 1.5rem;
+  font-size: 11rem;
+  font-weight: 700;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--aura-accent-color);
+  opacity: 0.1;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 0;
+}
+
+/* ---- Home: what the demo is, and the cards to start from ---- */
+.about {
+  display: grid;
+  gap: var(--vaadin-gap-xs);
+  max-width: 62ch;
+  margin-top: var(--vaadin-gap-xl);   /* a breath under the heading, clear of the watermark */
+}
+
+.about-title {
+  font-size: var(--aura-font-size-xl);
+  line-height: 1.3;
+}
+
+.about .intro {
+  line-height: 1.5;
+}
+
+.section-title {
+  font-size: var(--aura-font-size-xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vaadin-text-color-secondary);
+  margin-top: var(--vaadin-gap-s);
+}
+
+.start-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 320px));
+  gap: var(--vaadin-gap-l);
+  width: 100%;
+}
+
+/* a card that is one link: the whole card is the anchor */
+.start-card {
+  text-decoration: none;
+  color: inherit;
+}
+
+.start-card vaadin-card {
+  --vaadin-card-padding: var(--vaadin-padding-l);
+  --vaadin-card-title-color: var(--aura-accent-text-color);
+  --vaadin-card-title-font-size: var(--aura-font-size-l);
+  --vaadin-card-title-font-weight: 700;
+}
+
+.start-card vaadin-card:hover {
+  --vaadin-card-border-color: var(--aura-accent-border-color);
+}
+
+.start-card vaadin-card .text {
+  font-size: var(--aura-font-size-m);
+  color: var(--vaadin-text-color-secondary);
+}

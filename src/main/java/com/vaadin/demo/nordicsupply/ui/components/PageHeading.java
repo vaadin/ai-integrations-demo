@@ -6,10 +6,10 @@ import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Span;
 
 /**
- * The heading every view carries: the title as the page's {@code h1} in heavy italic capitals, a gold subtitle under
- * it, and the same word as a large translucent watermark behind the top of the page. The view adds the {@code page}
- * class, which clips the watermark at the page's edge and lifts the content above it. The drawer toggle shows only
- * when the rail is collapsed into an overlay.
+ * The heading every page carries: the title as the page's {@code h1} in heavy italic capitals, a gold subtitle under
+ * it, and the same word as a large translucent watermark behind the top of the page. The page's {@code page} class
+ * clips the watermark at the page's edge and lifts the content above it. The drawer toggle shows only when the rail
+ * is collapsed into an overlay.
  */
 public class PageHeading extends Div {
 

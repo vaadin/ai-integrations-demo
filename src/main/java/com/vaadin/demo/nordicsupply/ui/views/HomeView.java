@@ -1,5 +1,7 @@
 package com.vaadin.demo.nordicsupply.ui.views;
 
+import com.vaadin.flow.component.card.Card;
+import com.vaadin.flow.component.card.CardVariant;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.AnchorTarget;
 import com.vaadin.flow.component.html.Div;
@@ -7,27 +9,27 @@ import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
 import com.vaadin.demo.nordicsupply.ui.MainLayout;
-import com.vaadin.demo.nordicsupply.ui.components.PageHeading;
 
-/** The entry page of the demo: what the application is, and cards with where to go from here. */
-@Route(value = "", layout = MainLayout.class)
+/**
+ * The entry page: what the demo is, and cards that lead to the documentation, the source and Vaadin Start. It is the
+ * readme of the application.
+ */
+@Route("")
 @PageTitle("Home")
-public class HomeView extends VerticalLayout {
+@Menu(order = 0, title = "Home", icon = "icons/house.svg")
+public class HomeView extends PageView {
 
     private static final String DOCS = "https://vaadin.com/docs/latest/flow/ai-support";
     private static final String SOURCE = "https://github.com/vaadin/ai-integrations-demo";
     private static final String START = "https://start.vaadin.com";
 
     public HomeView() {
-        setSizeFull();
-        setPadding(true);
-        addClassName("page");
-        var heading = new PageHeading(MainLayout.COMPANY, "Order desk");
+        super(MainLayout.COMPANY, "Order desk");
 
         var aboutTitle = new H2("About this demo");
         aboutTitle.addClassName("about-title");
@@ -48,18 +50,20 @@ public class HomeView extends VerticalLayout {
                         "Generate a Vaadin project of your own and add the AI components to it.",
                         START));
         docs.addClassName("start-cards");
-        add(heading, about, readMore, docs);
+        add(about, readMore, docs);
     }
 
     /** A card that is one link, opening in a new tab: a title and one line saying what is there. */
     private static Anchor card(String title, String text, String href) {
-        var titleSpan = new Span(title);
-        titleSpan.addClassName("title");
-        var textSpan = new Span(text);
-        textSpan.addClassName("text");
-        var card = new Anchor(href, titleSpan, textSpan);
-        card.setTarget(AnchorTarget.BLANK);
-        card.addClassName("start-card");
-        return card;
+        var card = new Card();
+        card.addThemeVariants(CardVariant.OUTLINED);
+        card.setTitle(title, 4);
+        var line = new Span(text);
+        line.addClassName("text");
+        card.add(line);
+        var link = new Anchor(href, card);
+        link.setTarget(AnchorTarget.BLANK);
+        link.addClassName("start-card");
+        return link;
     }
 }

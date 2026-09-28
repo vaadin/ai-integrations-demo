@@ -1,6 +1,5 @@
 package com.vaadin.demo.nordicsupply.ui;
 
-import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.AnchorTarget;
@@ -8,15 +7,18 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.SvgIcon;
 import com.vaadin.flow.component.orderedlayout.Scroller;
+import com.vaadin.flow.component.orderedlayout.ScrollerVariant;
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
-
-import com.vaadin.demo.nordicsupply.ui.views.HomeView;
+import com.vaadin.flow.router.Layout;
+import com.vaadin.flow.server.menu.MenuConfiguration;
 
 /**
- * The app shell: a left rail with the Nordic Supply wordmark, the back-office views, and the Vaadin mark at its foot.
- * No top bar: each view carries its own heading.
+ * The app shell, the layout of every view: a left rail with the Nordic Supply wordmark, the views that list
+ * themselves with {@code @Menu} in the order they are to be tried, and the Vaadin mark at its foot. No top bar: each
+ * view carries its own heading.
  */
+@Layout
 public class MainLayout extends AppLayout {
 
     /** The company whose back office this is; every view is written for it. */
@@ -31,23 +33,17 @@ public class MainLayout extends AppLayout {
         wordmark.addClassName("wordmark");
 
         var nav = new SideNav();
-        nav.addItem(new SideNavItem("Home", HomeView.class, new SvgIcon("icons/house.svg")));
+        for (var entry : MenuConfiguration.getMenuEntries()) {
+            nav.addItem(new SideNavItem(entry.title(), entry.menuClass(), new SvgIcon(entry.icon())));
+        }
+        var scroller = new Scroller(nav);
+        scroller.addClassName("rail-nav");
+        scroller.addThemeVariants(ScrollerVariant.OVERFLOW_INDICATORS);
 
         var powered = new Anchor("https://vaadin.com", new SvgIcon("icons/vaadin.svg"), new Span("Powered by Vaadin"));
         powered.setTarget(AnchorTarget.BLANK);
         powered.addClassName("powered-by");
 
-        var drawer = new Div(wordmark, new Scroller(nav), powered);
-        drawer.addClassName("drawer");
-        addToDrawer(drawer);
-    }
-
-    /** Every view is the page's main landmark, for assistive technology to jump to. */
-    @Override
-    public void setContent(Component content) {
-        super.setContent(content);
-        if (content != null) {
-            content.getElement().setAttribute("role", "main");
-        }
+        addToDrawer(wordmark, scroller, powered);
     }
 }

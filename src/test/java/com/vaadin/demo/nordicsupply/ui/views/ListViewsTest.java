@@ -23,7 +23,10 @@ import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.ProductRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
 
-/** Each list view asks its repository for its rows in the order the view promises, and aligns its amounts. */
+/**
+ * Each list view asks its repository for its rows in the order the view promises, aligns its amounts, and carries a
+ * readme that names it and says what the list is.
+ */
 class ListViewsTest {
 
     @Test
@@ -64,6 +67,20 @@ class ListViewsTest {
                 .containsExactly("Terms (days)");
         assertThat(numberColumns(new ProductsView(mock(ProductRepository.class))))
                 .containsExactly("List price (EUR)");
+    }
+
+    @Test
+    void eachListCarriesAReadmeThatSaysWhatItListsAndWhatTheSearchMatches() {
+        var readmes = List.of(
+                new OrdersView(mock(SalesOrderRepository.class)).readme(),
+                new CustomersView(mock(CustomerRepository.class)).readme(),
+                new ProductsView(mock(ProductRepository.class)).readme());
+
+        assertThat(readmes)
+                .satisfiesExactly(
+                        orders -> assertThat(orders).contains("one row per sales order", "Search by"),
+                        customers -> assertThat(customers).contains("One row per retail customer", "Search by"),
+                        products -> assertThat(products).contains("one row per product", "Search by"));
     }
 
     /** Fetches the first page the way the browser does when the view opens. */

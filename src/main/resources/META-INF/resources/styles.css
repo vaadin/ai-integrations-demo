@@ -99,6 +99,30 @@ vaadin-button.rail-button[slot=drawer][theme~=tertiary] {
   }
 }
 
+/* the signed-in user, the rail button under Help: quieter, its initials on the line like the icons above */
+.rail-user {
+  --vaadin-button-text-color: var(--vaadin-text-color-secondary);
+  --vaadin-avatar-size: 1lh;
+}
+
+/* one employee in the switcher: the initials, then the name over the region */
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-gap-s);
+  padding: var(--vaadin-padding-xs) 0;
+}
+
+.user-item .name,
+.user-item .region {
+  display: block;
+}
+
+.user-item .region {
+  font-size: var(--aura-font-size-xs);
+  color: var(--vaadin-text-color-secondary);
+}
+
 /* "Powered by Vaadin" at the foot of the rail */
 .powered-by {
   display: flex;

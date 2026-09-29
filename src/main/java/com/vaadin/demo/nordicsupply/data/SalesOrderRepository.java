@@ -3,6 +3,7 @@ package com.vaadin.demo.nordicsupply.data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,13 +26,17 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Integer>
             String channel,
             BigDecimal totalNet) {}
 
-    /** The rows matching a {@link SearchTerms#like} term on number, customer or status; every row for {@code ""}. */
+    /**
+     * The rows of the orders of customers in the given countries matching a {@link SearchTerms#like} term on number,
+     * customer or status; every such row for {@code ""}.
+     */
     @Query("""
             select new com.vaadin.demo.nordicsupply.data.SalesOrderRepository$Row(
                 o.orderNumber, c.name, o.placedAt, o.status, o.promisedDeliveryDate, o.channel, o.totalNet)
             from SalesOrder o join o.customer c
-            where :term = '' or lower(o.orderNumber) like :term escape '\\' or lower(c.name) like :term escape '\\'
-               or lower(o.status) like :term escape '\\'
+            where c.country in :countries
+              and (:term = '' or lower(o.orderNumber) like :term escape '\\' or lower(c.name) like :term escape '\\'
+                   or lower(o.status) like :term escape '\\')
             """)
-    Page<Row> search(@Param("term") String term, Pageable pageable);
+    Page<Row> search(@Param("term") String term, @Param("countries") List<String> countries, Pageable pageable);
 }

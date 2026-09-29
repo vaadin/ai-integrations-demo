@@ -70,6 +70,7 @@ class CurrentUserTest {
         session.set(lars);
 
         assertThat(session.get()).isEqualTo(lars);
+        assertThat(session.signal().peek()).isEqualTo(lars);
     }
 
     @Test

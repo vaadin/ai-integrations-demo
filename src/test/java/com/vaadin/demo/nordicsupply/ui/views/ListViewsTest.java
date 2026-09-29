@@ -13,6 +13,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.data.provider.Query;
+import com.vaadin.flow.signals.shared.SharedValueSignal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -41,6 +42,7 @@ class ListViewsTest {
     @BeforeEach
     void signedInAsLars() {
         when(currentUser.get()).thenReturn(LARS);
+        when(currentUser.signal()).thenReturn(new SharedValueSignal<>(LARS));
     }
 
     @Test

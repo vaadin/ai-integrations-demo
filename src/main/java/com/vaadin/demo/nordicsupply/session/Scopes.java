@@ -18,6 +18,11 @@ public final class Scopes {
 
     private Scopes() {}
 
+    /** The four regions, the head office first. */
+    public static List<Scope> roleScopes() {
+        return ROLE_SCOPES;
+    }
+
     /** The region a key names, or empty when the key is not one of the four. */
     public static Optional<Scope> roleScope(String key) {
         return ROLE_SCOPES.stream().filter(scope -> scope.key().equals(key)).findFirst();

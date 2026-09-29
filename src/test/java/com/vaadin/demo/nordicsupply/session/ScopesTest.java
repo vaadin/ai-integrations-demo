@@ -16,6 +16,11 @@ class ScopesTest {
     }
 
     @Test
+    void theFourRegionsComeHeadOfficeFirst() {
+        assertThat(Scopes.roleScopes()).containsExactly(Scopes.ALL, Scopes.FI_EE, Scopes.SE_NO, Scopes.DK_DE);
+    }
+
+    @Test
     void anyOtherKeyNamesNothing() {
         assertThat(Scopes.roleScope("fi")).isEmpty();
         assertThat(Scopes.roleScope("")).isEmpty();

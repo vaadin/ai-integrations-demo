@@ -1,5 +1,7 @@
 package com.vaadin.demo.nordicsupply.util;
 
+import org.springframework.core.NestedExceptionUtils;
+
 /**
  * What to say when something underneath fails. A JDBC failure arrives wrapped in several layers; the innermost
  * message is the one that says anything, and it is clipped so that what is shown or sent on stays readable.
@@ -15,10 +17,7 @@ public final class Errors {
      * request that carries it.
      */
     public static String rootMessage(Throwable t, int maxLength) {
-        var cause = t;
-        while (cause.getCause() != null) {
-            cause = cause.getCause();
-        }
+        var cause = NestedExceptionUtils.getMostSpecificCause(t);
         var message = cause.getMessage() != null
                 ? cause.getMessage()
                 : cause.getClass().getSimpleName();

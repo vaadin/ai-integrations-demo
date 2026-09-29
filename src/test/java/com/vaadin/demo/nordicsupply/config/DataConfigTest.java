@@ -1,6 +1,7 @@
 package com.vaadin.demo.nordicsupply.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.util.Map;
 
@@ -57,6 +58,24 @@ class DataConfigTest {
     void theSetUpScriptsHaveRun() {
         assertThat(jdbc.queryForList("select user_id from scope_assignment order by user_id", Integer.class))
                 .containsExactly(1, 8, 9, 10);
+    }
+
+    /** The data scope: one schema of filtered views per region under the base tables' names, and its account. */
+    @Test
+    void theScopedViewsAndTheRegionsAccountsExist() {
+        assertThat(jdbc.queryForList("select table_schema, count(*) as views from information_schema.views"
+                        + " where table_schema like 'SCOPED\\_%' group by table_schema order by table_schema"))
+                .extracting(row -> row.get("TABLE_SCHEMA"), row -> row.get("VIEWS"))
+                .containsExactly(
+                        tuple("SCOPED_ALL", 24L),
+                        tuple("SCOPED_DK_DE", 24L),
+                        tuple("SCOPED_FI_EE", 24L),
+                        tuple("SCOPED_SE_NO", 24L));
+        assertThat(jdbc.queryForList(
+                        "select user_name from information_schema.users where user_name like 'AI_READER%'"
+                                + " order by user_name",
+                        String.class))
+                .containsExactly("AI_READER_ALL", "AI_READER_DK_DE", "AI_READER_FI_EE", "AI_READER_SE_NO");
     }
 
     @Test

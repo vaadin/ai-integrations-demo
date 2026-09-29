@@ -1,9 +1,9 @@
 package com.vaadin.demo.nordicsupply.ui.components;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,24 +14,35 @@ import com.vaadin.flow.component.listbox.ListBox;
 import com.vaadin.flow.component.page.Page;
 import com.vaadin.flow.component.popover.Popover;
 import com.vaadin.flow.router.AfterNavigationEvent;
-import com.vaadin.flow.router.BeforeLeaveEvent;
-import com.vaadin.flow.router.Location;
+import com.vaadin.flow.signals.shared.SharedValueSignal;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.CurrentUser.SignedInUser;
 import com.vaadin.demo.nordicsupply.session.Scopes;
 
-/** The rail's user entry, a button, names the signed-in user and lets the session switch to another demo user. */
+/**
+ * The rail's user entry, a button, names the signed-in user, lets the session switch to another demo user, and reloads
+ * the page when the session switches.
+ */
 class UserSwitcherTest {
 
     private static final SignedInUser TEST_USER = new SignedInUser(1, "Test User", Scopes.ALL);
     private static final SignedInUser LARS = new SignedInUser(8, "Lars Nygaard", Scopes.FI_EE);
 
+    /** The session's signal, as the session bean would hold it. */
+    private final SharedValueSignal<SignedInUser> signedIn = new SharedValueSignal<>(TEST_USER);
+
     private final CurrentUser currentUser = mock(CurrentUser.class);
+
     private final Page page = mock(Page.class);
 
-    /** The page the entry is on; a mock of its browser page shows whether it reloads. */
+    /**
+     * The current UI, held here since Flow keeps it only weakly; the entry is attached to it so its effect runs, and
+     * a mock of its browser page shows whether it reloads.
+     */
     private final UI ui = new UI() {
         @Override
         public Page getPage() {
@@ -39,10 +50,28 @@ class UserSwitcherTest {
         }
     };
 
-    /** The entry as the rail shows it on the page, with this user signed in. */
-    private UserSwitcher switcher(SignedInUser signedIn) {
+    @BeforeEach
+    void aUi() {
+        UI.setCurrent(ui);
         when(currentUser.all()).thenReturn(List.of(TEST_USER, LARS));
-        when(currentUser.get()).thenReturn(signedIn);
+        when(currentUser.signal()).thenReturn(signedIn.asReadonly());
+        when(currentUser.get()).thenAnswer(invocation -> signedIn.peek());
+        doAnswer(invocation -> {
+                    signedIn.set(invocation.getArgument(0));
+                    return null;
+                })
+                .when(currentUser)
+                .set(any());
+    }
+
+    @AfterEach
+    void noUi() {
+        UI.setCurrent(null);
+    }
+
+    /** The entry as the rail shows it on the page, with this user signed in. */
+    private UserSwitcher switcher(SignedInUser user) {
+        signedIn.set(user);
         var switcher = new UserSwitcher(currentUser);
         ui.add(switcher);
         return switcher;
@@ -80,7 +109,34 @@ class UserSwitcherTest {
     @Test
     void choosingAnotherUserSignsTheSessionInAsThemAndReloadsThePage() {
         switcher(TEST_USER);
+
         users().setValue(LARS);
+
+        verify(currentUser).set(LARS);
+        verify(page).reload();
+    }
+
+    /** Another tab of the session switches it; this tab's page reloads too. */
+    @Test
+    void aSwitchInAnotherTabReloadsThePage() {
+        switcher(TEST_USER);
+
+        signedIn.set(LARS);
+
+        verify(page).reload();
+    }
+
+    /**
+     * Another tab of the session can switch it after this one was drawn, so a tab can name a user the session has
+     * left. Choosing the session's user there is still a choice: the tab reloads as them.
+     */
+    @Test
+    void aTabLeftBehindByAnotherTabReloadsAsTheUserChosen() {
+        switcher(TEST_USER);
+        var users = users();
+        when(currentUser.get()).thenReturn(LARS);
+
+        users.setValue(LARS);
 
         verify(currentUser).set(LARS);
         verify(page).reload();
@@ -106,56 +162,6 @@ class UserSwitcherTest {
         switcher.afterNavigation(mock(AfterNavigationEvent.class));
 
         assertThat(popover().isOpened()).isFalse();
-    }
-
-    /**
-     * Another tab of the session can switch it after this one was drawn, so a tab can name a user the session has
-     * left. Choosing the session's user there is still a choice: the tab reloads as them.
-     */
-    @Test
-    void aTabLeftBehindByAnotherTabReloadsAsTheUserChosen() {
-        switcher(TEST_USER);
-        var users = users();
-        when(currentUser.get()).thenReturn(LARS);
-
-        users.setValue(LARS);
-
-        verify(currentUser).set(LARS);
-        verify(page).reload();
-    }
-
-    /**
-     * The views read the session's user when they are built, so a tab left behind would show the new user's rows
-     * under the old name after its next navigation. It holds that navigation back and loads the view afresh instead.
-     */
-    @Test
-    void aTabLeftBehindLoadsItsNextViewAfreshAsTheSessionsUser() {
-        var switcher = switcher(TEST_USER);
-        when(currentUser.get()).thenReturn(LARS);
-        var leaving = leavingFor("customers");
-
-        switcher.beforeLeave(leaving);
-
-        verify(leaving).postpone();
-        verify(page).setLocation("customers");
-    }
-
-    @Test
-    void aTabStillOnTheSessionsUserNavigatesAsUsual() {
-        var switcher = switcher(LARS);
-        var leaving = leavingFor("customers");
-
-        switcher.beforeLeave(leaving);
-
-        verify(leaving, never()).postpone();
-        verify(page, never()).setLocation(anyString());
-    }
-
-    /** The event Flow sends the page's components before it leaves the view for the one at this location. */
-    private static BeforeLeaveEvent leavingFor(String location) {
-        var event = mock(BeforeLeaveEvent.class);
-        when(event.getLocation()).thenReturn(new Location(location));
-        return event;
     }
 
     /** The list's popover, which Flow adds to the page once the entry is on it. */

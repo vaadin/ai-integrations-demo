@@ -1,0 +1,141 @@
+package com.vaadin.demo.nordicsupply.ui.views;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.stream.Stream;
+
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.HasStyle;
+import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.ai.common.ConfidenceLevel;
+import com.vaadin.flow.component.ai.common.PageRegion;
+import com.vaadin.flow.component.ai.common.Rect;
+import com.vaadin.flow.component.ai.common.SourceExtract;
+import com.vaadin.flow.component.ai.common.ValueSource;
+import com.vaadin.flow.component.html.Span;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+/**
+ * A PDF is shown as its pages and an image as one, with the model told their shape; an outline goes on the text a
+ * PDF prints, or where the model placed it on an image, coloured by confidence; a text marks the snippets in it.
+ */
+class AttachmentViewerTest {
+
+    /** A page is an image the UI serves; held here, since the current UI is kept only weakly. */
+    private final UI ui = new UI();
+
+    @BeforeEach
+    void aUi() {
+        UI.setCurrent(ui);
+    }
+
+    @AfterEach
+    void noUi() {
+        UI.setCurrent(null);
+    }
+
+    @Test
+    void aPdfIsShownAsItsPagesAndDescribedToTheModel() {
+        var viewer = new AttachmentViewer("Damaged pallet.pdf", "application/pdf", ExampleFile.DAMAGED_PALLET.bytes());
+
+        assertThat(viewer.pageCount()).isEqualTo(1);
+        assertThat(viewer.geometry()).isEqualTo("a PDF of 1 page, each 595 points wide and 842 points tall");
+    }
+
+    @Test
+    void anImageIsOnePageOfItsSizeInPixels() {
+        var viewer = new AttachmentViewer("wrong-color.png", "image/png", ExampleFile.WRONG_COLOUR.bytes());
+
+        assertThat(viewer.pageCount()).isEqualTo(1);
+        assertThat(viewer.geometry()).matches("an image \\d+ pixels wide and \\d+ pixels tall");
+    }
+
+    @Test
+    void anOutlineOnAPdfGoesOnTheTextItNamesNotOnTheEstimate() {
+        var viewer = new AttachmentViewer("Damaged pallet.pdf", "application/pdf", ExampleFile.DAMAGED_PALLET.bytes());
+        var farOff = new PageRegion(1, new Rect(0.05, 0.05, 0.2, 0.02));
+
+        viewer.show(new ValueSource(
+                ConfidenceLevel.HIGH, List.of(new SourceExtract("Order number: SO-2026-007365", farOff))));
+
+        assertThat(outlines(viewer)).singleElement().satisfies(box -> {
+            assertThat(box.getClassNames()).contains("source", "high");
+            assertThat(Double.parseDouble(box.getStyle().get("top").replace("%", "")))
+                    .isGreaterThan(50);
+        });
+    }
+
+    @Test
+    void anOutlineOnAnImageIsWhereTheModelPlacedIt() {
+        var viewer = new AttachmentViewer("wrong-color.png", "image/png", ExampleFile.WRONG_COLOUR.bytes());
+        var region = new PageRegion(1, new Rect(0.1, 0.2, 0.3, 0.05));
+
+        viewer.show(new ValueSource(null, List.of(new SourceExtract("SO-2026-007367", region))));
+
+        assertThat(outlines(viewer)).singleElement().satisfies(box -> {
+            assertThat(box.getClassNames()).contains("unrated");
+            assertThat(box.getStyle().get("left")).isEqualTo("10.00%");
+            assertThat(box.getStyle().get("top")).isEqualTo("20.00%");
+            assertThat(box.getStyle().get("width")).isEqualTo("30.00%");
+            assertThat(box.getStyle().get("height")).isEqualTo("5.00%");
+        });
+    }
+
+    @Test
+    void anExtractOnAPageTheAttachmentDoesNotHaveIsNotOutlined() {
+        var viewer = new AttachmentViewer("wrong-color.png", "image/png", ExampleFile.WRONG_COLOUR.bytes());
+
+        viewer.show(new ValueSource(
+                ConfidenceLevel.LOW,
+                List.of(
+                        new SourceExtract("x", new PageRegion(2, new Rect(0, 0, 1, 1))),
+                        new SourceExtract("y", null))));
+
+        assertThat(outlines(viewer)).isEmpty();
+    }
+
+    @Test
+    void noSourceClearsTheOutlines() {
+        var viewer = new AttachmentViewer("wrong-color.png", "image/png", ExampleFile.WRONG_COLOUR.bytes());
+        viewer.show(new ValueSource(
+                ConfidenceLevel.HIGH, List.of(new SourceExtract("x", new PageRegion(1, new Rect(0, 0, 1, 1))))));
+
+        viewer.show(null);
+
+        assertThat(outlines(viewer)).isEmpty();
+    }
+
+    @Test
+    void aTextMarksTheSnippetsItHas() {
+        var message = "20 jackets came in Moss\nGreen, we ordered Midnight Blue.";
+        var viewer = new AttachmentViewer("Pasted text", "text/plain", message.getBytes(StandardCharsets.UTF_8));
+
+        viewer.show(new ValueSource(
+                ConfidenceLevel.MEDIUM,
+                List.of(new SourceExtract("moss green", null), new SourceExtract("not in the text", null))));
+
+        assertThat(viewer.pageCount()).isZero();
+        assertThat(viewer.geometry()).isEmpty();
+        assertThat(descendants(viewer).filter(Span.class::isInstance).map(Span.class::cast))
+                .singleElement()
+                .satisfies(mark -> {
+                    assertThat(mark.getText()).isEqualTo("Moss\nGreen");
+                    assertThat(mark.getClassNames()).contains("source", "medium");
+                });
+    }
+
+    private static List<HasStyle> outlines(Component viewer) {
+        return descendants(viewer)
+                .filter(c -> c instanceof HasStyle styled && styled.hasClassName("source"))
+                .map(HasStyle.class::cast)
+                .toList();
+    }
+
+    private static Stream<Component> descendants(Component root) {
+        return Stream.concat(Stream.of(root), root.getChildren().flatMap(AttachmentViewerTest::descendants));
+    }
+}

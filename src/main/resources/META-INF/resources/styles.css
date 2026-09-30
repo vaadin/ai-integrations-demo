@@ -1,7 +1,8 @@
 /*
  * The demo's styles on top of Aura: the theme tokens, the app shell (the rail, and the page heading with its
  * watermark), the reusable pieces (the read-only data table, the Home page's about block and cards, and the rail's
- * footer), and the Claims view (the message area, the example files and the claim form).
+ * footer), and the Claims view (the message area, the example files, the message with where the AI read a value,
+ * and the claim form).
  */
 
 /* ---- the theme: gold on black, the whole page one surface ---- */
@@ -564,5 +565,100 @@ vaadin-radio-group.segmented.aura-surface {
     &[focus-ring] {
       outline: var(--vaadin-focus-ring-width) solid var(--vaadin-focus-ring-color);
     }
+  }
+}
+
+/* the message the AI reads, in place of the area and the examples: its name and what the AI is doing, a button
+   that closes it, and the message, which scrolls on its own beside the form */
+.message-panel {
+  display: grid;
+  gap: var(--vaadin-gap-m);
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vaadin-gap-s);
+
+  > div {
+    display: grid;
+  }
+
+  .message-name {
+    font-weight: var(--aura-font-weight-semibold);
+  }
+
+  .message-status {
+    font-size: var(--aura-font-size-s);
+    color: var(--vaadin-text-color-secondary);
+  }
+}
+
+/* the pages one above the other, scrolling inside the column */
+.attachment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-m);
+  max-height: calc(100vh - 14rem);
+  overflow: auto;
+  border-radius: var(--vaadin-radius-l);
+}
+
+/* a page as the AI saw it, with an outline in percent of the page wherever it read a value. It keeps its image's
+   height: a page shrunk to the column would move every outline up and cut off the page's foot */
+.attachment-page {
+  flex: none;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--vaadin-radius-m);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+/* how sure the model was, as the field marker says it: the colour of an outline */
+.attachment .source {
+  --_source-color: var(--aura-accent-color);
+
+  &.high {
+    --_source-color: var(--aura-green);
+  }
+
+  &.medium {
+    --_source-color: var(--aura-orange);
+  }
+
+  &.low {
+    --_source-color: var(--aura-red);
+  }
+}
+
+.attachment-page .source {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--_source-color);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--_source-color) 18%, transparent);
+}
+
+/* a text has no pages: what the AI read is marked in it */
+.attachment-text {
+  margin: 0;
+  padding: var(--vaadin-padding-l);
+  border: 1px solid var(--vaadin-border-color-secondary);
+  border-radius: var(--vaadin-radius-l);
+  font: inherit;
+  line-height: 1.5;
+  white-space: pre-wrap;
+
+  .source {
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--_source-color) 35%, transparent);
+    box-shadow: 0 0 0 2px var(--_source-color);
   }
 }

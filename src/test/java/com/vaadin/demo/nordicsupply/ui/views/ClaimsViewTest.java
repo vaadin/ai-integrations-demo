@@ -99,7 +99,8 @@ class ClaimsViewTest {
 
     @Test
     void theReadmeSaysHowAMessageBecomesAClaim() {
-        assertThat(view.readme()).contains("Drop the customer's message", "AI badge", "does not save claims");
+        assertThat(view.readme())
+                .contains("Drop the customer's message", "AI badge", "outlined", "does not save claims");
     }
 
     private static Stream<Component> descendants(Component root) {

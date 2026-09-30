@@ -10,6 +10,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.ai.orchestrator.AIOrchestrator;
 import com.vaadin.flow.component.ai.orchestrator.ResponseListener.ResponseEvent;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dnd.DragSource;
 import com.vaadin.flow.component.dnd.DropEffect;
@@ -51,7 +52,9 @@ import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 /**
  * A customer's complaint becomes a claim: the message goes into the area on the left, dropped or chosen as a file or
  * pasted as text, and the AI fills in the claim form on the right from it, through Vaadin's form filler, for a person
- * to check and create. Under the area are the dataset's example messages, to drag there or click.
+ * to check and create. Under the area are the dataset's example messages, to drag there or click. Once a message is
+ * read, it takes the area's place, and the field in focus has the words its value came from outlined in it, from the
+ * sources the form filler tracks.
  * <p>
  * Every message is a new claim, so the form is emptied before the AI reads one, and one message is read at a time:
  * the area and the examples wait while the AI works. The message reaches the model as an attachment, never as the
@@ -69,7 +72,9 @@ public class ClaimsView extends PageView implements HasReadme {
             left, an email, a PDF, a screenshot or a photo, or paste its text there, and the AI fills in the claim
             form: it finds the customer by the sender, then the contact, the order and the shipment the message is
             about, and writes the description in English whatever the language of the message. Every field it filled
-            carries an AI badge, which also undoes the change.
+            carries an AI badge, which also undoes the change. The message stays in view while you check the form:
+            focus a field, and the words the AI took its value from are outlined in the message, green where it was
+            sure of them, orange or red where less so.
 
             The example files are the demo data's own customer messages, exported as PDFs and a screenshot, so the
             customers, orders and shipments they name exist, and each tests something real messages do: an order
@@ -97,6 +102,11 @@ public class ClaimsView extends PageView implements HasReadme {
               named by its date instead of its number; the options show when each was placed, promised and
               delivered.
             - Leave a field empty rather than writing zero or guessing.
+            - Report where you read each value, every one you fill: also the claim type, the priority, the
+              resolution, a date you worked out and the description, from the words they rest on. Quote the text as
+              it is written in the message. Give every separately placed run of text its own extract: a label and the
+              value beside it are two extracts, never one. Make each rectangle span its run's full width and height,
+              in fractions of the page: left and width of the page's width, top and height of its height.
             - When the form is filled, answer with one short sentence: it is not shown to anyone.
             """;
 
@@ -117,9 +127,20 @@ public class ClaimsView extends PageView implements HasReadme {
 
     private final ClaimForm form;
     private final AIOrchestrator orchestrator;
+    private final transient Conversations conversations;
+    private final String conversationId = Conversations.newId();
 
     /** The name of the message the AI is reading, or {@code null} while it waits for one. */
     private final ValueSignal<String> reading = new ValueSignal<>(null);
+
+    /** The area and the examples, shown until a message is read. */
+    private final Div chooser;
+
+    /** The message being read or read, in place of the chooser. */
+    private final Div message = new Div();
+
+    /** What the message panel shows of the message, or {@code null} while no message is open. */
+    private AttachmentViewer viewer;
 
     private final Signal<Boolean> idle = reading.map(Objects::isNull);
 
@@ -137,13 +158,25 @@ public class ClaimsView extends PageView implements HasReadme {
                 orders,
                 shipments,
                 currentUser.get().scope().countries());
-        orchestrator = AIOrchestrator.builder(conversations.start(Conversations.newId()), SYSTEM_PROMPT)
+        this.conversations = conversations;
+        orchestrator = AIOrchestrator.builder(conversations.start(conversationId), SYSTEM_PROMPT)
                 .withController(form.aiController())
                 .withMetadata(() -> "Today is " + LocalDate.now() + ".")
                 .withResponseListener(this::turnEnded)
                 .build();
 
-        var source = new Section(title("New Claim Based on Customer Request"), dropZone(), demoTip());
+        chooser = new Div(dropZone(), demoTip());
+        chooser.addClassName("message-chooser");
+        message.addClassName("message-panel");
+        message.setVisible(false);
+        form.addSourceListener(e -> {
+            if (viewer != null) {
+                viewer.show(e.getValueSource().orElse(null));
+            }
+        });
+        form.addCreatedListener(e -> closeMessage());
+
+        var source = new Section(title("New Claim Based on Customer Request"), chooser, message);
         source.addClassName("claim-source");
         var entry = new Section(title("Create Claim"), form);
         entry.addClassName("claim-entry");
@@ -179,14 +212,8 @@ public class ClaimsView extends PageView implements HasReadme {
                 new Div(choose, new Span(" or drop an email, PDF, screenshot or photo")),
                 new Div("or paste text here"));
         instructions.addClassName("instructions");
-        instructions.bindVisible(idle);
-        var status = new Div();
-        status.addClassName("status");
-        status.bindText(reading.map(name -> name == null ? "" : "Reading " + shown(name) + "…"));
-        status.bindVisible(Signal.not(idle));
-        status.getElement().setAttribute("role", "status");
 
-        var zone = new UploadDropZone(new Div(instructions, status), manager);
+        var zone = new UploadDropZone(instructions, manager);
         zone.addClassNames("message-drop", "aura-surface");
         zone.getElement().setAttribute("tabindex", "0");
         zone.getElement().setAttribute("role", "group");
@@ -291,12 +318,52 @@ public class ClaimsView extends PageView implements HasReadme {
         }
         form.clear();
         reading.set(name);
+        openMessage(name, new AttachmentViewer(name, mimeType, data));
+        // the model is told the attachment's shape, to place the regions it reports on its pages
+        var prompt = viewer.geometry().isEmpty() ? PROMPT : PROMPT + " It is " + viewer.geometry() + ".";
         // the turn starts once the browser has shown the empty form: the form filler guards the fields on the client
         // when a turn starts, and values emptied in that same round trip stay on screen for a moment
         var attachment = new AIAttachment(name, mimeType, data);
+        // every message is a claim of its own: the model reads it alone, and no earlier message is sent again
+        conversations.forget(conversationId);
         getElement()
                 .executeJs("return null")
-                .then(ignored -> orchestrator.prompt(PROMPT, List.of(attachment)), error -> reading.set(null));
+                .then(ignored -> orchestrator.prompt(prompt, List.of(attachment)), error -> reading.set(null));
+    }
+
+    /**
+     * Shows the message in place of the area and the examples: its name, what the AI is doing with it, a button that
+     * closes it, and the message itself, with the place a value came from outlined when its field has the focus.
+     */
+    private void openMessage(String name, AttachmentViewer attachment) {
+        viewer = attachment;
+        var title = new Span(shown(name));
+        title.addClassName("message-name");
+        var status = new Span();
+        status.addClassName("message-status");
+        status.bindText(reading.map(busy -> busy == null
+                ? "Focus a field to see where the AI found its value."
+                : "The AI is reading the message…"));
+        status.getElement().setAttribute("role", "status");
+        var close = new Button(new SvgIcon("icons/x.svg"), e -> closeMessage());
+        close.addThemeVariants(ButtonVariant.TERTIARY);
+        close.setAriaLabel("Close the message");
+        close.setTooltipText("Close the message");
+        close.bindEnabled(idle);
+        var header = new Div(new Div(title, status), close);
+        header.addClassName("message-header");
+        message.removeAll();
+        message.add(header, attachment);
+        chooser.setVisible(false);
+        message.setVisible(true);
+    }
+
+    /** Puts the area and the examples back, for the next message; the form keeps what it holds. */
+    private void closeMessage() {
+        viewer = null;
+        message.removeAll();
+        message.setVisible(false);
+        chooser.setVisible(true);
     }
 
     /** The turn is over: the area takes the next message, after saying why the AI could not read this one. */

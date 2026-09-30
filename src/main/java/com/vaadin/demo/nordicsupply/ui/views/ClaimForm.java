@@ -5,8 +5,14 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.function.Function;
 
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.ComponentEvent;
+import com.vaadin.flow.component.ComponentEventListener;
+import com.vaadin.flow.component.HasValue;
+import com.vaadin.flow.component.ai.common.ValueSource;
 import com.vaadin.flow.component.ai.form.FormAIController;
 import com.vaadin.flow.component.ai.form.ValueOptions;
 import com.vaadin.flow.component.button.Button;
@@ -25,6 +31,7 @@ import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.BigDecimalField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.shared.Registration;
 import org.springframework.data.domain.PageRequest;
 
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
@@ -41,14 +48,42 @@ import com.vaadin.demo.nordicsupply.domain.RequestedResolution;
  * it, the order and the shipment, what the complaint is and how urgent, what the customer asks for, by when and for
  * how much, and a description. The contacts and orders to choose from are the chosen customer's, and the shipments
  * the chosen order's, so each of those fields waits, disabled, for the one before it; the AI is told the same and
- * fills them in that order. An order that came in one shipment chooses it. Create checks the form and confirms the claim; the demo keeps no claims, so the form
- * then starts over.
+ * fills them in that order. An order that came in one shipment chooses it. Create checks the form and confirms the
+ * claim; the demo keeps no claims, so the form then starts over, and says so with a {@link CreatedEvent}.
  * <p>
  * The fields are bound to a {@link Draft} through a {@link Binder}, which both a person and the AI are validated
  * against, and {@link #aiController()} is the form's side of the AI: the options it may pick from, labelled for a
- * model that matches a message's sender, order and shipment to the data, and a description of each field.
+ * model that matches a message's sender, order and shipment to the data, a description of each field, and where in
+ * the message the AI read each value. The form follows the field in focus and tells, with a {@link SourceEvent},
+ * where its value came from, so that the message can show it.
  */
 class ClaimForm extends Div {
+
+    /**
+     * Where the value of the field in focus came from, as the AI reported it: fired when the focus moves or the
+     * value changes. None when no field is in focus, or its value is not the AI's.
+     */
+    static class SourceEvent extends ComponentEvent<ClaimForm> {
+
+        private final ValueSource valueSource;
+
+        SourceEvent(ClaimForm form, ValueSource valueSource) {
+            super(form, false);
+            this.valueSource = valueSource;
+        }
+
+        Optional<ValueSource> getValueSource() {
+            return Optional.ofNullable(valueSource);
+        }
+    }
+
+    /** A claim was created, and the form starts over. */
+    static class CreatedEvent extends ComponentEvent<ClaimForm> {
+
+        CreatedEvent(ClaimForm form) {
+            super(form, false);
+        }
+    }
 
     /** What the form holds: a claim before it is created. Bound by property name, which the AI reads too. */
     public static class Draft {
@@ -169,6 +204,12 @@ class ClaimForm extends Div {
     private final transient ShipmentRepository shipments;
     private final List<String> countries;
 
+    /** The form's side of the AI, once {@link #aiController()} made it; the sources of the values are in it. */
+    private FormAIController controller;
+
+    /** The field in focus, whose value's source is shown, or {@code null}. */
+    private HasValue<?, ?> focused;
+
     /**
      * @param countries the signed-in user's region: the customers a claim can be for
      */
@@ -188,6 +229,7 @@ class ClaimForm extends Div {
         configureFields();
         bindFields();
         cascade();
+        followFocus();
 
         // six columns: two fields to a row, three in the row of the resolution, the description across
         fields.setAutoResponsive(true);
@@ -224,7 +266,14 @@ class ClaimForm extends Div {
      * them, and what each field means where its label does not say.
      */
     FormAIController aiController() {
-        var controller = new FormAIController(fields, binder);
+        controller = new FormAIController(fields, binder);
+        controller.setSourceTrackingEnabled(true);
+        // a turn that changed the field in focus shows where the new value came from
+        controller.addFieldValueChangeListener(e -> {
+            if (e.getField() == focused) {
+                showSource();
+            }
+        });
         controller
                 .fieldValueOptions(ValueOptions.forField(customer)
                         .options((filter, limit) ->
@@ -402,6 +451,60 @@ class ClaimForm extends Div {
         var confirmation = Notification.show(confirmation(draft, locale));
         confirmation.addThemeVariants(NotificationVariant.SUCCESS);
         clear();
+        fireEvent(new CreatedEvent(this));
+    }
+
+    /** Where the value of the field in focus came from, when it came from the AI; see {@link SourceEvent}. */
+    Registration addSourceListener(ComponentEventListener<SourceEvent> listener) {
+        return addListener(SourceEvent.class, listener);
+    }
+
+    /** A claim was created; see {@link CreatedEvent}. */
+    Registration addCreatedListener(ComponentEventListener<CreatedEvent> listener) {
+        return addListener(CreatedEvent.class, listener);
+    }
+
+    /**
+     * Follows the field in focus, by the browser's {@code focusin} and {@code focusout}, which every field sends,
+     * the radio group among them, and shows its source anew when it gets the focus, loses it, or its value changes:
+     * a value the user edits or reverts is no longer the AI's.
+     */
+    private void followFocus() {
+        for (var field : List.<HasValue<?, ?>>of(
+                customer,
+                reportedBy,
+                order,
+                shipment,
+                claimType,
+                priority,
+                requestedResolution,
+                neededBy,
+                claimedAmount,
+                description)) {
+            var element = ((Component) field).getElement();
+            element.addEventListener("focusin", e -> {
+                focused = field;
+                showSource();
+            });
+            element.addEventListener("focusout", e -> {
+                if (focused == field) {
+                    focused = null;
+                    showSource();
+                }
+            });
+            field.addValueChangeListener(e -> {
+                if (focused == field) {
+                    showSource();
+                }
+            });
+        }
+    }
+
+    private void showSource() {
+        var source = controller == null || focused == null
+                ? null
+                : controller.getFieldSource(focused).orElse(null);
+        fireEvent(new SourceEvent(this, source));
     }
 
     /** What Create says of a claim: whose it is, what about, how urgent and for how much. */

@@ -134,6 +134,17 @@ class ConversationsTest {
     }
 
     @Test
+    void aForgottenConversationsNextTurnIsItsFirst() {
+        var provider = conversations.start("claims-1");
+        ask(provider, "The damaged pallet");
+
+        conversations.forget("claims-1");
+        ask(provider, "The missing cartons");
+
+        assertThat(texts(repository.findByConversationId("claims-1"))).containsExactly("The missing cartons", "Done.");
+    }
+
+    @Test
     void restoringAgainReplacesWhatTheMemoryHeld() {
         conversations.restore("widget-1", List.of(said(ChatMessage.Role.USER, "Late shipments last month")));
 

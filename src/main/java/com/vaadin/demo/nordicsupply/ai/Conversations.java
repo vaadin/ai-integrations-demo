@@ -62,6 +62,15 @@ public class Conversations {
     }
 
     /**
+     * Empties a conversation's memory, so that its next turn is its first: for a conversation whose turns stand
+     * alone, such as a form filled from one message after another, where an earlier message would only be sent again
+     * and read into the next.
+     */
+    public void forget(String conversationId) {
+        memory.clear(conversationId);
+    }
+
+    /**
      * A provider for a conversation whose earlier turns are known: they become the model's memory, so the next
      * question is answered in context. Pass the same turns to {@code AIOrchestrator.Builder.withHistory} for the
      * message list.

@@ -19,4 +19,12 @@ class ShipmentRepositoryTest {
                 .extracting(ShipmentRepository.Option::shipmentNumber)
                 .containsExactly("SH-2025-000002", "SH-2025-000003");
     }
+
+    @Test
+    void aShipmentToChooseFromCountsItsPallets() {
+        assertThat(shipments.optionsOf(12421)).singleElement().satisfies(shipment -> {
+            assertThat(shipment.shipmentNumber()).isEqualTo("SH-2026-007802");
+            assertThat(shipment.palletCount()).isEqualTo(2);
+        });
+    }
 }

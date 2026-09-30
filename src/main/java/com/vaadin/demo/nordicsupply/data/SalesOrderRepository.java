@@ -40,13 +40,24 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Integer>
             """)
     Page<Row> search(@Param("term") String term, @Param("countries") List<String> countries, Pageable pageable);
 
-    /** An order to choose from: its number, and when it was placed and the customer's own reference for it. */
-    record Option(Integer id, String orderNumber, LocalDateTime placedAt, String customerReference) {}
+    /**
+     * An order to choose from: its number, and what a message may name it by instead: when it was placed, the customer's
+     * own reference, when it was promised and last delivered, and its net value.
+     */
+    record Option(
+            Integer id,
+            String orderNumber,
+            LocalDateTime placedAt,
+            String customerReference,
+            LocalDate promisedDeliveryDate,
+            LocalDateTime lastDeliveredAt,
+            BigDecimal totalNet) {}
 
-    /** The orders of one customer, newest first. */
+    /** The orders of one customer, newest first; the last delivery is {@code null} while none has arrived. */
     @Query("""
             select new com.vaadin.demo.nordicsupply.data.SalesOrderRepository$Option(
-                o.id, o.orderNumber, o.placedAt, o.customerReference)
+                o.id, o.orderNumber, o.placedAt, o.customerReference, o.promisedDeliveryDate,
+                (select max(s.deliveredAt) from Shipment s where s.order = o), o.totalNet)
             from SalesOrder o
             where o.customer.id = :customerId
             order by o.placedAt desc, o.id desc

@@ -7,9 +7,9 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
 /**
- * The files of the Nordic Supply dataset under {@code classpath:data/nordic_supply/}: the schema and loader scripts
- * and the CSV files. One bean knows where the dataset lives so that nothing else in the application resolves
- * classpath paths of its own.
+ * The files of the Nordic Supply dataset under {@code classpath:data/nordic_supply/}: the schema and loader scripts,
+ * the CSV files, and the customer messages written from them under {@code documents/}. One bean knows where the
+ * dataset lives so that nothing else in the application resolves classpath paths of its own.
  */
 public class PackData {
 

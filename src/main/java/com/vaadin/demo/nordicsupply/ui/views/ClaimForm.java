@@ -3,7 +3,6 @@ package com.vaadin.demo.nordicsupply.ui.views;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
@@ -42,7 +41,7 @@ import com.vaadin.demo.nordicsupply.domain.RequestedResolution;
  * it, the order and the shipment, what the complaint is and how urgent, what the customer asks for, by when and for
  * how much, and a description. The contacts and orders to choose from are the chosen customer's, and the shipments
  * the chosen order's, so each of those fields waits, disabled, for the one before it; the AI is told the same and
- * fills them in that order. Create checks the form and confirms the claim; the demo keeps no claims, so the form
+ * fills them in that order. An order that came in one shipment chooses it. Create checks the form and confirms the claim; the demo keeps no claims, so the form
  * then starts over.
  * <p>
  * The fields are bound to a {@link Draft} through a {@link Binder}, which both a person and the AI are validated
@@ -266,13 +265,16 @@ class ClaimForm extends Div {
                         neededBy, "The date the customer needs the resolution by, only when the message gives one.")
                 .describeField(
                         claimedAmount,
-                        "The amount claimed in euros: the amount the message states, or the value of the affected"
-                                + " goods at the prices it quotes. Leave it empty when neither is there.")
+                        "The amount claimed in euros, as a sum of money: the amount the message states, the value"
+                                + " of the affected goods at the prices it quotes, or a share of the order it asks"
+                                + " for, taken from the order's net value. Never estimate a price the message or the"
+                                + " order does not give; leave the field empty instead.")
                 .describeField(
                         description,
                         "A summary of the complaint for the claims team, in English whatever the language of the"
                                 + " message: what is affected and how many, what happened, and what the customer asks"
-                                + " for. At most " + DESCRIPTION_LENGTH + " characters.");
+                                + " for. Leave out personal details the claim does not need: no phone numbers, and no"
+                                + " names but the reporter's. At most " + DESCRIPTION_LENGTH + " characters.");
         return controller;
     }
 
@@ -367,11 +369,16 @@ class ClaimForm extends Div {
             order.setItems(ordersOf(chosen));
             order.setEnabled(chosen != null);
         });
+        // an order that came in one delivery names its shipment too
         order.addValueChangeListener(e -> {
             var chosen = e.getValue();
+            var delivered = shipmentsOf(chosen);
             shipment.clear();
-            shipment.setItems(shipmentsOf(chosen));
+            shipment.setItems(delivered);
             shipment.setEnabled(chosen != null);
+            if (delivered.size() == 1) {
+                shipment.setValue(delivered.getFirst());
+            }
         });
     }
 
@@ -436,14 +443,21 @@ class ClaimForm extends Div {
 
     private static String orderForTheModel(SalesOrderRepository.Option order) {
         var reference = order.customerReference() == null ? "" : ", customer reference " + order.customerReference();
-        return order.orderNumber() + " (placed " + order.placedAt().toLocalDate() + reference + ")";
+        var delivered = order.lastDeliveredAt() == null
+                ? ", not delivered"
+                : ", delivered " + order.lastDeliveredAt().toLocalDate();
+        return order.orderNumber() + " (placed " + order.placedAt().toLocalDate() + ", promised "
+                + order.promisedDeliveryDate() + delivered + ", net EUR "
+                + order.totalNet().toPlainString()
+                + reference + ")";
     }
 
     private static String shipmentForTheModel(ShipmentRepository.Option shipment) {
         var delivered = shipment.deliveredAt() == null
                 ? ", not delivered"
-                : ", delivered " + shipment.deliveredAt().toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE);
+                : ", delivered " + shipment.deliveredAt().toLocalDate();
         return shipment.shipmentNumber() + " (" + shipment.carrier() + ", tracking " + shipment.trackingNumber()
-                + ", shipped " + shipment.shippedAt().toLocalDate() + delivered + ")";
+                + ", shipped " + shipment.shippedAt().toLocalDate() + delivered + ", " + shipment.palletCount()
+                + " pallets)";
     }
 }

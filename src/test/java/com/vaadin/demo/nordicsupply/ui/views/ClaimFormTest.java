@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Stream;
@@ -42,19 +43,36 @@ class ClaimFormTest {
             new CustomerRepository.Option(1020, "C-12020", "Tartu Urheilu OÜ", "Tartu", "tartu.urheilu.example");
     private static final CustomerContactRepository.Option NIELS = new CustomerContactRepository.Option(
             2133, "Niels Madsen", "Store Manager", "niels.madsen@aalborg.trekking.example");
-    private static final SalesOrderRepository.Option ORDER =
-            new SalesOrderRepository.Option(6216, "SO-2026-006216", LocalDateTime.of(2026, 8, 26, 13, 17), "PO-84764");
+    private static final SalesOrderRepository.Option ORDER = new SalesOrderRepository.Option(
+            6216,
+            "SO-2026-006216",
+            LocalDateTime.of(2026, 8, 26, 13, 17),
+            "PO-84764",
+            LocalDate.of(2026, 8, 31),
+            LocalDateTime.of(2026, 8, 31, 15, 15),
+            new BigDecimal("9525.07"));
     private static final ShipmentRepository.Option SHIPMENT = new ShipmentRepository.Option(
             11808,
             "SH-2026-006654",
             "Havnelast",
             "HA8320332807",
             LocalDateTime.of(2026, 8, 27, 12, 58),
-            LocalDateTime.of(2026, 8, 31, 15, 15));
+            LocalDateTime.of(2026, 8, 31, 15, 15),
+            1);
+
+    private static final ShipmentRepository.Option LATER_SHIPMENT = new ShipmentRepository.Option(
+            11809,
+            "SH-2026-006655",
+            "Havnelast",
+            "HA8320332808",
+            LocalDateTime.of(2026, 9, 2, 9, 30),
+            LocalDateTime.of(2026, 9, 3, 11, 5),
+            0);
 
     /** Held here, since the current UI is kept only weakly and a garbage collection would clear it mid-test. */
     private final UI ui = new UI();
 
+    private ShipmentRepository shipments;
     private ClaimForm form;
     private ComboBox<CustomerRepository.Option> customer;
     private ComboBox<CustomerContactRepository.Option> reportedBy;
@@ -72,7 +90,7 @@ class ClaimFormTest {
         UI.setCurrent(ui);
         var contacts = mock(CustomerContactRepository.class);
         var orders = mock(SalesOrderRepository.class);
-        var shipments = mock(ShipmentRepository.class);
+        shipments = mock(ShipmentRepository.class);
         when(contacts.optionsOf(AALBORG.id())).thenReturn(List.of(NIELS));
         when(orders.optionsOf(AALBORG.id())).thenReturn(List.of(ORDER));
         when(shipments.optionsOf(ORDER.id())).thenReturn(List.of(SHIPMENT));
@@ -118,12 +136,23 @@ class ClaimFormTest {
     }
 
     @Test
-    void theShipmentsToChooseFromAreTheOrders() {
+    void anOrderThatCameInOneShipmentChoosesIt() {
         customer.setValue(AALBORG);
         order.setValue(ORDER);
 
         assertThat(shipment.isEnabled()).isTrue();
         assertThat(shipment.getListDataView().getItems()).containsExactly(SHIPMENT);
+        assertThat(shipment.getValue()).isEqualTo(SHIPMENT);
+    }
+
+    @Test
+    void anOrderThatCameInSeveralShipmentsLeavesTheChoiceOpen() {
+        when(shipments.optionsOf(ORDER.id())).thenReturn(List.of(SHIPMENT, LATER_SHIPMENT));
+        customer.setValue(AALBORG);
+        order.setValue(ORDER);
+
+        assertThat(shipment.getListDataView().getItems()).containsExactly(SHIPMENT, LATER_SHIPMENT);
+        assertThat(shipment.getValue()).isNull();
     }
 
     @Test

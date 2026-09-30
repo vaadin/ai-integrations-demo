@@ -31,8 +31,9 @@ import com.vaadin.demo.nordicsupply.session.CurrentUser.SignedInUser;
 import com.vaadin.demo.nordicsupply.session.Scopes;
 
 /**
- * The view offers every example file to drag to the message area or click, each file is there to read and of a type
- * the model reads, and an email reaches the model as its text.
+ * The view offers every example file to drag to the message area or click, each file is there and a document with
+ * pages, which the AI can point into when it reports where a value came from, and an email reaches the model as its
+ * text.
  */
 class ClaimsViewTest {
 
@@ -78,18 +79,22 @@ class ClaimsViewTest {
 
     @ParameterizedTest
     @EnumSource(ExampleFile.class)
-    void anExampleFileIsThereAndOfATypeTheModelReads(ExampleFile file) {
+    void anExampleFileIsThereAndHasPagesTheAiCanPointInto(ExampleFile file) {
         assertThat(file.bytes()).isNotEmpty();
         assertThat(ClaimsView.ACCEPTED).anyMatch(file.fileName()::endsWith);
-        assertThat(file.mimeType()).isEqualTo(ClaimsView.mimeTypeOf(file.fileName(), "application/octet-stream"));
+        assertThat(file.mimeType()).isIn("application/pdf", "image/png");
     }
 
     @Test
-    void anEmailReachesTheModelAsTextAndAnImageAsTheBrowserSaysItIs() {
-        assertThat(ClaimsView.mimeTypeOf("Order 17.EML", "message/rfc822")).isEqualTo("text/plain");
-        assertThat(ClaimsView.mimeTypeOf("note.txt", "")).isEqualTo("text/plain");
-        assertThat(ClaimsView.mimeTypeOf("scan.pdf", "application/x-pdf")).isEqualTo("application/pdf");
-        assertThat(ClaimsView.mimeTypeOf("photo.jpeg", "image/jpeg")).isEqualTo("image/jpeg");
+    void anEmailReachesTheModelAsTextAndTheOthersAsWhatTheyAre() {
+        assertThat(ClaimsView.mimeTypeOf("Order 17.EML")).isEqualTo("text/plain");
+        assertThat(ClaimsView.mimeTypeOf("note.txt")).isEqualTo("text/plain");
+        assertThat(ClaimsView.mimeTypeOf("scan.pdf")).isEqualTo("application/pdf");
+        assertThat(ClaimsView.mimeTypeOf("photo.jpeg")).isEqualTo("image/jpeg");
+        assertThat(ClaimsView.mimeTypeOf("portal.png")).isEqualTo("image/png");
+        assertThat(ClaimsView.ACCEPTED)
+                .allSatisfy(extension ->
+                        assertThat(ClaimsView.mimeTypeOf("file" + extension)).isNotBlank());
     }
 
     @Test

@@ -39,4 +39,17 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Integer>
                    or lower(o.status) like :term escape '\\')
             """)
     Page<Row> search(@Param("term") String term, @Param("countries") List<String> countries, Pageable pageable);
+
+    /** An order to choose from: its number, and when it was placed and the customer's own reference for it. */
+    record Option(Integer id, String orderNumber, LocalDateTime placedAt, String customerReference) {}
+
+    /** The orders of one customer, newest first. */
+    @Query("""
+            select new com.vaadin.demo.nordicsupply.data.SalesOrderRepository$Option(
+                o.id, o.orderNumber, o.placedAt, o.customerReference)
+            from SalesOrder o
+            where o.customer.id = :customerId
+            order by o.placedAt desc, o.id desc
+            """)
+    List<Option> optionsOf(@Param("customerId") int customerId);
 }

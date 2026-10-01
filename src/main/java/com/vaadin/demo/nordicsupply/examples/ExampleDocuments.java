@@ -46,7 +46,6 @@ import com.vaadin.demo.nordicsupply.util.Pdfs;
 @Component
 public class ExampleDocuments {
 
-    private static final String PDF = "application/pdf";
     private static final String PNG = "image/png";
     private static final String JPEG = "image/jpeg";
 
@@ -59,6 +58,14 @@ public class ExampleDocuments {
 
     /** The margin under the exported email's signature, where its page ends. */
     private static final int EMAIL_BOTTOM_MARGIN = 80;
+
+    /** The chat app's colours: its bars, the other side's bubbles and one's own, its text and its faint text. */
+    private static final Color CHAT_BAR = new Color(0x12, 0x20, 0x29);
+
+    private static final Color CHAT_THEIRS = new Color(0x1f, 0x2c, 0x34);
+    private static final Color CHAT_MINE = new Color(0x00, 0x5c, 0x4b);
+    private static final Color CHAT_TEXT = new Color(0xe9, 0xed, 0xef);
+    private static final Color CHAT_FAINT = new Color(0x8e, 0x9a, 0xa1);
 
     private final List<ExampleDocument> all;
 
@@ -81,7 +88,7 @@ public class ExampleDocuments {
 
     private static ExampleDocument pdf(String name, String kind, String country, List<Pdfs.Page> pages) {
         return new ExampleDocument(
-                new AIAttachment(name, PDF, Pdfs.fromPages(pages, DocumentPainter.DPI)), kind, country);
+                new AIAttachment(name, Pdfs.MIME_TYPE, Pdfs.fromPages(pages, DocumentPainter.DPI)), kind, country);
     }
 
     private static ExampleDocument png(String name, String kind, String country, BufferedImage picture) {
@@ -107,39 +114,25 @@ public class ExampleDocuments {
                 "Damaged pallet, order SO-2026-006830 / SH-2026-007291",
                 "delivery-note-SH-2026-007291.jpg (page 2)");
         var body = sans(28);
-        y = email.paragraph("Hello,", MARGIN, y, TEXT_WIDTH, body, INK) + 20;
-        y = email.paragraph(
-                        "Your shipment SH-2026-007291 for our order SO-2026-006830 (our reference PO-24154) was"
-                                + " delivered by Kalottfrakt on Friday 28 August. The pallet arrived with its top layer"
-                                + " crushed and the stretch wrap torn open. The driver noted the damage on the delivery"
-                                + " note, which I have attached as a scan.",
-                        MARGIN,
-                        y,
-                        TEXT_WIDTH,
-                        body,
-                        INK)
-                + 20;
-        y = email.paragraph(
-                        "Damaged: 6 pcs Nordvind Hav 2.0 Hardshell Jacket, size L, Burnt Orange (NVD-SHL-0026). The"
-                                + " two top cartons were crushed and the jackets inside are soaked and stained. The"
-                                + " other 90 jackets and the remaining lines are undamaged.",
-                        MARGIN,
-                        y,
-                        TEXT_WIDTH,
-                        body,
-                        INK)
-                + 20;
-        y = email.paragraph(
-                        "We ask for a replacement of the 6 jackets, value 6 x 197.90 = 1 187.40 EUR net. Our autumn"
-                                + " season opens on 3 October, so we need the replacements by 25 September 2026 at the"
-                                + " latest. The damaged jackets are kept here for your inspection.",
-                        MARGIN,
-                        y,
-                        TEXT_WIDTH,
-                        body,
-                        INK)
-                + 20;
-        y = email.paragraph("Best regards,", MARGIN, y, TEXT_WIDTH, body, INK) + 20;
+        y = email.paragraphs(
+                MARGIN,
+                y,
+                TEXT_WIDTH,
+                body,
+                INK,
+                20,
+                "Hello,",
+                "Your shipment SH-2026-007291 for our order SO-2026-006830 (our reference PO-24154) was delivered by"
+                        + " Kalottfrakt on Friday 28 August. The pallet arrived with its top layer crushed and the"
+                        + " stretch wrap torn open. The driver noted the damage on the delivery note, which I have"
+                        + " attached as a scan.",
+                "Damaged: 6 pcs Nordvind Hav 2.0 Hardshell Jacket, size L, Burnt Orange (NVD-SHL-0026). The two top"
+                        + " cartons were crushed and the jackets inside are soaked and stained. The other 90 jackets"
+                        + " and the remaining lines are undamaged.",
+                "We ask for a replacement of the 6 jackets, value 6 x 197.90 = 1 187.40 EUR net. Our autumn season"
+                        + " opens on 3 October, so we need the replacements by 25 September 2026 at the latest. The"
+                        + " damaged jackets are kept here for your inspection.",
+                "Best regards,");
         y = email.paragraph(
                 "Pekka Koskinen\nStore Manager, Ridge Sport & Fritid Oy\nKauppakatu 5, 96100 Rovaniemi, Finland"
                         + "\n+358 40 154 2114",
@@ -235,37 +228,23 @@ public class ExampleDocuments {
                         sans(21),
                         GREY)
                 .rule(card + 40, 285, card + 1080, 285, RULE, 1f);
-        var body = sans(24);
-        int width = 1040;
-        int y = 340;
-        y = shot.paragraph("Hi,", card + 40, y, width, body, INK) + 14;
-        y = shot.paragraph(
-                        "Shipment SH-2026-006754 (Kalott Freight, tracking KA1220942516) was delivered yesterday,"
-                                + " 2 September. The packing list shows 5 packages, but only 4 arrived, and the driver"
-                                + " had only 4 on his scanner.",
-                        card + 40,
-                        y,
-                        width,
-                        body,
-                        INK)
-                + 14;
-        y = shot.paragraph(
-                        "The missing package should contain 6 pcs Jäkälä Nordic Plus Softshell Jacket S Burnt Orange"
-                                + " (SIS-SHL-0045). We received 18 of the 24 ordered. The backpack on the same order,"
-                                + " Skarvind Revontuli 2.0 Backpack 55L Forest, arrived fine.",
-                        card + 40,
-                        y,
-                        width,
-                        body,
-                        INK)
-                + 14;
-        y = shot.paragraph(
-                        "Please send the 6 missing jackets as soon as possible; we would rather have the goods than a"
-                                + " credit. Value of the missing jackets: 6 x 152.90 = 917.40 EUR before our 5 %"
-                                + " discount.",
-                        card + 40, y, width, body, INK)
-                + 14;
-        shot.paragraph("Regards,\nAstrid", card + 40, y, width, body, INK);
+        shot.paragraphs(
+                card + 40,
+                340,
+                1040,
+                sans(24),
+                INK,
+                14,
+                "Hi,",
+                "Shipment SH-2026-006754 (Kalott Freight, tracking KA1220942516) was delivered yesterday, 2 September."
+                        + " The packing list shows 5 packages, but only 4 arrived, and the driver had only 4 on his"
+                        + " scanner.",
+                "The missing package should contain 6 pcs Jäkälä Nordic Plus Softshell Jacket S Burnt Orange"
+                        + " (SIS-SHL-0045). We received 18 of the 24 ordered. The backpack on the same order, Skarvind"
+                        + " Revontuli 2.0 Backpack 55L Forest, arrived fine.",
+                "Please send the 6 missing jackets as soon as possible; we would rather have the goods than a credit."
+                        + " Value of the missing jackets: 6 x 152.90 = 917.40 EUR before our 5 % discount.",
+                "Regards,\nAstrid");
         shot.box(card + 40, 860, 900, 60, new Color(0xf7, 0xf7, 0xf8), new Color(0xd9, 0xdc, 0xe1), 12)
                 .text("Write a reply...", card + 62, 898, sans(22), new Color(0x9a, 0x9a, 0x9a))
                 .box(card + 960, 860, 120, 60, new Color(0x16, 0x16, 0x16), null, 12)
@@ -298,36 +277,28 @@ public class ExampleDocuments {
                         serifBold(30),
                         INK)
                 + 30;
-        y = letter.paragraph("Dear Sir or Madam,", MARGIN, y, TEXT_WIDTH, body, INK) + 20;
-        y = letter.paragraph(
-                        "Our order SO-2026-006433, placed on 10 August 2026 through your portal, was confirmed for"
-                                + " delivery on 18 August 2026. The first part of it, shipment SH-2026-006877"
-                                + " (Kalott Freight, tracking KA1151121507), reached us only on 24 August, six days"
-                                + " after the confirmed date.",
+        // the signature goes in the room under the closing
+        y = letter.paragraphs(
                         MARGIN,
                         y,
                         TEXT_WIDTH,
                         body,
-                        INK)
-                + 20;
-        y = letter.paragraph(
+                        INK,
+                        20,
+                        "Dear Sir or Madam,",
+                        "Our order SO-2026-006433, placed on 10 August 2026 through your portal, was confirmed for"
+                                + " delivery on 18 August 2026. The first part of it, shipment SH-2026-006877 (Kalott"
+                                + " Freight, tracking KA1151121507), reached us only on 24 August, six days after the"
+                                + " confirmed date.",
                         "The shipment carried 12 pairs Peak Trail WP Hiking Boot EU 38 Ochre and 8 pairs Gråsten"
                                 + " Kallio Eco Winter Boot EU 41 Graphite that we had bought for our back-to-school"
                                 + " promotion, which ran from 17 to 23 August. The goods arrived after the promotion"
                                 + " had ended, and part of them had to be sold at a reduced price.",
-                        MARGIN,
-                        y,
-                        TEXT_WIDTH,
-                        body,
-                        INK)
-                + 20;
-        y = letter.paragraph(
                         "Under section 7 of our framework agreement we request a credit of 10 % of the order value,"
                                 + " 359.27 EUR, as compensation for the late delivery. We are not returning any goods."
                                 + " Please confirm the credit by 18 September 2026.",
-                        MARGIN, y, TEXT_WIDTH, body, INK)
-                + 20;
-        y = letter.paragraph("Yours faithfully,", MARGIN, y, TEXT_WIDTH, body, INK) + 70;
+                        "Yours faithfully,")
+                + 50;
         letter.signature(MARGIN, y, 320, PEN);
         letter.paragraph(
                 "Katharina Wagner\nOwner, Berlin Fritid GmbH\nkatharina.wagner@berlin.fritid.example"
@@ -472,30 +443,22 @@ public class ExampleDocuments {
     /** Aapastore OÜ, Tartu: the wrong colour delivered, in a chat with the account manager. */
     private static ExampleDocument wrongColour() {
         var phone = new DocumentPainter(1000, 1880, new Color(0x0b, 0x14, 0x1a), 7);
-        var bar = new Color(0x12, 0x20, 0x29);
-        var theirs = new Color(0x1f, 0x2c, 0x34);
-        var mine = new Color(0x00, 0x5c, 0x4b);
-        var white = new Color(0xe9, 0xed, 0xef);
-        var faint = new Color(0x8e, 0x9a, 0xa1);
-        phone.box(0, 0, 1000, 60, bar, null, 0)
-                .text("09:41", 40, 40, sansBold(24), white)
-                .textRight("5G  87 %", 960, 40, sans(22), white)
-                .box(0, 60, 1000, 110, bar, null, 0)
-                .text("<", 40, 130, sans(40), white)
+        phone.box(0, 0, 1000, 60, CHAT_BAR, null, 0)
+                .text("09:41", 40, 40, sansBold(24), CHAT_TEXT)
+                .textRight("5G  87 %", 960, 40, sans(22), CHAT_TEXT)
+                .box(0, 60, 1000, 110, CHAT_BAR, null, 0)
+                .text("<", 40, 130, sans(40), CHAT_TEXT)
                 .box(100, 80, 70, 70, new Color(0x3b, 0x5b, 0x6a), null, 35)
-                .text("KR", 116, 126, sansBold(26), white)
-                .text("Kadri Rebane  -  Aapastore OÜ", 200, 118, sansBold(28), white)
-                .text("Store Manager, Tartu  -  online", 200, 152, sans(22), faint);
-        phone.text("Tue 1 Sep 2026", 410, 230, sans(20), faint);
+                .text("KR", 116, 126, sansBold(26), CHAT_TEXT)
+                .text("Kadri Rebane  -  Aapastore OÜ", 200, 118, sansBold(28), CHAT_TEXT)
+                .text("Store Manager, Tartu  -  online", 200, 152, sans(22), CHAT_FAINT);
+        phone.text("Tue 1 Sep 2026", 410, 230, sans(20), CHAT_FAINT);
         int y = 270;
         y = bubble(
                 phone,
                 "Hi Helmi! We unpacked shipment SH-2026-006922 today (our order SO-2026-006473).",
                 y,
                 false,
-                theirs,
-                white,
-                faint,
                 "10:12");
         y = bubble(
                 phone,
@@ -503,9 +466,6 @@ public class ExampleDocuments {
                         + " (NVD-SHL-0043). Photo:",
                 y,
                 false,
-                theirs,
-                white,
-                faint,
                 "10:13");
         phone.box(60, y, 420, 240, new Color(0x2a, 0x3b, 0x44), null, 18)
                 .box(120, y + 40, 300, 160, new Color(0xb8, 0x86, 0x3b), null, 12)
@@ -517,9 +477,6 @@ public class ExampleDocuments {
                         + " sent out, or would you keep the Ochre at a discount?",
                 y,
                 true,
-                mine,
-                white,
-                faint,
                 "10:16");
         y = bubble(
                 phone,
@@ -527,32 +484,18 @@ public class ExampleDocuments {
                         + " return label for the Ochre ones.",
                 y,
                 false,
-                theirs,
-                white,
-                faint,
                 "10:18");
         y = bubble(
                 phone,
                 "Value 36 x 193.90 = 6 980.40 EUR. We need them before our winter campaign starts on" + " 16 October.",
                 y,
                 false,
-                theirs,
-                white,
-                faint,
                 "10:19");
-        bubble(
-                phone,
-                "Understood. Claim coming up, you'll get the confirmation by email today.",
-                y,
-                true,
-                mine,
-                white,
-                faint,
-                "10:21");
-        phone.box(0, 1770, 1000, 110, bar, null, 0)
-                .box(40, 1792, 820, 66, theirs, null, 33)
-                .text("Message", 76, 1835, sans(26), faint)
-                .box(880, 1792, 66, 66, mine, null, 33);
+        bubble(phone, "Understood. Claim coming up, you'll get the confirmation by email today.", y, true, "10:21");
+        phone.box(0, 1770, 1000, 110, CHAT_BAR, null, 0)
+                .box(40, 1792, 820, 66, CHAT_THEIRS, null, 33)
+                .text("Message", 76, 1835, sans(26), CHAT_FAINT)
+                .box(880, 1792, 66, 66, CHAT_MINE, null, 33);
         return png(
                 "Wrong colour.png", "Screenshot of a chat", "EE", phone.page().image());
     }
@@ -600,17 +543,16 @@ public class ExampleDocuments {
     }
 
     /** One message of a chat, in a bubble on the writer's side with the time under it. Returns where the next starts. */
-    private static int bubble(
-            DocumentPainter phone, String text, int y, boolean mine, Color fill, Color ink, Color faint, String time) {
+    private static int bubble(DocumentPainter phone, String text, int y, boolean mine, String time) {
         Font font = sans(26);
         int width = 640;
         int padding = 28;
         int x = mine ? 1000 - 60 - width - 2 * padding : 60;
         int lines = phone.wrap(text, width, font).size();
         int height = lines * lineHeight(font) + padding + 12;
-        phone.box(x, y, width + 2 * padding, height, fill, null, 24);
-        phone.paragraph(text, x + padding, y + padding + 20, width, font, ink);
-        phone.textRight(time, x + width + 2 * padding - padding, y + height + 30, sans(20), faint);
+        phone.box(x, y, width + 2 * padding, height, mine ? CHAT_MINE : CHAT_THEIRS, null, 24);
+        phone.paragraph(text, x + padding, y + padding + 20, width, font, CHAT_TEXT);
+        phone.textRight(time, x + width + 2 * padding - padding, y + height + 30, sans(20), CHAT_FAINT);
         return y + height + 60;
     }
 }

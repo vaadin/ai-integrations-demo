@@ -98,14 +98,6 @@ final class DocumentPainter {
         return new Font(Font.MONOSPACED, Font.PLAIN, size);
     }
 
-    int width() {
-        return image.getWidth();
-    }
-
-    int height() {
-        return image.getHeight();
-    }
-
     /** The width of a text in a font, to place what follows it or to right-align it. */
     int widthOf(String text, Font font) {
         return g.getFontMetrics(font).stringWidth(text);
@@ -136,6 +128,19 @@ final class DocumentPainter {
         for (var line : wrap(text, width, font)) {
             text(line, x, baseline, font, color);
             baseline += lineHeight(font);
+        }
+        return baseline;
+    }
+
+    /**
+     * Paragraphs one under another, with the gap between each, as {@link #paragraph} paints them.
+     *
+     * @return the baseline that would follow the last paragraph and a gap, to continue from
+     */
+    int paragraphs(int x, int y, int width, Font font, Color color, int gap, String... texts) {
+        int baseline = y;
+        for (var text : texts) {
+            baseline = paragraph(text, x, baseline, width, font, color) + gap;
         }
         return baseline;
     }
@@ -194,12 +199,6 @@ final class DocumentPainter {
     DocumentPainter highlight(int x, int y, int width, int height) {
         g.setColor(HIGHLIGHTER);
         g.fillRoundRect(x, y, width, height, 6, 6);
-        return this;
-    }
-
-    /** Another image painted onto the page, scaled to the box. */
-    DocumentPainter image(BufferedImage picture, int x, int y, int width, int height) {
-        g.drawImage(picture, x, y, width, height, null);
         return this;
     }
 

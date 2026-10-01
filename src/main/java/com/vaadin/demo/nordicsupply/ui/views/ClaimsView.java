@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 import com.vaadin.flow.component.Component;
@@ -52,6 +53,7 @@ import com.vaadin.demo.nordicsupply.examples.ExampleDocument;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
+import com.vaadin.demo.nordicsupply.util.Pdfs;
 
 /**
  * A customer's complaint becomes a claim: the message goes into the area on the left, dropped or chosen as a file or
@@ -124,12 +126,29 @@ public class ClaimsView extends PageView implements HasReadme {
     /** What the model is asked with every message, which comes as the prompt's attachment. */
     private static final String PROMPT = "Fill in the claim form from the attached customer message.";
 
-    /** The file types the model reads: emails and text as text, PDFs, and the common image formats. */
-    static final List<String> ACCEPTED = List.of(".eml", ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif");
+    private static final String TEXT = "text/plain";
+
+    /**
+     * The file types the model reads, by extension, and how each reaches it: an email as its text, since the
+     * providers leave {@code message/rfc822} out, and the others as what they are.
+     */
+    private static final Map<String, String> MIME_TYPES = Map.of(
+            "eml", TEXT,
+            "txt", TEXT,
+            "pdf", Pdfs.MIME_TYPE,
+            "png", "image/png",
+            "jpg", "image/jpeg",
+            "jpeg", "image/jpeg",
+            "webp", "image/webp",
+            "gif", "image/gif");
+
+    /** The extensions of the files the model reads, as the upload takes them. */
+    static final List<String> ACCEPTED = MIME_TYPES.keySet().stream()
+            .sorted()
+            .map(extension -> "." + extension)
+            .toList();
 
     private static final long MAX_FILE_SIZE = 10L * 1024 * 1024;
-
-    private static final String TEXT = "text/plain";
 
     /** The name a pasted text is read under. */
     private static final String PASTED_TEXT = "Pasted text";
@@ -138,25 +157,19 @@ public class ClaimsView extends PageView implements HasReadme {
 
     private final ClaimForm form;
     private final AIOrchestrator orchestrator;
-    private final transient Conversations conversations;
-    private final String conversationId = Conversations.newId();
 
     /** The name of the message the AI is reading, or {@code null} while it waits for one. */
     private final ValueSignal<String> reading = new ValueSignal<>(null);
 
-    /** The area and the examples, shown until a message is read. */
-    private final Div chooser;
+    private final Signal<Boolean> idle = reading.map(Objects::isNull);
 
-    /** The message being read or read, in place of the chooser. */
+    /** The message being read or read, in place of the area and the examples. */
     private final Div message = new Div();
 
-    /** Whether the message is shown, in place of the chooser. */
-    private final ValueSignal<Boolean> messageShown = new ValueSignal<>(false);
-
     /** What the message panel shows of the message, or {@code null} while no message is open. */
-    private AttachmentViewer viewer;
+    private final ValueSignal<AttachmentViewer> viewer = new ValueSignal<>(null);
 
-    private final Signal<Boolean> idle = reading.map(Objects::isNull);
+    private final Signal<Boolean> messageShown = viewer.map(Objects::nonNull);
 
     public ClaimsView(
             CustomerRepository customers,
@@ -174,15 +187,15 @@ public class ClaimsView extends PageView implements HasReadme {
                 shipments,
                 currentUser.get().scope().countries(),
                 Signal.not(idle));
-        this.conversations = conversations;
-        orchestrator = AIOrchestrator.builder(conversations.start(conversationId), SYSTEM_PROMPT)
+        // every message is a claim of its own: the model reads it alone, and no earlier message is sent again
+        orchestrator = AIOrchestrator.builder(conversations.standalone(), SYSTEM_PROMPT)
                 .withController(form.aiController())
                 .withMetadata(() -> "Today is " + LocalDate.now() + ".")
                 .withResponseListener(this::turnEnded)
                 .build();
 
         // a region's account is offered the examples of its own countries' customers, the only ones it can find
-        chooser = new Div(
+        var chooser = new Div(
                 dropZone(),
                 demoTip(examples.forCountries(currentUser.get().scope().countries())));
         chooser.addClassName("message-chooser");
@@ -190,8 +203,8 @@ public class ClaimsView extends PageView implements HasReadme {
         message.addClassName("message-panel");
         message.bindVisible(messageShown);
         form.addSourceListener(e -> {
-            if (viewer != null) {
-                viewer.show(e.getValueSource().orElse(null));
+            if (viewer.peek() != null) {
+                viewer.peek().show(e.getValueSource().orElse(null));
             }
         });
         form.addCreatedListener(e -> closeMessage());
@@ -221,7 +234,7 @@ public class ClaimsView extends PageView implements HasReadme {
         manager.setAcceptedFileExtensions(ACCEPTED.toArray(String[]::new));
         manager.setUploadHandler(UploadHandler.inMemory((file, data) -> {
             manager.clearFileList();
-            read(file.fileName(), mimeTypeOf(file.fileName()), data);
+            read(new AIAttachment(file.fileName(), mimeTypeOf(file.fileName()), data));
         }));
         manager.addFileRejectedListener(e -> warn("The AI reads emails, text files, PDFs and images of up to 10 MB."));
 
@@ -242,7 +255,7 @@ public class ClaimsView extends PageView implements HasReadme {
                 .addEventListener("paste", e -> {
                     var text = e.getEventData().get(CLIPBOARD_TEXT).asString("");
                     if (!text.isBlank()) {
-                        read(PASTED_TEXT, TEXT, text.getBytes(StandardCharsets.UTF_8));
+                        read(new AIAttachment(PASTED_TEXT, TEXT, text.getBytes(StandardCharsets.UTF_8)));
                     }
                 })
                 .addEventData(CLIPBOARD_TEXT)
@@ -259,6 +272,7 @@ public class ClaimsView extends PageView implements HasReadme {
         examples.addDropListener(e -> e.getDragData()
                 .filter(ExampleDocument.class::isInstance)
                 .map(ExampleDocument.class::cast)
+                .map(ExampleDocument::attachment)
                 .ifPresent(this::read));
         Signal.effect(this, () -> {
             manager.setEnabled(idle.get());
@@ -276,7 +290,8 @@ public class ClaimsView extends PageView implements HasReadme {
                 heading,
                 new Paragraph("Drag one of these example files to the container above, and let the AI integration fill"
                         + " in the form based on the contents of the file."),
-                new Paragraph("You can also download a file to inspect its contents and upload it from your computer."));
+                new Paragraph(
+                        "You can also download a file to inspect its contents and upload it from your computer."));
         text.addClassName("tip");
         var files = new Div();
         files.addClassNames("example-files", "aura-surface");
@@ -304,7 +319,7 @@ public class ClaimsView extends PageView implements HasReadme {
         use.add(icon, name);
         use.addClassName("file-use");
         use.getElement().setAttribute("aria-description", "Fills in the form from this file");
-        use.addClickListener(e -> read(example));
+        use.addClickListener(e -> read(file));
         use.bindEnabled(idle);
 
         var download = new Anchor(
@@ -324,26 +339,19 @@ public class ClaimsView extends PageView implements HasReadme {
         return tile;
     }
 
-    private void read(ExampleDocument example) {
-        var file = example.attachment();
-        read(file.name(), file.mimeType(), file.data());
-    }
-
     /** Hands a message to the AI on an empty form, unless it is still reading the one before. */
-    private void read(String name, String mimeType, byte[] data) {
+    private void read(AIAttachment attachment) {
         if (reading.peek() != null) {
             return;
         }
         form.clear();
-        reading.set(name);
-        openMessage(name, new AttachmentViewer(name, mimeType, data));
+        reading.set(attachment.name());
+        var shown = new AttachmentViewer(attachment);
+        openMessage(attachment.name(), shown);
         // the model is told the attachment's shape, to place the regions it reports on its pages
-        var prompt = viewer.geometry().isEmpty() ? PROMPT : PROMPT + " It is " + viewer.geometry() + ".";
+        var prompt = shown.geometry().isEmpty() ? PROMPT : PROMPT + " It is " + shown.geometry() + ".";
         // the turn starts once the browser has shown the empty form: the form filler guards the fields on the client
         // when a turn starts, and values emptied in that same round trip stay on screen for a moment
-        var attachment = new AIAttachment(name, mimeType, data);
-        // every message is a claim of its own: the model reads it alone, and no earlier message is sent again
-        conversations.forget(conversationId);
         getElement()
                 .executeJs("return null")
                 .then(ignored -> orchestrator.prompt(prompt, List.of(attachment)), error -> reading.set(null));
@@ -354,7 +362,6 @@ public class ClaimsView extends PageView implements HasReadme {
      * closes it, and the message itself, with the place a value came from outlined when its field has the focus.
      */
     private void openMessage(String name, AttachmentViewer attachment) {
-        viewer = attachment;
         var title = new Span(shown(name));
         title.addClassName("message-name");
         var status = new Span();
@@ -372,14 +379,13 @@ public class ClaimsView extends PageView implements HasReadme {
         header.addClassName("message-header");
         message.removeAll();
         message.add(header, attachment);
-        messageShown.set(true);
+        viewer.set(attachment);
     }
 
     /** Puts the area and the examples back, for the next message; the form keeps what it holds. */
     private void closeMessage() {
-        viewer = null;
+        viewer.set(null);
         message.removeAll();
-        messageShown.set(false);
     }
 
     /**
@@ -418,20 +424,14 @@ public class ClaimsView extends PageView implements HasReadme {
         notification.addThemeVariants(NotificationVariant.WARNING);
     }
 
-    /**
-     * How a file reaches the model, by its extension, one of {@link #ACCEPTED}: an email as its text, since the
-     * providers leave {@code message/rfc822} out, and the others as what they are.
-     */
+    /** How a file reaches the model, by its extension, one of {@link #ACCEPTED}; see {@link #MIME_TYPES}. */
     static String mimeTypeOf(String fileName) {
         var name = fileName.toLowerCase(Locale.ROOT);
-        var extension = name.substring(name.lastIndexOf('.') + 1);
-        return switch (extension) {
-            case "eml", "txt" -> TEXT;
-            case "pdf" -> "application/pdf";
-            case "jpg", "jpeg" -> "image/jpeg";
-            case "png", "webp", "gif" -> "image/" + extension;
-            default -> throw new IllegalArgumentException("not a file the AI reads: " + fileName);
-        };
+        var type = MIME_TYPES.get(name.substring(name.lastIndexOf('.') + 1));
+        if (type == null) {
+            throw new IllegalArgumentException("not a file the AI reads: " + fileName);
+        }
+        return type;
     }
 
     private static H2 title(String text) {

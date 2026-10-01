@@ -1,7 +1,8 @@
 package com.vaadin.demo.nordicsupply.examples;
 
 import com.vaadin.flow.component.ai.common.AIAttachment;
-import com.vaadin.flow.component.ai.common.AttachmentContentType;
+
+import com.vaadin.demo.nordicsupply.util.Pdfs;
 
 /**
  * One of the documents the Claims view offers to try the assistant on: a file as it would be sent to the model, a
@@ -21,6 +22,6 @@ public record ExampleDocument(AIAttachment attachment, String kind, String count
 
     /** Whether the file is a PDF rather than an image. */
     public boolean isPdf() {
-        return AttachmentContentType.fromMimeType(attachment.mimeType()) == AttachmentContentType.PDF;
+        return Pdfs.MIME_TYPE.equals(attachment.mimeType());
     }
 }

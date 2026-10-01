@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
 
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -24,6 +23,9 @@ import org.apache.pdfbox.util.Matrix;
  * the PDF's text finds the words where the image shows them.
  */
 public final class Pdfs {
+
+    /** The MIME type of a PDF. */
+    public static final String MIME_TYPE = "application/pdf";
 
     /**
      * A run of text on a page image, in the image's pixels: where it starts on its baseline, how wide it is painted,
@@ -80,17 +82,6 @@ public final class Pdfs {
             return out.toByteArray();
         } catch (IOException e) {
             throw new UncheckedIOException("could not write the PDF", e);
-        }
-    }
-
-    /**
-     * How many pages a PDF has.
-     *
-     * @throws IOException when the bytes are not a PDF PDFBox can read
-     */
-    public static int pageCount(byte[] pdf) throws IOException {
-        try (var document = Loader.loadPDF(pdf)) {
-            return document.getNumberOfPages();
         }
     }
 

@@ -9,7 +9,7 @@ import org.apache.pdfbox.Loader;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
+import com.vaadin.demo.nordicsupply.examples.PaintedExamples;
 
 /**
  * A snippet is found where the PDF prints it, whitespace and case aside, on the lines it runs over, at the occurrence
@@ -25,22 +25,10 @@ class PdfTextTest {
 
     @BeforeAll
     static void theDamagedPalletExample() throws IOException {
-        var example = new ExampleDocuments()
-                .all().stream()
-                        .filter(document -> document.name().equals("Damaged pallet.pdf"))
-                        .findFirst()
-                        .orElseThrow();
+        var example = PaintedExamples.named("Damaged pallet.pdf");
         try (var document = Loader.loadPDF(example.attachment().data())) {
             damagedPallet = PdfText.of(document, AttachmentViewer.MAX_PAGES);
         }
-    }
-
-    @Test
-    void theTextIsThePagesWithWhitespaceCollapsed() {
-        assertThat(damagedPallet.text(1))
-                .contains("Damaged pallet, order SO-2026-006830 / SH-2026-007291")
-                .doesNotContain("  ");
-        assertThat(damagedPallet.text(2)).contains("Top layer crushed, stretch wrap torn.", "RECEIVED WITH REMARKS");
     }
 
     @Test
@@ -66,9 +54,10 @@ class PdfTextTest {
     }
 
     @Test
-    void handwritingIsFoundAsWellAsPrint() {
+    void handwritingAndStampsAreFoundAsWellAsPrint() {
         assertThat(damagedPallet.find("2 cartons wet - 6 jackets damaged", 2, ANYWHERE))
                 .hasValueSatisfying(boxes -> assertThat(boxes).hasSize(1));
+        assertThat(damagedPallet.find("RECEIVED WITH REMARKS", 2, ANYWHERE)).isPresent();
     }
 
     @Test

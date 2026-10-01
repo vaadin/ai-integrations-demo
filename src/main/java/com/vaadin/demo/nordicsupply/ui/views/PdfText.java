@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import com.vaadin.flow.component.ai.common.Rect;
@@ -57,19 +56,16 @@ final class PdfText implements Serializable {
      * @return the snippet's boxes, in fractions of the page, top to bottom
      */
     Optional<List<Rect>> find(String snippet, int page, Rect estimate) {
-        if (snippet == null || page < 1 || page > pages.size()) {
+        var pattern = ValueSources.pattern(snippet);
+        if (pattern.isEmpty() || page < 1 || page > pages.size()) {
             return Optional.empty();
         }
-        var needle = collapse(snippet).toLowerCase(Locale.ROOT);
         var on = pages.get(page - 1);
-        var haystack = on.text().toLowerCase(Locale.ROOT);
-        if (needle.isEmpty() || haystack.length() != on.text().length()) {
-            return Optional.empty();
-        }
+        var found = pattern.get().matcher(on.text());
         List<Rect> nearest = null;
         double best = Double.MAX_VALUE;
-        for (int at = haystack.indexOf(needle); at >= 0; at = haystack.indexOf(needle, at + 1)) {
-            var lines = lines(on.boxes().subList(at, at + needle.length()));
+        for (int at = 0; found.find(at); at = found.start() + 1) {
+            var lines = lines(on.boxes().subList(found.start(), found.end()));
             if (lines.isEmpty()) {
                 continue;
             }
@@ -113,10 +109,6 @@ final class PdfText implements Serializable {
         return dx * dx + dy * dy;
     }
 
-    private static String collapse(String text) {
-        return text.strip().replaceAll("\\s+", " ");
-    }
-
     /** Collects each page's characters and their boxes as the text is laid out, spaces collapsed. */
     private static final class Stripper extends PDFTextStripper {
 
@@ -126,10 +118,6 @@ final class PdfText implements Serializable {
         }
 
         final List<Collected> pages = new ArrayList<>();
-
-        Stripper() throws IOException {
-            super();
-        }
 
         @Override
         protected void startPage(PDPage page) throws IOException {
@@ -181,23 +169,14 @@ final class PdfText implements Serializable {
             var height = position.getPageHeight();
             var size = position.getFontSizeInPt();
             // kept on the page, which a rectangle has to be
-            var left = clamp(position.getXDirAdj() - PADDING, width);
-            var right = clamp(position.getXDirAdj() + position.getWidthDirAdj() + PADDING, width);
-            var top = clamp(position.getYDirAdj() - size * 0.8f - PADDING, height);
-            var bottom = clamp(position.getYDirAdj() + size * 0.25f + PADDING, height);
+            var left = Math.clamp(position.getXDirAdj() - PADDING, 0, width);
+            var right = Math.clamp(position.getXDirAdj() + position.getWidthDirAdj() + PADDING, 0, width);
+            var top = Math.clamp(position.getYDirAdj() - size * 0.8f - PADDING, 0, height);
+            var bottom = Math.clamp(position.getYDirAdj() + size * 0.25f + PADDING, 0, height);
             if (right <= left || bottom <= top) {
                 return null;
             }
             return new Rect(left / width, top / height, (right - left) / width, (bottom - top) / height);
         }
-
-        private static float clamp(float value, float limit) {
-            return Math.clamp(value, 0, limit);
-        }
-    }
-
-    /** The text of a page as it is searched: whitespace collapsed to single spaces. */
-    String text(int page) {
-        return pages.get(page - 1).text();
     }
 }

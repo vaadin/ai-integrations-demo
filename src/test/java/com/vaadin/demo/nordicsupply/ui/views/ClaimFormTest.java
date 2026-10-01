@@ -8,9 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Stream;
 
-import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.HasValidation;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -110,7 +108,7 @@ class ClaimFormTest {
         priority = field("priority", RadioButtonGroup.class);
         claimedAmount = field("claimed-amount", BigDecimalField.class);
         description = field("description", TextArea.class);
-        create = descendants(form)
+        create = ComponentTree.descendants(form)
                 .filter(Button.class::isInstance)
                 .map(Button.class::cast)
                 .filter(button -> "Create Claim".equals(button.getText()))
@@ -258,14 +256,10 @@ class ClaimFormTest {
     }
 
     private <T> T field(String id, Class<T> type) {
-        return descendants(form)
+        return ComponentTree.descendants(form)
                 .filter(component -> component.getId().filter(id::equals).isPresent())
                 .map(type::cast)
                 .findFirst()
                 .orElseThrow();
-    }
-
-    private static Stream<Component> descendants(Component root) {
-        return Stream.concat(Stream.of(root), root.getChildren().flatMap(ClaimFormTest::descendants));
     }
 }

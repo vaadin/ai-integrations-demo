@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,7 +56,7 @@ class ConversationsTest {
         return new ChatMessage(role, text, null, null);
     }
 
-    private static List<String> texts(List<Message> messages) {
+    private static List<String> texts(List<? extends Message> messages) {
         return messages.stream().map(Message::getText).toList();
     }
 
@@ -134,14 +135,15 @@ class ConversationsTest {
     }
 
     @Test
-    void aForgottenConversationsNextTurnIsItsFirst() {
-        var provider = conversations.start("claims-1");
+    void aStandaloneTurnIsSentAloneAndLeavesNothingInTheMemory() {
+        var provider = conversations.standalone();
         ask(provider, "The damaged pallet");
-
-        conversations.forget("claims-1");
         ask(provider, "The missing cartons");
 
-        assertThat(texts(repository.findByConversationId("claims-1"))).containsExactly("The missing cartons", "Done.");
+        var prompts = ArgumentCaptor.forClass(Prompt.class);
+        verify(model, times(2)).stream(prompts.capture());
+        assertThat(texts(prompts.getValue().getUserMessages())).containsExactly("The missing cartons");
+        assertThat(repository.findConversationIds()).isEmpty();
     }
 
     @Test

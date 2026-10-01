@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 
 import com.vaadin.demo.nordicsupply.session.Scopes;
 import com.vaadin.demo.nordicsupply.util.Images;
-import com.vaadin.demo.nordicsupply.util.Pdfs;
 
 /**
  * The example documents are painted at start-up: six files, one per country, each a readable PDF or image of the
@@ -23,7 +22,7 @@ import com.vaadin.demo.nordicsupply.util.Pdfs;
  */
 class ExampleDocumentsTest {
 
-    private final ExampleDocuments documents = new ExampleDocuments();
+    private static final ExampleDocuments documents = PaintedExamples.ALL;
 
     @Test
     void thereIsOneExamplePerCountryInTheOrderTheyAreShown() {
@@ -40,12 +39,9 @@ class ExampleDocumentsTest {
 
     @Test
     void thePdfsHaveThePagesTheirTilesPromise() throws IOException {
-        assertThat(Pdfs.pageCount(example("Damaged pallet.pdf").attachment().data()))
-                .isEqualTo(2);
-        assertThat(Pdfs.pageCount(example("Late delivery.pdf").attachment().data()))
-                .isEqualTo(1);
-        assertThat(Pdfs.pageCount(example("Pricing dispute.pdf").attachment().data()))
-                .isEqualTo(1);
+        assertThat(pagesOf("Damaged pallet.pdf")).isEqualTo(2);
+        assertThat(pagesOf("Late delivery.pdf")).isEqualTo(1);
+        assertThat(pagesOf("Pricing dispute.pdf")).isEqualTo(1);
         assertThat(documents.all()).filteredOn(ExampleDocument::isPdf).hasSize(3);
     }
 
@@ -125,16 +121,19 @@ class ExampleDocumentsTest {
         }
     }
 
-    private String text(String name) throws IOException {
+    private static int pagesOf(String name) throws IOException {
+        try (var document = Loader.loadPDF(example(name).attachment().data())) {
+            return document.getNumberOfPages();
+        }
+    }
+
+    private static String text(String name) throws IOException {
         try (var document = Loader.loadPDF(example(name).attachment().data())) {
             return new PDFTextStripper().getText(document);
         }
     }
 
-    private ExampleDocument example(String name) {
-        return documents.all().stream()
-                .filter(document -> document.name().equals(name))
-                .findFirst()
-                .orElseThrow();
+    private static ExampleDocument example(String name) {
+        return PaintedExamples.named(name);
     }
 }

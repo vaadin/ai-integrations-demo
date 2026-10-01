@@ -4,31 +4,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.stream.Stream;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.HasStyle;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.ai.common.ConfidenceLevel;
 import com.vaadin.flow.component.ai.common.PageRegion;
 import com.vaadin.flow.component.ai.common.Rect;
 import com.vaadin.flow.component.ai.common.SourceExtract;
 import com.vaadin.flow.component.ai.common.ValueSource;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
+import com.vaadin.demo.nordicsupply.examples.PaintedExamples;
 
 /**
  * A PDF is shown as its pages and an image as one, with the model told their shape; an outline goes on the text a
  * PDF prints, or where the model placed it on an image, coloured by confidence; a text marks the snippets in it.
  */
 class AttachmentViewerTest {
-
-    /** Painted once: painting the examples takes a moment. */
-    private static final ExampleDocuments EXAMPLES = new ExampleDocuments();
 
     /** A page is an image the UI serves; held here, since the current UI is kept only weakly. */
     private final UI ui = new UI();
@@ -47,7 +45,7 @@ class AttachmentViewerTest {
     void aPdfIsShownAsItsPagesAndDescribedToTheModel() {
         var viewer = viewerOf("Late delivery.pdf");
 
-        assertThat(viewer.pageCount()).isEqualTo(1);
+        assertThat(pagesOf(viewer)).isEqualTo(1);
         assertThat(viewer.geometry()).isEqualTo("a PDF of 1 page, each 595 points wide and 842 points tall");
     }
 
@@ -55,7 +53,7 @@ class AttachmentViewerTest {
     void aPdfWithPagesOfDifferentSizesIsDescribedPageByPage() {
         var viewer = viewerOf("Damaged pallet.pdf");
 
-        assertThat(viewer.pageCount()).isEqualTo(2);
+        assertThat(pagesOf(viewer)).isEqualTo(2);
         assertThat(viewer.geometry())
                 .matches("a PDF of 2 pages: page 1 595 points wide and \\d+ points tall;"
                         + " page 2 595 points wide and 842 points tall");
@@ -65,7 +63,7 @@ class AttachmentViewerTest {
     void anImageIsOnePageOfItsSizeInPixels() {
         var viewer = viewerOf("Wrong colour.png");
 
-        assertThat(viewer.pageCount()).isEqualTo(1);
+        assertThat(pagesOf(viewer)).isEqualTo(1);
         assertThat(viewer.geometry()).matches("an image \\d+ pixels wide and \\d+ pixels tall");
     }
 
@@ -144,7 +142,8 @@ class AttachmentViewerTest {
     @Test
     void aTextMarksTheSnippetsItHas() {
         var message = "20 jackets came in Moss\nGreen, we ordered Midnight Blue.";
-        var viewer = new AttachmentViewer("Pasted text", "text/plain", message.getBytes(StandardCharsets.UTF_8));
+        var viewer = new AttachmentViewer(
+                new AIAttachment("Pasted text", "text/plain", message.getBytes(StandardCharsets.UTF_8)));
 
         viewer.show(new ValueSource(
                 ConfidenceLevel.MEDIUM,
@@ -153,9 +152,11 @@ class AttachmentViewerTest {
                         new SourceExtract("not in the text", null),
                         new SourceExtract("Reasoning: Green is the colour that came.", null))));
 
-        assertThat(viewer.pageCount()).isZero();
+        assertThat(pagesOf(viewer)).isZero();
         assertThat(viewer.geometry()).isEmpty();
-        assertThat(descendants(viewer).filter(Span.class::isInstance).map(Span.class::cast))
+        assertThat(ComponentTree.descendants(viewer)
+                        .filter(Span.class::isInstance)
+                        .map(Span.class::cast))
                 .singleElement()
                 .satisfies(mark -> {
                     assertThat(mark.getText()).isEqualTo("Moss\nGreen");
@@ -164,22 +165,20 @@ class AttachmentViewerTest {
     }
 
     private static AttachmentViewer viewerOf(String name) {
-        var example = EXAMPLES.all().stream()
-                .filter(document -> document.name().equals(name))
-                .findFirst()
-                .orElseThrow();
-        return new AttachmentViewer(
-                name, example.attachment().mimeType(), example.attachment().data());
+        return new AttachmentViewer(PaintedExamples.named(name).attachment());
+    }
+
+    /** The pages a viewer shows: none for a text. */
+    private static long pagesOf(AttachmentViewer viewer) {
+        return viewer.getChildren()
+                .filter(child -> child instanceof Div page && page.hasClassName("attachment-page"))
+                .count();
     }
 
     private static List<HasStyle> outlines(Component viewer) {
-        return descendants(viewer)
+        return ComponentTree.descendants(viewer)
                 .filter(c -> c instanceof HasStyle styled && styled.hasClassName("source"))
                 .map(HasStyle.class::cast)
                 .toList();
-    }
-
-    private static Stream<Component> descendants(Component root) {
-        return Stream.concat(Stream.of(root), root.getChildren().flatMap(AttachmentViewerTest::descendants));
     }
 }

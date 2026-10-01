@@ -5,12 +5,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.dnd.DragSource;
-import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.signals.shared.SharedValueSignal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +26,7 @@ import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
 import com.vaadin.demo.nordicsupply.data.ShipmentRepository;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocument;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
+import com.vaadin.demo.nordicsupply.examples.PaintedExamples;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.CurrentUser.SignedInUser;
 import com.vaadin.demo.nordicsupply.session.Scopes;
@@ -40,8 +40,7 @@ class ClaimsViewTest {
     private static final SignedInUser HEAD_OFFICE = new SignedInUser(1, "Test User", Scopes.ALL);
     private static final SignedInUser NORTH = new SignedInUser(2, "Test User", Scopes.SE_NO);
 
-    /** Painted once: painting the examples takes a moment. */
-    private static final ExampleDocuments EXAMPLES = new ExampleDocuments();
+    private static final ExampleDocuments EXAMPLES = PaintedExamples.ALL;
 
     /** Held here, since the current UI is kept only weakly and a garbage collection would clear it mid-test. */
     private final UI ui = new UI();
@@ -59,14 +58,14 @@ class ClaimsViewTest {
 
     @Test
     void theHeadOfficeIsOfferedEveryExampleAndEachDragsItself() {
-        assertThat(tilesOf(viewFor(HEAD_OFFICE)))
+        assertThat(examplesOf(viewFor(HEAD_OFFICE)))
                 .extracting(tile -> DragSource.configure(tile).getDragData())
                 .containsExactlyElementsOf(EXAMPLES.all());
     }
 
     @Test
     void aRegionIsOfferedTheExamplesOfItsCountries() {
-        assertThat(tilesOf(viewFor(NORTH)))
+        assertThat(examplesOf(viewFor(NORTH)))
                 .extracting(
                         tile -> ((ExampleDocument) DragSource.configure(tile).getDragData()).name())
                 .containsExactly("Missing cartons.png", "Quality defect.jpg");
@@ -116,15 +115,12 @@ class ClaimsViewTest {
                 EXAMPLES);
     }
 
-    private static List<Component> tilesOf(ClaimsView view) {
-        return descendants(view).filter(ClaimsViewTest::isTile).toList();
+    /** Each example tile's button, which reads the example when clicked and carries it when dragged. */
+    private static List<Component> examplesOf(ClaimsView view) {
+        return ComponentTree.descendants(view).filter(ClaimsViewTest::isExample).toList();
     }
 
-    private static Stream<Component> descendants(Component root) {
-        return Stream.concat(Stream.of(root), root.getChildren().flatMap(ClaimsViewTest::descendants));
-    }
-
-    private static boolean isTile(Component component) {
-        return component instanceof Div tile && tile.hasClassName("example-file");
+    private static boolean isExample(Component component) {
+        return component instanceof NativeButton use && use.hasClassName("file-use");
     }
 }

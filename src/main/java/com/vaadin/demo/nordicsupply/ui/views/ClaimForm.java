@@ -12,6 +12,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentEvent;
 import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.HasValue;
+import com.vaadin.flow.component.ItemLabelGenerator;
 import com.vaadin.flow.component.ai.common.ValueSource;
 import com.vaadin.flow.component.ai.form.FormAIController;
 import com.vaadin.flow.component.ai.form.ValueOptions;
@@ -36,6 +37,7 @@ import com.vaadin.flow.shared.Registration;
 import com.vaadin.flow.signals.Signal;
 import com.vaadin.flow.signals.local.ValueSignal;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.util.StringUtils;
 
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
@@ -208,8 +210,8 @@ class ClaimForm extends Div {
     private final transient ShipmentRepository shipments;
     private final List<String> countries;
 
-    /** The form's side of the AI, once {@link #aiController()} made it; the sources of the values are in it. */
-    private FormAIController controller;
+    /** The form's side of the AI; the sources of the values are in it. */
+    private final FormAIController controller;
 
     /** The field in focus, whose value's source is shown, or {@code null}. */
     private HasValue<?, ?> focused;
@@ -262,6 +264,8 @@ class ClaimForm extends Div {
         var text = new FormRow();
         text.add(description, 6);
         fields.add(parties, delivery, complaint, request, text);
+        controller = new FormAIController(fields, binder);
+        configureAi();
 
         var create = new Button("Create Claim", e -> create());
         create.addThemeVariants(ButtonVariant.PRIMARY, ButtonVariant.LARGE);
@@ -276,9 +280,14 @@ class ClaimForm extends Div {
     /**
      * The form's side of the AI, for one orchestrator: the options of each choice labelled the way a message names
      * them, and what each field means where its label does not say.
+     *
+     * @return the controller to hand the orchestrator
      */
     FormAIController aiController() {
-        controller = new FormAIController(fields, binder);
+        return controller;
+    }
+
+    private void configureAi() {
         controller.setSourceTrackingEnabled(true);
         // the AI badge's popover says why the AI chose the value, and quotes what it read it from
         controller.setFieldMarkerPopoverContentProvider(change -> change.getFieldSource()
@@ -298,18 +307,9 @@ class ClaimForm extends Div {
                         .options((filter, limit) ->
                                 customers.options(SearchTerms.like(filter), countries, PageRequest.of(0, limit)))
                         .itemLabelGenerator(ClaimForm::customerForTheModel))
-                .fieldValueOptions(ValueOptions.forField(reportedBy)
-                        .options((filter, limit) ->
-                                matching(contactsOf(customer.getValue()), filter, limit, ClaimForm::contactForTheModel))
-                        .itemLabelGenerator(ClaimForm::contactForTheModel))
-                .fieldValueOptions(ValueOptions.forField(order)
-                        .options((filter, limit) ->
-                                matching(ordersOf(customer.getValue()), filter, limit, ClaimForm::orderForTheModel))
-                        .itemLabelGenerator(ClaimForm::orderForTheModel))
-                .fieldValueOptions(ValueOptions.forField(shipment)
-                        .options((filter, limit) ->
-                                matching(shipmentsOf(order.getValue()), filter, limit, ClaimForm::shipmentForTheModel))
-                        .itemLabelGenerator(ClaimForm::shipmentForTheModel))
+                .fieldValueOptions(offered(reportedBy, ClaimForm::contactForTheModel))
+                .fieldValueOptions(offered(order, ClaimForm::orderForTheModel))
+                .fieldValueOptions(offered(shipment, ClaimForm::shipmentForTheModel))
                 .describeField(
                         customer,
                         "The retail customer the message comes from. Search by the sender's mail domain, the shop's"
@@ -346,7 +346,6 @@ class ClaimForm extends Div {
                                 + " message: what is affected and how many, what happened, and what the customer asks"
                                 + " for. Leave out personal details the claim does not need: no phone numbers, and no"
                                 + " names but the reporter's. At most " + DESCRIPTION_LENGTH + " characters.");
-        return controller;
     }
 
     /** Empties the form for the next claim; the priority starts at Normal. */
@@ -439,29 +438,40 @@ class ClaimForm extends Div {
 
     /** Each choice offers what the one before it leads to: the customer's contacts and orders, the order's shipments. */
     private void cascade() {
-        reportedBy.setEnabled(false);
-        order.setEnabled(false);
-        shipment.setEnabled(false);
+        offer(reportedBy, List.of(), false);
+        offer(order, List.of(), false);
+        offer(shipment, List.of(), false);
         customer.addValueChangeListener(e -> {
             var chosen = e.getValue();
-            reportedBy.clear();
-            reportedBy.setItems(contactsOf(chosen));
-            reportedBy.setEnabled(chosen != null);
-            order.clear();
-            order.setItems(ordersOf(chosen));
-            order.setEnabled(chosen != null);
+            offer(reportedBy, contactsOf(chosen), chosen != null);
+            offer(order, ordersOf(chosen), chosen != null);
         });
         // an order that came in one delivery names its shipment too
         order.addValueChangeListener(e -> {
-            var chosen = e.getValue();
-            var delivered = shipmentsOf(chosen);
-            shipment.clear();
-            shipment.setItems(delivered);
-            shipment.setEnabled(chosen != null);
+            var delivered = shipmentsOf(e.getValue());
+            offer(shipment, delivered, e.getValue() != null);
             if (delivered.size() == 1) {
                 shipment.setValue(delivered.getFirst());
             }
         });
+    }
+
+    /** A choice emptied and given what there is to choose from, enabled once what it depends on is chosen. */
+    private static <T> void offer(ComboBox<T> field, List<T> items, boolean enabled) {
+        field.clear();
+        field.setItems(items);
+        field.setEnabled(enabled);
+    }
+
+    /**
+     * What the AI may pick for a choice: what the form offers in it, the choices that depend on another one, labelled
+     * for the model.
+     */
+    private static <T> ValueOptions<T> offered(ComboBox<T> field, ItemLabelGenerator<T> label) {
+        return ValueOptions.forField(field)
+                .options((filter, limit) ->
+                        matching(field.getListDataView().getItems().toList(), filter, limit, label))
+                .itemLabelGenerator(label);
     }
 
     private List<CustomerContactRepository.Option> contactsOf(CustomerRepository.Option customer) {
@@ -498,22 +508,12 @@ class ClaimForm extends Div {
     }
 
     /**
-     * Follows the field in focus, by the browser's {@code focusin} and {@code focusout}, which every field sends,
-     * the radio group among them, and shows its source anew when it gets the focus, loses it, or its value changes:
-     * a value the user edits or reverts is no longer the AI's.
+     * Follows the field in focus, among the fields the binder holds, by the browser's {@code focusin} and
+     * {@code focusout}, which every field sends, the radio group among them, and shows its source anew when it gets
+     * the focus, loses it, or its value changes: a value the user edits or reverts is no longer the AI's.
      */
     private void followFocus() {
-        for (var field : List.<HasValue<?, ?>>of(
-                customer,
-                reportedBy,
-                order,
-                shipment,
-                claimType,
-                priority,
-                requestedResolution,
-                neededBy,
-                claimedAmount,
-                description)) {
+        binder.getFields().forEach(field -> {
             var element = ((Component) field).getElement();
             element.addEventListener("focusin", e -> {
                 focused = field;
@@ -530,13 +530,11 @@ class ClaimForm extends Div {
                     showSource();
                 }
             });
-        }
+        });
     }
 
     private void showSource() {
-        var source = controller == null || focused == null
-                ? null
-                : controller.getFieldSource(focused).orElse(null);
+        var source = focused == null ? null : controller.getFieldSource(focused).orElse(null);
         fireEvent(new SourceEvent(this, source));
     }
 
@@ -568,8 +566,7 @@ class ClaimForm extends Div {
         if (constant == null) {
             return "";
         }
-        var words = constant.name().replace('_', ' ').toLowerCase(Locale.ROOT);
-        return Character.toUpperCase(words.charAt(0)) + words.substring(1);
+        return StringUtils.capitalize(constant.name().replace('_', ' ').toLowerCase(Locale.ROOT));
     }
 
     /** The options whose label for the model contains the filter, ignoring case; all of them for no filter. */

@@ -1,5 +1,6 @@
 package com.vaadin.demo.nordicsupply.ui.views;
 
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
@@ -35,6 +36,7 @@ import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.streams.DownloadHandler;
+import com.vaadin.flow.server.streams.DownloadResponse;
 import com.vaadin.flow.server.streams.UploadHandler;
 import com.vaadin.flow.signals.Signal;
 import com.vaadin.flow.signals.local.ValueSignal;
@@ -46,6 +48,8 @@ import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
 import com.vaadin.demo.nordicsupply.data.ShipmentRepository;
+import com.vaadin.demo.nordicsupply.examples.ExampleDocument;
+import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 
@@ -76,13 +80,13 @@ public class ClaimsView extends PageView implements HasReadme {
             focus a field, and the words the AI took its value from are outlined in the message, green where it was
             sure of them, orange or red where less so.
 
-            The example files are the demo data's own customer messages, exported as PDFs and a screenshot, so the
-            customers, orders and shipments they name exist, and each tests something real messages do: an order
-            number only in a quoted confirmation or none at all, a delivery named by its weekday, a message in
-            Swedish, a private phone number that has no place in the claim. Drag one to the area, or click it. They come from customers all over the Nordic Supply area, and the AI
-            finds only the customers of your region, so signed in as a regional employee it leaves the others empty.
-            Check the form, correct what the AI got wrong and create the claim. The demo does not save claims, so the
-            form then starts over.
+            The example files are complaints from the demo data's own customers, in the shapes they arrive in: an
+            exported email with the scanned delivery note, a letter, an invoice written on by hand, a photographed
+            form, and screenshots of a portal message and a chat. The customers, orders and shipments they name exist.
+            The PDFs carry their text the way a scan that went through OCR does, so a value's source is outlined on the
+            words themselves; on an image the outline goes where the AI saw them. You are offered the examples of your
+            region's customers. Drag one to the area, or click it. Check the form, correct what the AI got wrong and
+            create the claim. The demo does not save claims, so the form then starts over.
             """;
 
     private static final String SYSTEM_PROMPT = """
@@ -150,7 +154,8 @@ public class ClaimsView extends PageView implements HasReadme {
             SalesOrderRepository orders,
             ShipmentRepository shipments,
             Conversations conversations,
-            CurrentUser currentUser) {
+            CurrentUser currentUser,
+            ExampleDocuments examples) {
         super("Claims", "Resolve customer issues");
         form = new ClaimForm(
                 customers,
@@ -165,7 +170,10 @@ public class ClaimsView extends PageView implements HasReadme {
                 .withResponseListener(this::turnEnded)
                 .build();
 
-        chooser = new Div(dropZone(), demoTip());
+        // a region's account is offered the examples of its own countries' customers, the only ones it can find
+        chooser = new Div(
+                dropZone(),
+                demoTip(examples.forCountries(currentUser.get().scope().countries())));
         chooser.addClassName("message-chooser");
         message.addClassName("message-panel");
         message.setVisible(false);
@@ -237,8 +245,8 @@ public class ClaimsView extends PageView implements HasReadme {
         var examples = DropTarget.create(zone);
         examples.setDropEffect(DropEffect.COPY);
         examples.addDropListener(e -> e.getDragData()
-                .filter(ExampleFile.class::isInstance)
-                .map(ExampleFile.class::cast)
+                .filter(ExampleDocument.class::isInstance)
+                .map(ExampleDocument.class::cast)
                 .ifPresent(this::read));
         Signal.effect(this, () -> {
             manager.setEnabled(idle.get());
@@ -248,7 +256,7 @@ public class ClaimsView extends PageView implements HasReadme {
     }
 
     /** The tip that introduces the example files, and the files, to drag to the area or click. */
-    private Div demoTip() {
+    private Div demoTip(List<ExampleDocument> examples) {
         var sparkle = new Span(new SvgIcon("icons/sparkle.svg"));
         sparkle.addClassName("sparkle");
         var label = new Span("Demo Tip:");
@@ -262,8 +270,8 @@ public class ClaimsView extends PageView implements HasReadme {
         text.addClassName("tip");
         var files = new Div();
         files.addClassNames("example-files", "aura-surface");
-        for (var file : ExampleFile.values()) {
-            files.add(exampleFile(file));
+        for (var example : examples) {
+            files.add(exampleFile(example));
         }
         var tip = new Div(text, files);
         tip.addClassName("demo-tip");
@@ -274,12 +282,13 @@ public class ClaimsView extends PageView implements HasReadme {
      * One example file: its icon, name and kind as a button that reads it, which can also be dragged to the area,
      * and a button that downloads it, shown on hover.
      */
-    private Component exampleFile(ExampleFile file) {
-        var icon = new Span(new SvgIcon(file.icon()));
+    private Component exampleFile(ExampleDocument example) {
+        var file = example.attachment();
+        var icon = new Span(new SvgIcon(example.isPdf() ? "icons/file.svg" : "icons/file-image.svg"));
         icon.addClassNames("file-icon", "aura-surface");
-        var name = new Span(file.fileName());
+        var name = new Span(example.name());
         name.addClassName("file-name");
-        var kind = new Span(file.description());
+        var kind = new Span(example.kind());
         kind.addClassName("file-kind");
         var caption = new Span(name, kind);
         caption.addClassName("file-caption");
@@ -287,28 +296,30 @@ public class ClaimsView extends PageView implements HasReadme {
         use.add(icon, caption);
         use.addClassName("file-use");
         use.getElement().setAttribute("aria-description", "Fills in the form from this file");
-        use.addClickListener(e -> read(file));
+        use.addClickListener(e -> read(example));
         use.bindEnabled(idle);
 
         var download = new Anchor(
-                DownloadHandler.forClassResource(ExampleFile.class, file.resource(), file.fileName()),
+                DownloadHandler.fromInputStream(event -> new DownloadResponse(
+                        new ByteArrayInputStream(file.data()), file.name(), file.mimeType(), file.data().length)),
                 AttachmentType.DOWNLOAD,
                 "");
         download.add(new SvgIcon("icons/download.svg"));
         download.addClassName("file-download");
-        download.setAriaLabel("Download " + file.fileName());
+        download.setAriaLabel("Download " + example.name());
         download.setTitle("Download");
 
         var tile = new Div(use, download);
         tile.addClassName("example-file");
         var drag = DragSource.create(tile);
-        drag.setDragData(file);
+        drag.setDragData(example);
         drag.setEffectAllowed(EffectAllowed.COPY);
         return tile;
     }
 
-    private void read(ExampleFile file) {
-        read(file.fileName(), file.mimeType(), file.bytes());
+    private void read(ExampleDocument example) {
+        var file = example.attachment();
+        read(file.name(), file.mimeType(), file.data());
     }
 
     /** Hands a message to the AI on an empty form, unless it is still reading the one before. */

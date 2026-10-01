@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 import com.vaadin.flow.component.Component;
@@ -14,8 +15,6 @@ import com.vaadin.flow.signals.shared.SharedValueSignal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -26,41 +25,31 @@ import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
 import com.vaadin.demo.nordicsupply.data.ShipmentRepository;
+import com.vaadin.demo.nordicsupply.examples.ExampleDocument;
+import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.CurrentUser.SignedInUser;
 import com.vaadin.demo.nordicsupply.session.Scopes;
 
 /**
- * The view offers every example file to drag to the message area or click, each file is there and a document with
- * pages, which the AI can point into when it reports where a value came from, and an email reaches the model as its
- * text.
+ * The view offers the examples of the user's region to drag to the message area or click, each a document the view
+ * accepts, and an email reaches the model as its text.
  */
 class ClaimsViewTest {
 
-    private static final SignedInUser TEST_USER = new SignedInUser(1, "Test User", Scopes.ALL);
+    private static final SignedInUser HEAD_OFFICE = new SignedInUser(1, "Test User", Scopes.ALL);
+    private static final SignedInUser NORTH = new SignedInUser(2, "Test User", Scopes.SE_NO);
+
+    /** Painted once: painting the examples takes a moment. */
+    private static final ExampleDocuments EXAMPLES = new ExampleDocuments();
 
     /** Held here, since the current UI is kept only weakly and a garbage collection would clear it mid-test. */
     private final UI ui = new UI();
 
-    private ClaimsView view;
-
     @BeforeEach
-    void theViewAsTheHeadOfficeSeesIt() {
+    void aUi() {
         ui.setLocale(DisplayLocale.LOCALE);
         UI.setCurrent(ui);
-        var currentUser = mock(CurrentUser.class);
-        when(currentUser.get()).thenReturn(TEST_USER);
-        when(currentUser.signal()).thenReturn(new SharedValueSignal<>(TEST_USER));
-        var conversations = new Conversations(
-                ChatClient.builder(mock(ChatModel.class)),
-                MessageWindowChatMemory.builder().build());
-        view = new ClaimsView(
-                mock(CustomerRepository.class),
-                mock(CustomerContactRepository.class),
-                mock(SalesOrderRepository.class),
-                mock(ShipmentRepository.class),
-                conversations,
-                currentUser);
     }
 
     @AfterEach
@@ -69,20 +58,27 @@ class ClaimsViewTest {
     }
 
     @Test
-    void everyExampleFileIsOfferedAndDragsItself() {
-        var tiles = descendants(view).filter(ClaimsViewTest::isTile).toList();
-
-        assertThat(tiles)
+    void theHeadOfficeIsOfferedEveryExampleAndEachDragsItself() {
+        assertThat(tilesOf(viewFor(HEAD_OFFICE)))
                 .extracting(tile -> DragSource.configure(tile).getDragData())
-                .containsExactly((Object[]) ExampleFile.values());
+                .containsExactlyElementsOf(EXAMPLES.all());
     }
 
-    @ParameterizedTest
-    @EnumSource(ExampleFile.class)
-    void anExampleFileIsThereAndHasPagesTheAiCanPointInto(ExampleFile file) {
-        assertThat(file.bytes()).isNotEmpty();
-        assertThat(ClaimsView.ACCEPTED).anyMatch(file.fileName()::endsWith);
-        assertThat(file.mimeType()).isIn("application/pdf", "image/png");
+    @Test
+    void aRegionIsOfferedTheExamplesOfItsCountries() {
+        assertThat(tilesOf(viewFor(NORTH)))
+                .extracting(
+                        tile -> ((ExampleDocument) DragSource.configure(tile).getDragData()).name())
+                .containsExactly("Missing cartons.png", "Quality defect.jpg");
+    }
+
+    @Test
+    void everyExampleIsAFileTheViewAcceptsAsWhatItIs() {
+        assertThat(EXAMPLES.all()).allSatisfy(example -> {
+            assertThat(ClaimsView.ACCEPTED).anyMatch(example.name()::endsWith);
+            assertThat(ClaimsView.mimeTypeOf(example.name()))
+                    .isEqualTo(example.attachment().mimeType());
+        });
     }
 
     @Test
@@ -99,8 +95,29 @@ class ClaimsViewTest {
 
     @Test
     void theReadmeSaysHowAMessageBecomesAClaim() {
-        assertThat(view.readme())
+        assertThat(viewFor(HEAD_OFFICE).readme())
                 .contains("Drop the customer's message", "AI badge", "outlined", "does not save claims");
+    }
+
+    private static ClaimsView viewFor(SignedInUser user) {
+        var currentUser = mock(CurrentUser.class);
+        when(currentUser.get()).thenReturn(user);
+        when(currentUser.signal()).thenReturn(new SharedValueSignal<>(user));
+        var conversations = new Conversations(
+                ChatClient.builder(mock(ChatModel.class)),
+                MessageWindowChatMemory.builder().build());
+        return new ClaimsView(
+                mock(CustomerRepository.class),
+                mock(CustomerContactRepository.class),
+                mock(SalesOrderRepository.class),
+                mock(ShipmentRepository.class),
+                conversations,
+                currentUser,
+                EXAMPLES);
+    }
+
+    private static List<Component> tilesOf(ClaimsView view) {
+        return descendants(view).filter(ClaimsViewTest::isTile).toList();
     }
 
     private static Stream<Component> descendants(Component root) {

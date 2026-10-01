@@ -70,6 +70,9 @@ final class PdfText implements Serializable {
         double best = Double.MAX_VALUE;
         for (int at = haystack.indexOf(needle); at >= 0; at = haystack.indexOf(needle, at + 1)) {
             var lines = lines(on.boxes().subList(at, at + needle.length()));
+            if (lines.isEmpty()) {
+                continue;
+            }
             var distance = distance(lines.getFirst(), estimate);
             if (distance < best) {
                 best = distance;
@@ -169,17 +172,27 @@ final class PdfText implements Serializable {
             }
         }
 
-        /** A glyph's box from its baseline and font size, in fractions of the page, top-left origin. */
+        /**
+         * A glyph's box from its baseline and font size, in fractions of the page, top-left origin, cut to the page;
+         * {@code null} for a glyph that lies off it.
+         */
         private static Rect box(TextPosition position) {
             var width = position.getPageWidth();
             var height = position.getPageHeight();
             var size = position.getFontSizeInPt();
             // kept on the page, which a rectangle has to be
-            var top = Math.max(0, position.getYDirAdj() - size * 0.8f - PADDING);
-            var bottom = Math.min(height, position.getYDirAdj() + size * 0.25f + PADDING);
-            var left = Math.max(0, position.getXDirAdj() - PADDING);
-            var right = Math.min(width, position.getXDirAdj() + position.getWidthDirAdj() + PADDING);
+            var left = clamp(position.getXDirAdj() - PADDING, width);
+            var right = clamp(position.getXDirAdj() + position.getWidthDirAdj() + PADDING, width);
+            var top = clamp(position.getYDirAdj() - size * 0.8f - PADDING, height);
+            var bottom = clamp(position.getYDirAdj() + size * 0.25f + PADDING, height);
+            if (right <= left || bottom <= top) {
+                return null;
+            }
             return new Rect(left / width, top / height, (right - left) / width, (bottom - top) / height);
+        }
+
+        private static float clamp(float value, float limit) {
+            return Math.clamp(value, 0, limit);
         }
     }
 

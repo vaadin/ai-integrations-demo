@@ -228,16 +228,23 @@ class AttachmentViewer extends Div {
         }
     }
 
+    /** The pages and their size in points: one size for them all when they share it, each page's otherwise. */
     private static String geometry(PDDocument document) {
-        var box = document.getPage(0).getMediaBox();
         var count = document.getNumberOfPages();
-        return String.format(
-                Locale.ROOT,
-                "a PDF of %d page%s, each %.0f points wide and %.0f points tall",
-                count,
-                count == 1 ? "" : "s",
-                box.getWidth(),
-                box.getHeight());
+        var sizes = new ArrayList<String>();
+        for (var page : document.getPages()) {
+            var box = page.getMediaBox();
+            sizes.add(String.format(
+                    Locale.ROOT, "%.0f points wide and %.0f points tall", box.getWidth(), box.getHeight()));
+        }
+        if (sizes.stream().distinct().count() == 1) {
+            return "a PDF of " + count + " page" + (count == 1 ? "" : "s") + ", each " + sizes.getFirst();
+        }
+        var pages = new ArrayList<String>();
+        for (int i = 0; i < sizes.size(); i++) {
+            pages.add("page " + (i + 1) + " " + sizes.get(i));
+        }
+        return "a PDF of " + count + " pages: " + String.join("; ", pages);
     }
 
     /** An image's size in pixels; nothing for a format the JDK cannot read, such as WebP. */

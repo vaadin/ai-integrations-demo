@@ -662,3 +662,12 @@ vaadin-radio-group.segmented.aura-surface {
     box-shadow: 0 0 0 2px var(--_source-color);
   }
 }
+
+/* the AI badge's popover: the snippets a value was read from */
+.source-extracts {
+  display: grid;
+  gap: var(--vaadin-gap-xs);
+  max-width: 24rem;
+  font-size: var(--aura-font-size-s);
+  color: var(--vaadin-text-color-secondary);
+}

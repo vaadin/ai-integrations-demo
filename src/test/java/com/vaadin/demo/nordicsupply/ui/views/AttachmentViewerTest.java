@@ -19,11 +19,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
+
 /**
  * A PDF is shown as its pages and an image as one, with the model told their shape; an outline goes on the text a
  * PDF prints, or where the model placed it on an image, coloured by confidence; a text marks the snippets in it.
  */
 class AttachmentViewerTest {
+
+    /** Painted once: painting the examples takes a moment. */
+    private static final ExampleDocuments EXAMPLES = new ExampleDocuments();
 
     /** A page is an image the UI serves; held here, since the current UI is kept only weakly. */
     private final UI ui = new UI();
@@ -40,15 +45,25 @@ class AttachmentViewerTest {
 
     @Test
     void aPdfIsShownAsItsPagesAndDescribedToTheModel() {
-        var viewer = new AttachmentViewer("Damaged pallet.pdf", "application/pdf", ExampleFile.DAMAGED_PALLET.bytes());
+        var viewer = viewerOf("Late delivery.pdf");
 
         assertThat(viewer.pageCount()).isEqualTo(1);
         assertThat(viewer.geometry()).isEqualTo("a PDF of 1 page, each 595 points wide and 842 points tall");
     }
 
     @Test
+    void aPdfWithPagesOfDifferentSizesIsDescribedPageByPage() {
+        var viewer = viewerOf("Damaged pallet.pdf");
+
+        assertThat(viewer.pageCount()).isEqualTo(2);
+        assertThat(viewer.geometry())
+                .matches("a PDF of 2 pages: page 1 595 points wide and \\d+ points tall;"
+                        + " page 2 595 points wide and 842 points tall");
+    }
+
+    @Test
     void anImageIsOnePageOfItsSizeInPixels() {
-        var viewer = new AttachmentViewer("wrong-color.png", "image/png", ExampleFile.WRONG_COLOUR.bytes());
+        var viewer = viewerOf("Wrong colour.png");
 
         assertThat(viewer.pageCount()).isEqualTo(1);
         assertThat(viewer.geometry()).matches("an image \\d+ pixels wide and \\d+ pixels tall");
@@ -56,11 +71,11 @@ class AttachmentViewerTest {
 
     @Test
     void anOutlineOnAPdfGoesOnTheTextItNamesNotOnTheEstimate() {
-        var viewer = new AttachmentViewer("Damaged pallet.pdf", "application/pdf", ExampleFile.DAMAGED_PALLET.bytes());
+        var viewer = viewerOf("Damaged pallet.pdf");
         var farOff = new PageRegion(1, new Rect(0.05, 0.05, 0.2, 0.02));
 
         viewer.show(new ValueSource(
-                ConfidenceLevel.HIGH, List.of(new SourceExtract("Order number: SO-2026-007365", farOff))));
+                ConfidenceLevel.HIGH, List.of(new SourceExtract("Kauppakatu 5, 96100 Rovaniemi", farOff))));
 
         assertThat(outlines(viewer)).singleElement().satisfies(box -> {
             assertThat(box.getClassNames()).contains("source", "high");
@@ -71,10 +86,10 @@ class AttachmentViewerTest {
 
     @Test
     void anOutlineOnAnImageIsWhereTheModelPlacedIt() {
-        var viewer = new AttachmentViewer("wrong-color.png", "image/png", ExampleFile.WRONG_COLOUR.bytes());
+        var viewer = viewerOf("Wrong colour.png");
         var region = new PageRegion(1, new Rect(0.1, 0.2, 0.3, 0.05));
 
-        viewer.show(new ValueSource(null, List.of(new SourceExtract("SO-2026-007367", region))));
+        viewer.show(new ValueSource(null, List.of(new SourceExtract("SO-2026-006473", region))));
 
         assertThat(outlines(viewer)).singleElement().satisfies(box -> {
             assertThat(box.getClassNames()).contains("unrated");
@@ -87,7 +102,7 @@ class AttachmentViewerTest {
 
     @Test
     void anExtractOnAPageTheAttachmentDoesNotHaveIsNotOutlined() {
-        var viewer = new AttachmentViewer("wrong-color.png", "image/png", ExampleFile.WRONG_COLOUR.bytes());
+        var viewer = viewerOf("Wrong colour.png");
 
         viewer.show(new ValueSource(
                 ConfidenceLevel.LOW,
@@ -100,7 +115,7 @@ class AttachmentViewerTest {
 
     @Test
     void noSourceClearsTheOutlines() {
-        var viewer = new AttachmentViewer("wrong-color.png", "image/png", ExampleFile.WRONG_COLOUR.bytes());
+        var viewer = viewerOf("Wrong colour.png");
         viewer.show(new ValueSource(
                 ConfidenceLevel.HIGH, List.of(new SourceExtract("x", new PageRegion(1, new Rect(0, 0, 1, 1))))));
 
@@ -126,6 +141,15 @@ class AttachmentViewerTest {
                     assertThat(mark.getText()).isEqualTo("Moss\nGreen");
                     assertThat(mark.getClassNames()).contains("source", "medium");
                 });
+    }
+
+    private static AttachmentViewer viewerOf(String name) {
+        var example = EXAMPLES.all().stream()
+                .filter(document -> document.name().equals(name))
+                .findFirst()
+                .orElseThrow();
+        return new AttachmentViewer(
+                name, example.attachment().mimeType(), example.attachment().data());
     }
 
     private static List<HasStyle> outlines(Component viewer) {

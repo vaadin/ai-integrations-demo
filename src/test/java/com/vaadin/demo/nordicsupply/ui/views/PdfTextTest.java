@@ -9,9 +9,12 @@ import org.apache.pdfbox.Loader;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
+
 /**
  * A snippet is found where the PDF prints it, whitespace and case aside, on the lines it runs over, at the occurrence
- * nearest the model's estimate; a snippet the page does not have is not found.
+ * nearest the model's estimate; a snippet the page does not have is not found. The damaged pallet example has an
+ * exported email as its first page and a scanned delivery note, written on by hand and stamped, as its second.
  */
 class PdfTextTest {
 
@@ -21,8 +24,13 @@ class PdfTextTest {
     private static PdfText damagedPallet;
 
     @BeforeAll
-    static void theDamagedPalletEmail() throws IOException {
-        try (var document = Loader.loadPDF(ExampleFile.DAMAGED_PALLET.bytes())) {
+    static void theDamagedPalletExample() throws IOException {
+        var example = new ExampleDocuments()
+                .all().stream()
+                        .filter(document -> document.name().equals("Damaged pallet.pdf"))
+                        .findFirst()
+                        .orElseThrow();
+        try (var document = Loader.loadPDF(example.attachment().data())) {
             damagedPallet = PdfText.of(document, AttachmentViewer.MAX_PAGES);
         }
     }
@@ -30,19 +38,19 @@ class PdfTextTest {
     @Test
     void theTextIsThePagesWithWhitespaceCollapsed() {
         assertThat(damagedPallet.text(1))
-                .contains("Order number: SO-2026-007365 Customer: Retkivakka Tampere (C-10001)")
+                .contains("Damaged pallet, order SO-2026-006830 / SH-2026-007291")
                 .doesNotContain("  ");
+        assertThat(damagedPallet.text(2)).contains("Top layer crushed, stretch wrap torn.", "RECEIVED WITH REMARKS");
     }
 
     @Test
     void aSnippetOnOneLineIsOneBoxWithinThePage() {
-        var boxes =
-                damagedPallet.find("Order number: SO-2026-007365", 1, ANYWHERE).orElseThrow();
+        var boxes = damagedPallet.find("KA9456355659", 2, ANYWHERE).orElseThrow();
 
         assertThat(boxes).singleElement().satisfies(box -> {
             assertThat(box.x()).isBetween(0.0, 0.5);
-            assertThat(box.y()).isBetween(0.5, 1.0);
-            assertThat(box.width()).isBetween(0.1, 0.6);
+            assertThat(box.y()).isBetween(0.2, 0.4);
+            assertThat(box.width()).isBetween(0.05, 0.4);
             assertThat(box.height()).isBetween(0.005, 0.05);
         });
     }
@@ -50,7 +58,7 @@ class PdfTextTest {
     @Test
     void aSnippetOverALineBreakIsABoxPerLine() {
         var boxes = damagedPallet
-                .find("the outer wrap was torn and the cartons at the bottom were crushed", 1, ANYWHERE)
+                .find("crushed and the stretch wrap torn open", 1, ANYWHERE)
                 .orElseThrow();
 
         assertThat(boxes).hasSize(2);
@@ -58,19 +66,24 @@ class PdfTextTest {
     }
 
     @Test
+    void handwritingIsFoundAsWellAsPrint() {
+        assertThat(damagedPallet.find("2 cartons wet - 6 jackets damaged", 2, ANYWHERE))
+                .hasValueSatisfying(boxes -> assertThat(boxes).hasSize(1));
+    }
+
+    @Test
     void caseAndWhitespaceDoNotMatter() {
-        assertThat(damagedPallet.find("ORDER   NUMBER:\nso-2026-007365", 1, ANYWHERE))
+        assertThat(damagedPallet.find("top LAYER   crushed,\nstretch wrap torn", 2, ANYWHERE))
                 .isPresent();
     }
 
     @Test
     void ofSeveralOccurrencesTheOneNearestTheEstimateIsTaken() {
-        var top = damagedPallet
-                .find("Retkivakka Tampere", 1, new Rect(0.2, 0.0, 0.3, 0.02))
-                .orElseThrow();
-        var bottom = damagedPallet
-                .find("Retkivakka Tampere", 1, new Rect(0.5, 0.9, 0.3, 0.02))
-                .orElseThrow();
+        // the shipment is named in the subject, in the attachment's name and in the message
+        var subject = new Rect(0.6, 0.05, 0.2, 0.02);
+        var message = new Rect(0.2, 0.6, 0.2, 0.02);
+        var top = damagedPallet.find("SH-2026-007291", 1, subject).orElseThrow();
+        var bottom = damagedPallet.find("SH-2026-007291", 1, message).orElseThrow();
 
         assertThat(top.getFirst().y()).isLessThan(bottom.getFirst().y());
     }
@@ -78,7 +91,8 @@ class PdfTextTest {
     @Test
     void aSnippetThePageDoesNotHaveIsNotFound() {
         assertThat(damagedPallet.find("SO-2026-999999", 1, ANYWHERE)).isEmpty();
-        assertThat(damagedPallet.find("SO-2026-007365", 2, ANYWHERE)).isEmpty();
+        assertThat(damagedPallet.find("RECEIVED WITH REMARKS", 1, ANYWHERE)).isEmpty();
+        assertThat(damagedPallet.find("SO-2026-006830", 3, ANYWHERE)).isEmpty();
         assertThat(damagedPallet.find(" ", 1, ANYWHERE)).isEmpty();
     }
 }

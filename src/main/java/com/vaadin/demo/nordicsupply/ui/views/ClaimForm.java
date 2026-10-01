@@ -268,6 +268,11 @@ class ClaimForm extends Div {
     FormAIController aiController() {
         controller = new FormAIController(fields, binder);
         controller.setSourceTrackingEnabled(true);
+        // the AI badge's popover quotes what the value was read from
+        controller.setFieldMarkerPopoverContentProvider(change -> change.getFieldSource()
+                .filter(source -> !source.extracts().isEmpty())
+                .map(ClaimForm::quotes)
+                .orElse(null));
         // a turn that changed the field in focus shows where the new value came from
         controller.addFieldValueChangeListener(e -> {
             if (e.getField() == focused) {
@@ -515,6 +520,14 @@ class ClaimForm extends Div {
         return "Claim created for " + draft.getCustomer().name() + ": " + label(draft.getClaimType()) + ", "
                 + label(draft.getPriority()).toLowerCase(locale) + " priority" + amount
                 + ". The demo does not save claims, so the form starts over.";
+    }
+
+    /** The snippets a value was read from, quoted, one to a line. */
+    private static Component quotes(ValueSource source) {
+        var list = new Div();
+        list.addClassName("source-extracts");
+        source.extracts().forEach(extract -> list.add(new Div("“" + extract.text() + "”")));
+        return list;
     }
 
     /** An enum constant as the screen writes it: {@code MISSING_ITEMS} is "Missing items"; none is "". */

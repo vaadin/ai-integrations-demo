@@ -41,9 +41,10 @@ class ConversationsTest {
     private final ChatModel model = mock(ChatModel.class);
     private final InMemoryChatMemoryRepository repository = new InMemoryChatMemoryRepository();
     /** The window Spring AI's auto-configured memory has, over the test's own repository. */
-    private final Conversations conversations = new Conversations(
-            ChatClient.builder(model),
-            MessageWindowChatMemory.builder().chatMemoryRepository(repository).build());
+    private final MessageWindowChatMemory memory =
+            MessageWindowChatMemory.builder().chatMemoryRepository(repository).build();
+
+    private final Conversations conversations = new Conversations(ChatClient.builder(model), memory);
 
     @BeforeEach
     void theModelAnswersDone() {
@@ -170,6 +171,29 @@ class ConversationsTest {
                 .containsExactlyElementsOf(IntStream.rangeClosed(21, 40)
                         .mapToObj(i -> "message " + i)
                         .toList());
+    }
+
+    @Test
+    void aForgottenConversationLeavesNothingInTheMemory() {
+        conversations.restore("widget-1", List.of(said(ChatMessage.Role.USER, "Late shipments last month")));
+
+        conversations.forget("widget-1");
+
+        assertThat(repository.findByConversationId("widget-1")).isEmpty();
+    }
+
+    /** A failed turn's question would otherwise be answered again with the next question. */
+    @Test
+    void aFailedTurnsQuestionIsDroppedAndAnAnsweredOneKept() {
+        conversations.restore(
+                "widget-1",
+                List.of(said(ChatMessage.Role.USER, "Open claims"), said(ChatMessage.Role.ASSISTANT, "TITLE: Open")));
+        memory.add("widget-1", List.of(new UserMessage("Late shipments last month")));
+
+        conversations.dropUnanswered("widget-1");
+        conversations.dropUnanswered("widget-1");
+
+        assertThat(texts(repository.findByConversationId("widget-1"))).containsExactly("Open claims", "TITLE: Open");
     }
 
     @Test

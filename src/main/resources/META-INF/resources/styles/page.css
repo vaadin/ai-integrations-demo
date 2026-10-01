@@ -31,6 +31,15 @@
     background: transparent;
     margin-top: -10px;
   }
+
+  /* a page's own actions, such as Save Dashboard, at the heading's end and above the watermark */
+  .page-actions {
+    justify-self: end;
+    align-self: center;
+    z-index: 1;
+    display: flex;
+    gap: var(--vaadin-gap-s);
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

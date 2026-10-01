@@ -2,8 +2,13 @@ package com.vaadin.demo.nordicsupply.ui.components;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.UnorderedList;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +30,19 @@ class HelpTest {
         @Override
         public String readme() {
             return readme;
+        }
+    }
+
+    /** A view whose readme points at the documentation of its components. */
+    private static class DocumentedView extends ReadmeView {
+
+        DocumentedView() {
+            super("Insights");
+        }
+
+        @Override
+        public List<Link> readMore() {
+            return List.of(new Link("AI-powered Grid", "https://vaadin.com/docs/grid", "the table widget"));
         }
     }
 
@@ -55,6 +73,34 @@ class HelpTest {
         assertThat(popover.getTarget()).isSameAs(help);
         assertThat(help.isVisible()).isTrue();
         assertThat(view.getClassNames()).contains("first-visit");
+    }
+
+    @Test
+    void aViewsDocumentationLinksAreShownWithItsReadme() {
+        var help = new Help(session, popover);
+
+        help.follow(new DocumentedView(), "Insights");
+
+        assertThat(popover.getChildren()
+                        .filter(UnorderedList.class::isInstance)
+                        .flatMap(Component::getChildren)
+                        .map(item -> (Anchor) item.getChildren().findFirst().orElseThrow())
+                        .map(Anchor::getHref))
+                .containsExactly("https://vaadin.com/docs/grid");
+    }
+
+    /** On a later visit the readme is not opened but set, links included, for Help to open. */
+    @Test
+    void aLaterVisitSetsTheReadmeAndItsLinksForHelpToOpen() {
+        var help = new Help(session, new ReadmePopover());
+        help.follow(new DocumentedView(), "Insights");
+
+        var reloadedPage = new Help(session, popover);
+        reloadedPage.follow(new DocumentedView(), "Insights");
+
+        assertThat(popover.isOpened()).isFalse();
+        assertThat(popover.getChildren().filter(UnorderedList.class::isInstance).flatMap(Component::getChildren))
+                .hasSize(1);
     }
 
     @Test

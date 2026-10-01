@@ -20,6 +20,7 @@ import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.ProductRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
+import com.vaadin.demo.nordicsupply.data.SavedWidgetRepository;
 import com.vaadin.demo.nordicsupply.data.ScopeAssignmentRepository;
 import com.vaadin.demo.nordicsupply.data.ShipmentRepository;
 import com.vaadin.demo.nordicsupply.data.StaffRepository;
@@ -57,6 +58,9 @@ class EntityMappingTest {
     private ScopeAssignmentRepository assignments;
 
     @Autowired
+    private SavedWidgetRepository savedWidgets;
+
+    @Autowired
     private EntityManager entityManager;
 
     @Autowired
@@ -76,6 +80,7 @@ class EntityMappingTest {
         aggregates.put("Product", products);
         aggregates.put("Staff", staff);
         aggregates.put("ScopeAssignment", assignments);
+        aggregates.put("SavedWidget", savedWidgets);
         aggregates.forEach((name, repository) -> assertThat(
                         repository.findAll(PageRequest.of(0, 1)).getContent())
                 .as(name)
@@ -122,6 +127,25 @@ class EntityMappingTest {
         assertThat(contact.getCustomer().getId()).isEqualTo(column("customer_contacts", "customer_id", contactId));
     }
 
+    /** A saved widget's chat is the turns that name it, in their order, and every turn reaches its widget. */
+    @Test
+    void aSavedWidgetsChatIsTheTurnsThatNameIt() {
+        for (var widget : savedWidgets.findByUserIdOrderByPositionAscIdAsc(9)) {
+            assertThat(widget.getMessages())
+                    .extracting(SavedWidgetMessage::getId)
+                    .containsExactlyElementsOf(jdbc.queryForList(
+                            "select id from saved_widget_messages where widget_id = ? order by position",
+                            Long.class,
+                            widget.getId()));
+            assertThat(widget.getMessages()).allSatisfy(turn -> {
+                assertThat(turn.getWidget().getId()).isEqualTo(widget.getId());
+                assertThat(turn.getRole()).isNotNull();
+                assertThat(turn.getContent()).isNotBlank();
+                assertThat(turn.getSentAt()).isNotNull();
+            });
+        }
+    }
+
     /**
      * A reference taken inside a session is a proxy of the entity; compared with the same row loaded earlier, the two
      * are equal both ways and hash alike, for every entity type. Calling {@code equals} on the proxy initialises it,
@@ -141,7 +165,8 @@ class EntityMappingTest {
                 Shipment.class,
                 Claim.class,
                 Staff.class,
-                ScopeAssignment.class)) {
+                ScopeAssignment.class,
+                SavedWidget.class)) {
             var loaded = entityManager.find(type, 1);
 
             transactions.executeWithoutResult(status -> {

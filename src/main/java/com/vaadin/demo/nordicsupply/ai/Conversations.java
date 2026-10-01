@@ -92,6 +92,27 @@ public class Conversations {
         return new SpringAILLMProvider(client);
     }
 
+    /** Forgets a conversation, when the widget that held it is removed; the memory otherwise keeps it for ever. */
+    public void forget(String conversationId) {
+        memory.clear(conversationId);
+    }
+
+    /**
+     * Drops the question of a turn that failed. The memory advisor writes the user's message before the model is
+     * called, so a turn that fails for a rate limit, the network or a missing key leaves its question behind, and
+     * the model would answer it again with the next one.
+     */
+    public void dropUnanswered(String conversationId) {
+        var messages = memory.get(conversationId);
+        if (!messages.isEmpty() && messages.getLast() instanceof UserMessage) {
+            memory.clear(conversationId);
+            var kept = messages.subList(0, messages.size() - 1);
+            if (!kept.isEmpty()) {
+                memory.add(conversationId, kept);
+            }
+        }
+    }
+
     private static Message toMessage(ChatMessage turn) {
         return turn.role() == ChatMessage.Role.USER
                 ? new UserMessage(turn.content())

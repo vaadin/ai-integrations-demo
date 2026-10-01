@@ -39,6 +39,13 @@ public class ScopedConnections {
 
     private static final int POOL_SIZE = 4;
 
+    /**
+     * Words H2 reads as keywords that a model writes as column aliases: the chart controller's own examples alias the
+     * numeric column {@code value}, and period columns come as {@code year} or {@code month}. On this connection they
+     * are names, so the model's first query runs instead of failing on a syntax error.
+     */
+    private static final String NON_KEYWORDS = "VALUE,YEAR,MONTH,DAY,HOUR,MINUTE,SECOND,KEY";
+
     /** One pool per region's key; a pool opens its first connection when a query needs it. */
     private final Map<String, HikariDataSource> pools =
             Scopes.roleScopes().stream().collect(Collectors.toMap(Scope::key, ScopedConnections::pool));
@@ -74,12 +81,12 @@ public class ScopedConnections {
     }
 
     /**
-     * A region's pool, opened on its schema and without the application's keep-alive option, which only an
-     * administrator may set.
+     * A region's pool, opened on its schema, with the model's aliases as names, and without the application's
+     * keep-alive option, which only an administrator may set.
      */
     private static HikariDataSource pool(Scope scope) {
         var ds = new HikariDataSource();
-        ds.setJdbcUrl(DataConfig.DATABASE + ";SCHEMA=" + schemaFor(scope));
+        ds.setJdbcUrl(DataConfig.DATABASE + ";SCHEMA=" + schemaFor(scope) + ";NON_KEYWORDS=" + NON_KEYWORDS);
         ds.setUsername(userFor(scope));
         ds.setPassword(PASSWORD);
         ds.setPoolName(userFor(scope));

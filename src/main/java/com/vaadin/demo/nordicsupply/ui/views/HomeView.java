@@ -17,13 +17,14 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouterLink;
 
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.ui.MainLayout;
 
 /**
- * The entry page: what the demo is, and cards that lead to the documentation, the source and Vaadin Start. It is the
- * readme of the application.
+ * The entry page: what the demo is, the card to start from, and cards that lead to the documentation, the source and
+ * Vaadin Start. It is the readme of the application.
  */
 @Route("")
 @PageTitle("Home")
@@ -52,6 +53,22 @@ public class HomeView extends PageView {
         var about = new Div(aboutTitle, intro);
         about.addClassName("about");
 
+        var tryTitle = new H3("Try");
+        tryTitle.addClassName("section-title");
+        var insights = new Card();
+        insights.addThemeVariants(CardVariant.OUTLINED);
+        var badge = new Span("Start here");
+        badge.addClassName("badge");
+        insights.setTitle(new Span(new Span("Insights"), badge));
+        var line = new Span("Ask a question about orders, shipments or claims and get a chart or a table.");
+        line.addClassName("text");
+        insights.add(line);
+        var start = new RouterLink(InsightsView.class);
+        start.add(insights);
+        start.addClassName("start-card");
+        var cards = new Div(start);
+        cards.addClassName("start-cards");
+
         var readMore = new H3("Read more");
         readMore.addClassName("section-title");
         var docs = new Div(
@@ -62,7 +79,7 @@ public class HomeView extends PageView {
                         "Generate a Vaadin project of your own and add the AI components to it.",
                         START));
         docs.addClassName("start-cards");
-        add(about, readMore, docs);
+        add(about, tryTitle, cards, readMore, docs);
     }
 
     /** A card that is one link, opening in a new tab: a title and one line saying what is there. */

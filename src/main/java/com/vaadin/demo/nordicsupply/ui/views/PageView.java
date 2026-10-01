@@ -10,8 +10,16 @@ import com.vaadin.demo.nordicsupply.ui.components.PageHeading;
  */
 public abstract class PageView extends Main {
 
+    private final PageHeading heading;
+
     protected PageView(String pageClassName, String title, String subtitle, String watermark) {
         addClassNames("page", pageClassName);
-        add(new PageHeading(title, subtitle, watermark));
+        heading = new PageHeading(title, subtitle, watermark);
+        add(heading);
+    }
+
+    /** The page's heading, where a view puts its own actions. */
+    protected PageHeading heading() {
+        return heading;
     }
 }

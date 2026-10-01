@@ -62,6 +62,19 @@ class ScopedConnectionsTest {
     @Autowired
     private DataSource dataSource;
 
+    /** The aliases a model writes for a chart's columns are names on every region's connection, not keywords. */
+    @Test
+    void aModelsAliasesThatH2ReadsAsKeywordsAreNames() {
+        for (var scope : Scopes.roleScopes()) {
+            assertThat(connections
+                            .templateFor(scope)
+                            .queryForMap("SELECT 1 AS value, 2026 AS year, 9 AS month, 7 AS day, 10 AS hour,"
+                                    + " 30 AS minute, 15 AS second, 'k' AS key"))
+                    .as(scope.key())
+                    .containsKeys("VALUE", "YEAR", "MONTH", "DAY", "HOUR", "MINUTE", "SECOND", "KEY");
+        }
+    }
+
     /** The countries the lists filter by are the ones the database scopes by: the two lists cannot drift apart. */
     @Test
     void aRegionSeesTheCountriesItsScopeNames() {

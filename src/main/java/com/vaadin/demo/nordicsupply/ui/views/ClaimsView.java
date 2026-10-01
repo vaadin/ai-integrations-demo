@@ -269,16 +269,14 @@ public class ClaimsView extends PageView implements HasReadme {
 
     /** The tip that introduces the example files, and the files, to drag to the area or click. */
     private Div demoTip(List<ExampleDocument> examples) {
-        var sparkle = new Span(new SvgIcon("icons/sparkle.svg"));
-        sparkle.addClassName("sparkle");
         var label = new Span("Demo Tip:");
         label.addClassName("label");
-        var heading = new H3(label, new Span(" Use an Example File"), sparkle);
+        var heading = new H3(label, new Span(" Use an Example File"));
         var text = new Div(
                 heading,
                 new Paragraph("Drag one of these example files to the container above, and let the AI integration fill"
                         + " in the form based on the contents of the file."),
-                new Paragraph("You can download a file to inspect its contents and upload it from your computer."));
+                new Paragraph("You can also download a file to inspect its contents and upload it from your computer."));
         text.addClassName("tip");
         var files = new Div();
         files.addClassNames("example-files", "aura-surface");
@@ -300,12 +298,10 @@ public class ClaimsView extends PageView implements HasReadme {
         icon.addClassNames("file-icon", "aura-surface");
         var name = new Span(example.name());
         name.addClassName("file-name");
-        var kind = new Span(example.kind());
-        kind.addClassName("file-kind");
-        var caption = new Span(name, kind);
-        caption.addClassName("file-caption");
+        var kind = new Div(example.kind());
+        kind.addClassName("file-description");
         var use = new NativeButton();
-        use.add(icon, caption);
+        use.add(icon, name);
         use.addClassName("file-use");
         use.getElement().setAttribute("aria-description", "Fills in the form from this file");
         use.addClickListener(e -> read(example));
@@ -316,14 +312,13 @@ public class ClaimsView extends PageView implements HasReadme {
                         new ByteArrayInputStream(file.data()), file.name(), file.mimeType(), file.data().length)),
                 AttachmentType.DOWNLOAD,
                 "");
-        download.add(new SvgIcon("icons/download.svg"));
+        download.add(new SvgIcon("icons/download.svg"), new Span("Download"));
         download.addClassName("file-download");
         download.setAriaLabel("Download " + example.name());
-        download.setTitle("Download");
 
-        var tile = new Div(use, download);
+        var tile = new Div(use, kind, download);
         tile.addClassName("example-file");
-        var drag = DragSource.create(tile);
+        var drag = DragSource.create(use);
         drag.setDragData(example);
         drag.setEffectAllowed(EffectAllowed.COPY);
         return tile;

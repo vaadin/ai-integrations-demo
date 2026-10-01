@@ -275,19 +275,19 @@ vaadin-button.rail-button[slot=drawer][theme~=tertiary] {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
   gap: var(--vaadin-gap-xl) 2.625rem;
   align-items: start;
-  max-width: 74rem;
   margin-top: var(--vaadin-gap-xl);   /* a breath under the heading, clear of the watermark */
 }
 
 .claim-source,
 .claim-entry {
   display: grid;
-  gap: 1.625rem;   /* the drawn space under the column title */
+  gap: var(--vaadin-gap-xl);
   min-width: 0;
 }
 
-.claim-entry {
-  gap: 2.5rem;
+.message-chooser {
+  display: grid;
+  gap: inherit;
 }
 
 /* a column's title, underlined in gold that fades out towards the end */
@@ -344,14 +344,9 @@ vaadin-button.rail-button[slot=drawer][theme~=tertiary] {
 }
 
 /* "Choose" reads as a word of the sentence it opens; Aura pads a tertiary button directly, not through a property */
-vaadin-upload-button.choose[theme~=tertiary] {
+vaadin-upload-button.choose {
   --vaadin-button-font-weight: var(--aura-font-weight-semibold);
-  --vaadin-button-text-color: var(--aura-accent-text-color);
-  --vaadin-button-line-height: inherit;
-  height: auto;
-  min-height: 0;
   padding: 0;
-  vertical-align: baseline;
 }
 
 /* the AI's sparkle: a gold star in a tinted circle */
@@ -387,7 +382,6 @@ vaadin-upload-button.choose[theme~=tertiary] {
     margin: 0;
     font-size: var(--aura-font-size-m);
     font-weight: var(--aura-font-weight-semibold);
-    line-height: 1.45;
   }
 
   .label {
@@ -397,7 +391,6 @@ vaadin-upload-button.choose[theme~=tertiary] {
   p {
     margin: 0;
     color: var(--vaadin-text-color-secondary);
-    line-height: 1.45;
   }
 }
 
@@ -405,32 +398,30 @@ vaadin-upload-button.choose[theme~=tertiary] {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: var(--vaadin-gap-s) var(--vaadin-gap-xl);
-  padding: var(--vaadin-padding-xl);
+  gap: var(--vaadin-gap-m);
+  padding: var(--vaadin-padding-xl) var(--vaadin-padding-m);
   --aura-surface-level: 4;
-  --aura-surface-opacity: 0.1;
+  --aura-surface-opacity: 0.3;
 }
 
 /* one example file: a button to read it, which is also dragged, and a download button over its icon's corner */
 .example-file {
   position: relative;
-  width: 7.5rem;
-
-  &.v-dragged {
-    opacity: 0.5;
-  }
+  width: 9rem;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  align-self: start;
 }
 
 .file-use {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--vaadin-gap-m);
-  width: 100%;
-  padding: var(--vaadin-padding-m) 0;
+  display: grid;
+  justify-items: center;
+  gap: var(--vaadin-gap-s);
   border: 0;
-  border-radius: var(--vaadin-radius-l);
-  background: none;
+  padding: var(--vaadin-padding-xs) var(--vaadin-padding-s);
+  border-radius: var(--vaadin-radius-m);
+  background: transparent;
   color: inherit;
   font: inherit;
   text-align: center;
@@ -452,54 +443,54 @@ vaadin-upload-button.choose[theme~=tertiary] {
   justify-content: center;
   width: 3rem;
   height: 3.5625rem;
-  border-radius: var(--vaadin-radius-m);
-  --aura-surface-level: 4;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--vaadin-border-color-secondary);
+  border-radius: var(--vaadin-radius-s);
+  box-shadow: var(--aura-shadow-s);
   color: var(--aura-accent-color);
   --vaadin-icon-size: 1.25rem;
+  transition: rotate 200ms, scale 200ms;
 }
 
-.file-caption {
-  display: grid;
-  gap: var(--vaadin-gap-xs);
-  font-size: var(--aura-font-size-xs);
-  line-height: 1.35;
+.file-use:hover .file-icon {
+  rotate: 4deg;
+  scale: 1.2;
 }
 
 .file-name {
+  font-size: var(--aura-font-size-xs);
+  line-height: var(--aura-line-height-xs);
   font-weight: var(--aura-font-weight-semibold);
-  color: var(--vaadin-text-color);
 }
 
-.file-kind {
-  font-weight: var(--aura-font-weight-medium);
+.file-description {
+  font-size: var(--aura-font-size-xs);
+  line-height: var(--aura-line-height-xs);
   color: var(--vaadin-text-color-secondary);
 }
 
 .file-download {
-  position: absolute;
-  top: -0.375rem;
-  right: 1.125rem;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  background: var(--aura-accent-color);
-  color: var(--aura-accent-contrast-color);
-  opacity: 0;
-  transition: opacity 0.15s;
-  --vaadin-icon-size: 1.25rem;
+  gap: 0.4em;
+  padding: 0.3em;
+  color: var(--aura-accent-color);
+  text-decoration: none;
+  font-size: var(--aura-font-size-xs);
+  line-height: var(--aura-line-height-xs);
+  font-weight: var(--aura-font-weight-medium);
 
-  .example-file:hover &,
-  .example-file:focus-within &,
-  &:focus-visible {
-    opacity: 1;
-  }
+  @media (any-hover: hover) {
+    opacity: 0;
+    transition: opacity 0.15s;
 
-  @media (hover: none) {
-    opacity: 1;
+    .example-file:hover &,
+    &:focus-visible {
+      opacity: 1;
+    }
+
+    .example-file:hover &:not(:hover) {
+      transition-delay: 0.5s;
+    }
   }
 }
 

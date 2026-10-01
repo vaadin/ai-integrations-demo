@@ -17,7 +17,9 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.component.textfield.BigDecimalField;
 import com.vaadin.flow.component.textfield.TextArea;
+import com.vaadin.flow.signals.local.ValueSignal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +35,8 @@ import com.vaadin.demo.nordicsupply.domain.RequestedResolution;
 
 /**
  * The form offers each choice what the one before it leads to, and waits with a choice until there is something to
- * choose from; Create needs a customer and what the claim is about, and a created claim empties the form.
+ * choose from; Create waits for a customer and what the claim is about, and for the AI to finish, and a created claim
+ * empties the form.
  */
 class ClaimFormTest {
 
@@ -73,6 +76,7 @@ class ClaimFormTest {
     private final UI ui = new UI();
 
     private ShipmentRepository shipments;
+    private final ValueSignal<Boolean> filling = new ValueSignal<>(false);
     private ClaimForm form;
     private ComboBox<CustomerRepository.Option> customer;
     private ComboBox<CustomerContactRepository.Option> reportedBy;
@@ -80,6 +84,7 @@ class ClaimFormTest {
     private ComboBox<ShipmentRepository.Option> shipment;
     private Select<ClaimType> claimType;
     private RadioButtonGroup<Priority> priority;
+    private BigDecimalField claimedAmount;
     private TextArea description;
     private Button create;
 
@@ -94,7 +99,7 @@ class ClaimFormTest {
         when(contacts.optionsOf(AALBORG.id())).thenReturn(List.of(NIELS));
         when(orders.optionsOf(AALBORG.id())).thenReturn(List.of(ORDER));
         when(shipments.optionsOf(ORDER.id())).thenReturn(List.of(SHIPMENT));
-        form = new ClaimForm(mock(CustomerRepository.class), contacts, orders, shipments, List.of("DK", "DE"));
+        form = new ClaimForm(mock(CustomerRepository.class), contacts, orders, shipments, List.of("DK", "DE"), filling);
         ui.add(form);
 
         customer = field("customer", ComboBox.class);
@@ -103,6 +108,7 @@ class ClaimFormTest {
         shipment = field("shipment", ComboBox.class);
         claimType = field("claim-type", Select.class);
         priority = field("priority", RadioButtonGroup.class);
+        claimedAmount = field("claimed-amount", BigDecimalField.class);
         description = field("description", TextArea.class);
         create = descendants(form)
                 .filter(Button.class::isInstance)
@@ -171,14 +177,49 @@ class ClaimFormTest {
     }
 
     @Test
-    void aClaimNeedsACustomerAndWhatItIsAbout() {
+    void createWaitsForACustomerAndWhatTheClaimIsAbout() {
+        assertThat(create.isEnabled()).isFalse();
+
         description.setValue("Two cartons missing.");
+        customer.setValue(AALBORG);
+        assertThat(create.isEnabled()).isFalse();
 
-        create.click();
+        claimType.setValue(ClaimType.MISSING_ITEMS);
+        assertThat(create.isEnabled()).isTrue();
+        assertThat(((HasValidation) customer).isInvalid()).isFalse();
+    }
 
-        assertThat(((HasValidation) customer).isInvalid()).isTrue();
-        assertThat(((HasValidation) claimType).isInvalid()).isTrue();
-        assertThat(description.getValue()).isEqualTo("Two cartons missing.");
+    @Test
+    void createWaitsForAValidAmount() {
+        customer.setValue(AALBORG);
+        claimType.setValue(ClaimType.MISSING_ITEMS);
+
+        claimedAmount.setValue(new BigDecimal("-1"));
+
+        assertThat(create.isEnabled()).isFalse();
+    }
+
+    @Test
+    void createWaitsForTheAiToFinish() {
+        customer.setValue(AALBORG);
+        claimType.setValue(ClaimType.MISSING_ITEMS);
+
+        filling.set(true);
+        assertThat(create.isEnabled()).isFalse();
+
+        filling.set(false);
+        assertThat(create.isEnabled()).isTrue();
+    }
+
+    @Test
+    void anEmptiedFormWaitsAgain() {
+        customer.setValue(AALBORG);
+        claimType.setValue(ClaimType.MISSING_ITEMS);
+
+        form.clear();
+
+        assertThat(create.isEnabled()).isFalse();
+        assertThat(form.filledByAi().peek()).isFalse();
     }
 
     @Test

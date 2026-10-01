@@ -20,7 +20,6 @@ import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.ai.common.ConfidenceLevel;
 import com.vaadin.flow.component.ai.common.PageRegion;
 import com.vaadin.flow.component.ai.common.Rect;
-import com.vaadin.flow.component.ai.common.SourceExtract;
 import com.vaadin.flow.component.ai.common.ValueSource;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
@@ -121,8 +120,9 @@ class AttachmentViewer extends Div {
     }
 
     /**
-     * Outlines where a value came from: each extract's region on its page, coloured by how sure the model was, or for
-     * a text each snippet where it occurs. {@code null} clears the outlines. The first outline is scrolled into view.
+     * Outlines where a value came from: each snippet's region on its page, coloured by how sure the model was, or for
+     * a text each snippet where it occurs; the model's reasoning is no place in the message, and is left out.
+     * {@code null} clears the outlines. The first outline is scrolled into view.
      */
     void show(ValueSource source) {
         if (text != null) {
@@ -137,7 +137,9 @@ class AttachmentViewer extends Div {
             return;
         }
         Div first = null;
-        for (var extract : source.extracts()) {
+        // an outline's tooltip says why the value rests on it, which the outlined words themselves do not
+        var reasoning = ValueSources.reasoning(source);
+        for (var extract : ValueSources.snippets(source)) {
             if (extract.location() instanceof PageRegion region
                     && region.page() >= 1
                     && region.page() <= pages.size()) {
@@ -147,7 +149,7 @@ class AttachmentViewer extends Div {
                         : printed.find(extract.text(), region.page(), region.rect())
                                 .orElse(List.of(region.rect()));
                 for (var place : places) {
-                    var box = outline(extract, place, source.confidence());
+                    var box = outline(reasoning.orElse(extract.text()), place, source.confidence());
                     pages.get(region.page() - 1).add(box);
                     first = first == null ? box : first;
                 }
@@ -158,10 +160,10 @@ class AttachmentViewer extends Div {
         }
     }
 
-    private static Div outline(SourceExtract extract, Rect rect, ConfidenceLevel confidence) {
+    private static Div outline(String title, Rect rect, ConfidenceLevel confidence) {
         var box = new Div();
         box.addClassNames(SOURCE, confidenceOf(confidence));
-        box.setTitle(extract.text());
+        box.setTitle(title);
         box.getStyle()
                 .set("left", percent(rect.x()))
                 .set("top", percent(rect.y()))
@@ -175,7 +177,7 @@ class AttachmentViewer extends Div {
         text.removeAll();
         var marks = new ArrayList<int[]>();
         if (source != null) {
-            for (var extract : source.extracts()) {
+            for (var extract : ValueSources.snippets(source)) {
                 var words = extract.text() == null
                         ? new String[0]
                         : extract.text().strip().split("\\s+");

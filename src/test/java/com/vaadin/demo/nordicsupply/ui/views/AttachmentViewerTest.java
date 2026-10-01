@@ -101,6 +101,23 @@ class AttachmentViewerTest {
     }
 
     @Test
+    void anOutlineSaysWhyTheValueRestsOnItAndTheReasoningIsNoOutline() {
+        var viewer = viewerOf("Wrong colour.png");
+        var region = new PageRegion(1, new Rect(0.1, 0.2, 0.3, 0.05));
+
+        viewer.show(new ValueSource(
+                ConfidenceLevel.HIGH,
+                List.of(
+                        new SourceExtract("SO-2026-006473", region),
+                        new SourceExtract("Reasoning: The customer names the order.", region))));
+
+        assertThat(outlines(viewer))
+                .singleElement()
+                .satisfies(box -> assertThat(((Component) box).getElement().getAttribute("title"))
+                        .isEqualTo("The customer names the order."));
+    }
+
+    @Test
     void anExtractOnAPageTheAttachmentDoesNotHaveIsNotOutlined() {
         var viewer = viewerOf("Wrong colour.png");
 
@@ -131,7 +148,10 @@ class AttachmentViewerTest {
 
         viewer.show(new ValueSource(
                 ConfidenceLevel.MEDIUM,
-                List.of(new SourceExtract("moss green", null), new SourceExtract("not in the text", null))));
+                List.of(
+                        new SourceExtract("moss green", null),
+                        new SourceExtract("not in the text", null),
+                        new SourceExtract("Reasoning: Green is the colour that came.", null))));
 
         assertThat(viewer.pageCount()).isZero();
         assertThat(viewer.geometry()).isEmpty();

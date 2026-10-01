@@ -31,7 +31,10 @@ import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.BigDecimalField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.data.binder.BinderValidationStatus;
 import com.vaadin.flow.shared.Registration;
+import com.vaadin.flow.signals.Signal;
+import com.vaadin.flow.signals.local.ValueSignal;
 import org.springframework.data.domain.PageRequest;
 
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
@@ -48,8 +51,9 @@ import com.vaadin.demo.nordicsupply.domain.RequestedResolution;
  * it, the order and the shipment, what the complaint is and how urgent, what the customer asks for, by when and for
  * how much, and a description. The contacts and orders to choose from are the chosen customer's, and the shipments
  * the chosen order's, so each of those fields waits, disabled, for the one before it; the AI is told the same and
- * fills them in that order. An order that came in one shipment chooses it. Create checks the form and confirms the
- * claim; the demo keeps no claims, so the form then starts over, and says so with a {@link CreatedEvent}.
+ * fills them in that order. An order that came in one shipment chooses it. Create is enabled once the form holds what
+ * a claim needs, and not while the AI fills it in; it confirms the claim, and since the demo keeps no claims, the form
+ * then starts over, and says so with a {@link CreatedEvent}.
  * <p>
  * The fields are bound to a {@link Draft} through a {@link Binder}, which both a person and the AI are validated
  * against, and {@link #aiController()} is the form's side of the AI: the options it may pick from, labelled for a
@@ -210,15 +214,20 @@ class ClaimForm extends Div {
     /** The field in focus, whose value's source is shown, or {@code null}. */
     private HasValue<?, ?> focused;
 
+    /** Whether the AI filled in the form since it was last emptied. */
+    private final ValueSignal<Boolean> filledByAi = new ValueSignal<>(false);
+
     /**
      * @param countries the signed-in user's region: the customers a claim can be for
+     * @param filling whether the AI is filling in the form, which Create waits for
      */
     ClaimForm(
             CustomerRepository customers,
             CustomerContactRepository contacts,
             SalesOrderRepository orders,
             ShipmentRepository shipments,
-            List<String> countries) {
+            List<String> countries,
+            Signal<Boolean> filling) {
         this.customers = customers;
         this.contacts = contacts;
         this.orders = orders;
@@ -258,6 +267,9 @@ class ClaimForm extends Div {
         create.addThemeVariants(ButtonVariant.PRIMARY, ButtonVariant.LARGE);
         create.addClassName("create");
         create.setWidthFull();
+        // ready to submit: what a claim needs is filled in and valid, and the AI is done with the form
+        var valid = binder.validationStatusSignal().map(BinderValidationStatus::isOk);
+        create.bindEnabled(Signal.computed(() -> valid.get() && !filling.get()));
         add(fields, create);
     }
 
@@ -268,13 +280,15 @@ class ClaimForm extends Div {
     FormAIController aiController() {
         controller = new FormAIController(fields, binder);
         controller.setSourceTrackingEnabled(true);
-        // the AI badge's popover quotes what the value was read from
+        // the AI badge's popover says why the AI chose the value, and quotes what it read it from
         controller.setFieldMarkerPopoverContentProvider(change -> change.getFieldSource()
                 .filter(source -> !source.extracts().isEmpty())
-                .map(ClaimForm::quotes)
+                .map(ClaimForm::sourceSummary)
                 .orElse(null));
-        // a turn that changed the field in focus shows where the new value came from
+        // a turn that changed a field leaves the AI's values in the form, and if it was the field in focus, shows
+        // where the new value came from
         controller.addFieldValueChangeListener(e -> {
+            filledByAi.set(true);
             if (e.getField() == focused) {
                 showSource();
             }
@@ -316,13 +330,16 @@ class ClaimForm extends Div {
                                 + " the resolution is needed within about a week, or for a season or event about to"
                                 + " start; Low for a minor issue with no deadline; otherwise Normal.")
                 .describeField(
-                        neededBy, "The date the customer needs the resolution by, only when the message gives one.")
+                        neededBy,
+                        "The date the customer needs the resolution by: the date the message gives, or one it implies,"
+                                + " such as the start of a season or a campaign. When it gives none, estimate one from"
+                                + " how urgent it is, counting from the date the message was sent.")
                 .describeField(
                         claimedAmount,
                         "The amount claimed in euros, as a sum of money: the amount the message states, the value"
                                 + " of the affected goods at the prices it quotes, or a share of the order it asks"
-                                + " for, taken from the order's net value. Never estimate a price the message or the"
-                                + " order does not give; leave the field empty instead.")
+                                + " for, taken from the order's net value. When it gives neither an amount nor"
+                                + " prices, estimate the value of the affected goods from the order's net value.")
                 .describeField(
                         description,
                         "A summary of the complaint for the claims team, in English whatever the language of the"
@@ -335,6 +352,17 @@ class ClaimForm extends Div {
     /** Empties the form for the next claim; the priority starts at Normal. */
     void clear() {
         binder.readBean(new Draft());
+        filledByAi.set(false);
+    }
+
+    /**
+     * Whether the AI filled in the form since it was last emptied.
+     *
+     * @return a signal that turns {@code true} when an AI turn changes a field, and {@code false} when the form is
+     *     emptied
+     */
+    Signal<Boolean> filledByAi() {
+        return filledByAi.asReadonly();
     }
 
     private void configureFields() {
@@ -522,12 +550,17 @@ class ClaimForm extends Div {
                 + ". The demo does not save claims, so the form starts over.";
     }
 
-    /** The snippets a value was read from, quoted, one to a line. */
-    private static Component quotes(ValueSource source) {
-        var list = new Div();
-        list.addClassName("source-extracts");
-        source.extracts().forEach(extract -> list.add(new Div("“" + extract.text() + "”")));
-        return list;
+    /** Why the AI chose a value, when it said, and the snippets it read it from, quoted, one to a line. */
+    private static Component sourceSummary(ValueSource source) {
+        var summary = new Div();
+        summary.addClassName("source-extracts");
+        ValueSources.reasoning(source).ifPresent(reasoning -> {
+            var paragraph = new Div(reasoning);
+            paragraph.addClassName("source-reasoning");
+            summary.add(paragraph);
+        });
+        ValueSources.snippets(source).forEach(extract -> summary.add(new Div("“" + extract.text() + "”")));
+        return summary;
     }
 
     /** An enum constant as the screen writes it: {@code MISSING_ITEMS} is "Missing items"; none is "". */

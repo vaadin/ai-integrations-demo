@@ -354,6 +354,20 @@ vaadin-upload-button.choose[theme~=tertiary] {
   vertical-align: baseline;
 }
 
+/* the AI's sparkle: a gold star in a tinted circle */
+.sparkle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--aura-accent-color) 20%, transparent);
+  color: var(--aura-accent-color);
+  --vaadin-icon-size: 0.75rem;
+}
+
 /* the tip over the example files, and the files */
 .demo-tip {
   border: 1px solid var(--vaadin-border-color);
@@ -378,18 +392,6 @@ vaadin-upload-button.choose[theme~=tertiary] {
 
   .label {
     color: var(--aura-accent-text-color);
-  }
-
-  .sparkle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.25rem;
-    height: 1.25rem;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--aura-accent-color) 20%, transparent);
-    color: var(--aura-accent-color);
-    --vaadin-icon-size: 0.75rem;
   }
 
   p {
@@ -664,10 +666,30 @@ vaadin-radio-group.segmented.aura-surface {
 }
 
 /* the AI badge's popover: the snippets a value was read from */
+/* over the form the AI filled in: tinted in the AI's gold, and closer to the fields than the column's gap */
+.ai-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-gap-s);
+  margin-block-end: -1rem;
+  padding: var(--vaadin-padding-s) var(--vaadin-padding-m);
+  border: 1px solid color-mix(in srgb, var(--aura-accent-color) 35%, transparent);
+  border-radius: var(--vaadin-radius-m);
+  background: color-mix(in srgb, var(--aura-accent-color) 8%, transparent);
+  font-size: var(--aura-font-size-s);
+  line-height: 1.45;
+}
+
 .source-extracts {
   display: grid;
   gap: var(--vaadin-gap-xs);
   max-width: 24rem;
   font-size: var(--aura-font-size-s);
   color: var(--vaadin-text-color-secondary);
+
+  /* the AI's reasoning reads as the popover's text, the quotes under it as its evidence */
+  .source-reasoning {
+    margin-block-end: var(--vaadin-gap-xs);
+    color: var(--vaadin-text-color);
+  }
 }

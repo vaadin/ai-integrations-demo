@@ -2,7 +2,6 @@ package com.vaadin.demo.nordicsupply.ui.views;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -123,7 +122,14 @@ public class ClaimsView extends PageView implements HasReadme {
             - When the form is filled, answer with one short sentence: it is not shown to anyone.
             """.formatted(ValueSources.REASONING, ValueSources.REASONING);
 
-    /** What the model is asked with every message, which comes as the prompt's attachment. */
+    /**
+     * What the model is asked with every message, which comes as the prompt's attachment.
+     * <p>
+     * The system prompt's last rule but one makes the model's reasoning one more source extract, without a location,
+     * because a {@code ValueSource} has no field for it; {@link ValueSources} reads it back out. That is a feature
+     * request for the AI kit (an explanation on the value source), to be filed on flow-components; the convention
+     * goes when it is answered.
+     */
     private static final String PROMPT = "Fill in the claim form from the attached customer message.";
 
     private static final String TEXT = "text/plain";
@@ -187,10 +193,10 @@ public class ClaimsView extends PageView implements HasReadme {
                 shipments,
                 currentUser.get().scope().countries(),
                 Signal.not(idle));
-        // every message is a claim of its own: the model reads it alone, and no earlier message is sent again
+        // every message is a claim of its own: the model reads it alone, and no earlier message is sent again; the
+        // orchestrator's own session context tells it today's date, time and weekday
         orchestrator = AIOrchestrator.builder(conversations.standalone(), SYSTEM_PROMPT)
                 .withController(form.aiController())
-                .withMetadata(() -> "Today is " + LocalDate.now() + ".")
                 .withResponseListener(this::turnEnded)
                 .build();
 
@@ -358,8 +364,9 @@ public class ClaimsView extends PageView implements HasReadme {
         openMessage(attachment.name(), shown);
         // the model is told the attachment's shape, to place the regions it reports on its pages
         var prompt = shown.geometry().isEmpty() ? PROMPT : PROMPT + " It is " + shown.geometry() + ".";
-        // the turn starts once the browser has shown the empty form: the form filler guards the fields on the client
-        // when a turn starts, and values emptied in that same round trip stay on screen for a moment
+        // A workaround, to be filed on flow-components and dropped when the form filler handles it: the filler guards
+        // the fields on the client when a turn starts, and a value emptied in that same round trip stays on screen
+        // for a moment. So the turn starts one round trip later, once the browser has shown the empty form.
         getElement()
                 .executeJs("return null")
                 .then(ignored -> orchestrator.prompt(prompt, List.of(attachment)), error -> reading.set(null));

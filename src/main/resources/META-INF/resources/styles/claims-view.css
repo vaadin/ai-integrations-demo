@@ -1,0 +1,423 @@
+/* the page grows with the message and the form, and the layout's content scrolls, as on the home page */
+.claims.page {
+  height: auto;
+  overflow: visible;
+}
+
+/* the customer's message on the left, the claim form on the right: side by side where they fit, one above the other
+   where they do not */
+.page > .claim-columns {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: var(--vaadin-gap-xl) 2.625rem;
+  align-items: start;
+  margin-top: var(--vaadin-gap-xl);   /* a breath under the heading, clear of the watermark */
+}
+
+.claim-source,
+.claim-entry {
+  display: grid;
+  gap: var(--vaadin-gap-xl);
+  min-width: 0;
+}
+
+.message-chooser {
+  display: grid;
+  gap: inherit;
+}
+
+/* a column's title, underlined in gold that fades out towards the end */
+.column-title {
+  position: relative;
+  margin: 0;
+  padding-bottom: var(--vaadin-gap-l);
+  font-size: var(--aura-font-size-xl);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.column-title::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--aura-accent-color) 50%, transparent);
+}
+
+/* the area a message goes into: dropped, chosen or pasted */
+.message-drop {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 6.75rem;
+  padding: var(--vaadin-padding-s) var(--vaadin-padding-m);
+  box-sizing: border-box;
+  border: 1px solid var(--vaadin-border-color-secondary);
+  border-radius: var(--vaadin-radius-l);
+  --aura-surface-level: 4;
+  --aura-surface-opacity: 0.3;
+  color: var(--vaadin-text-color-secondary);
+  font-weight: var(--aura-font-weight-medium);
+  line-height: 1.55;
+  text-align: center;
+  transition: border-color 0.15s, background-color 0.15s;
+
+  &[dragover],
+  &.v-drag-over-target {
+    border-color: var(--aura-accent-color);
+    background: color-mix(in srgb, var(--aura-accent-color) 10%, transparent);
+  }
+
+  &:focus-visible {
+    outline: var(--vaadin-focus-ring-width) solid var(--vaadin-focus-ring-color);
+    outline-offset: 2px;
+  }
+
+  .status {
+    color: var(--vaadin-text-color);
+  }
+}
+
+/* "Choose" reads as a word of the sentence it opens; Aura pads a tertiary button directly, not through a property */
+vaadin-upload-button.choose {
+  --vaadin-button-font-weight: var(--aura-font-weight-semibold);
+  padding: 0;
+}
+
+/* the AI's sparkle: a gold star in a tinted circle */
+.sparkle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--aura-accent-color) 20%, transparent);
+  color: var(--aura-accent-color);
+  --vaadin-icon-size: 0.75rem;
+}
+
+/* the tip over the example files, and the files */
+.demo-tip {
+  border: 1px solid var(--vaadin-border-color);
+  border-radius: var(--vaadin-radius-l);
+  overflow: hidden;
+
+  .tip {
+    display: grid;
+    gap: var(--vaadin-gap-s);
+    padding: var(--vaadin-padding-xl);
+  }
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--vaadin-gap-xs);
+    margin: 0;
+    font-size: var(--aura-font-size-m);
+    font-weight: var(--aura-font-weight-semibold);
+  }
+
+  .label {
+    color: var(--aura-accent-text-color);
+  }
+
+  p {
+    margin: 0;
+    color: var(--vaadin-text-color-secondary);
+  }
+}
+
+.example-files {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--vaadin-gap-m);
+  padding: var(--vaadin-padding-xl) var(--vaadin-padding-m);
+  --aura-surface-level: 4;
+  --aura-surface-opacity: 0.3;
+}
+
+/* one example file: a button to read it, which is also dragged, and a download button over its icon's corner */
+.example-file {
+  position: relative;
+  width: 9rem;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  align-self: start;
+}
+
+.file-use {
+  display: grid;
+  justify-items: center;
+  gap: var(--vaadin-gap-s);
+  border: 0;
+  padding: var(--vaadin-padding-xs) var(--vaadin-padding-s);
+  border-radius: var(--vaadin-radius-m);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: grab;
+
+  &:focus-visible {
+    outline: var(--vaadin-focus-ring-width) solid var(--vaadin-focus-ring-color);
+  }
+
+  &:disabled {
+    cursor: progress;
+    opacity: 0.6;
+  }
+}
+
+.file-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3.5625rem;
+  border: 1px solid var(--vaadin-border-color-secondary);
+  border-radius: var(--vaadin-radius-s);
+  box-shadow: var(--aura-shadow-s);
+  color: var(--aura-accent-color);
+  --vaadin-icon-size: 1.25rem;
+  transition: rotate 200ms, scale 200ms;
+}
+
+.file-use:hover .file-icon {
+  rotate: 4deg;
+  scale: 1.2;
+}
+
+.file-name {
+  font-size: var(--aura-font-size-xs);
+  line-height: var(--aura-line-height-xs);
+  font-weight: var(--aura-font-weight-semibold);
+}
+
+.file-description {
+  font-size: var(--aura-font-size-xs);
+  line-height: var(--aura-line-height-xs);
+  color: var(--vaadin-text-color-secondary);
+}
+
+.file-download {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.3em;
+  color: var(--aura-accent-color);
+  text-decoration: none;
+  font-size: var(--aura-font-size-xs);
+  line-height: var(--aura-line-height-xs);
+  font-weight: var(--aura-font-weight-medium);
+
+  @media (any-hover: hover) {
+    opacity: 0;
+    transition: opacity 0.15s;
+
+    .example-file:hover &,
+    &:focus-visible {
+      opacity: 1;
+    }
+
+    .example-file:hover &:not(:hover) {
+      transition-delay: 0.5s;
+    }
+  }
+}
+
+/* the claim form: labels as strong as the design's, and the space the design leaves between rows */
+.claim-form {
+  display: grid;
+  gap: 2.5rem;
+  --vaadin-input-field-label-color: var(--vaadin-text-color);
+  --vaadin-input-field-label-font-weight: var(--aura-font-weight-semibold);
+
+  vaadin-form-layout {
+    --vaadin-form-layout-row-spacing: 2.5rem;
+    --vaadin-form-layout-column-spacing: var(--vaadin-gap-l);
+  }
+
+  /* the one action, drawn taller than Aura's large button */
+  .create {
+    --vaadin-button-height: 2.75rem;
+  }
+}
+
+/* the priority as one pill of segments: the radio buttons without their circles, the chosen one raised. The group
+   is a surface of the fields' level only for its pill, which takes the colour; the group itself stays clear */
+vaadin-radio-group.segmented.aura-surface {
+  --aura-surface-level: 4;
+  --aura-surface-opacity: 0.7;
+  background: none;
+
+  &::part(group-field) {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--vaadin-gap-xs);
+    padding: 3px 7px;
+    border-radius: var(--vaadin-radius-l);
+    background: var(--aura-surface-color);
+  }
+
+  /* one grid cell for the label: the circle's column and the gap after it go with the circle */
+  > vaadin-radio-button {
+    flex: 1;
+    min-width: 0;
+    grid-template-columns: 1fr;
+    column-gap: 0;
+    border-radius: var(--vaadin-radius-l);
+    --vaadin-radio-button-label-color: var(--vaadin-text-color-secondary);
+    --vaadin-radio-button-label-font-weight: var(--aura-font-weight-medium);
+
+    &::part(radio) {
+      display: none;
+    }
+
+    > label {
+      grid-area: 1 / 1;
+      padding: 4px 0;
+      text-align: center;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    &[checked] {
+      background: color-mix(in srgb, var(--vaadin-text-color) 25%, transparent);
+      --vaadin-radio-button-label-color: var(--vaadin-text-color);
+    }
+
+    &[focus-ring] {
+      outline: var(--vaadin-focus-ring-width) solid var(--vaadin-focus-ring-color);
+    }
+  }
+}
+
+/* the message the AI reads, in place of the area and the examples: its name and what the AI is doing, a button
+   that closes it, and the message, which scrolls on its own beside the form */
+.message-panel {
+  display: grid;
+  gap: var(--vaadin-gap-m);
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vaadin-gap-s);
+
+  > div {
+    display: grid;
+  }
+
+  .message-name {
+    font-weight: var(--aura-font-weight-semibold);
+  }
+
+  .message-status {
+    font-size: var(--aura-font-size-s);
+    color: var(--vaadin-text-color-secondary);
+  }
+}
+
+/* the pages one above the other, scrolling inside the column */
+.attachment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-m);
+  max-height: calc(100vh - 14rem);
+  overflow: auto;
+  border-radius: var(--vaadin-radius-l);
+}
+
+/* a page as the AI saw it, with an outline in percent of the page wherever it read a value. It keeps its image's
+   height: a page shrunk to the column would move every outline up and cut off the page's foot */
+.attachment-page {
+  flex: none;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--vaadin-radius-m);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+/* how sure the model was, as the field marker says it: the colour of an outline */
+.attachment .source {
+  --_source-color: var(--aura-accent-color);
+
+  &.high {
+    --_source-color: var(--aura-green);
+  }
+
+  &.medium {
+    --_source-color: var(--aura-orange);
+  }
+
+  &.low {
+    --_source-color: var(--aura-red);
+  }
+}
+
+.attachment-page .source {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--_source-color);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--_source-color) 18%, transparent);
+}
+
+/* a text has no pages: what the AI read is marked in it */
+.attachment-text {
+  margin: 0;
+  padding: var(--vaadin-padding-l);
+  border: 1px solid var(--vaadin-border-color-secondary);
+  border-radius: var(--vaadin-radius-l);
+  font: inherit;
+  line-height: 1.5;
+  white-space: pre-wrap;
+
+  .source {
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--_source-color) 35%, transparent);
+    box-shadow: 0 0 0 2px var(--_source-color);
+  }
+}
+
+/* the AI badge's popover: the snippets a value was read from */
+/* over the form the AI filled in: tinted in the AI's gold, and closer to the fields than the column's gap */
+.ai-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-gap-s);
+  margin-block-end: -1rem;
+  padding: var(--vaadin-padding-s) var(--vaadin-padding-m);
+  border: 1px solid color-mix(in srgb, var(--aura-accent-color) 35%, transparent);
+  border-radius: var(--vaadin-radius-m);
+  background: color-mix(in srgb, var(--aura-accent-color) 8%, transparent);
+  font-size: var(--aura-font-size-s);
+  line-height: 1.45;
+}
+
+.source-extracts {
+  display: grid;
+  gap: var(--vaadin-gap-xs);
+  max-width: 24rem;
+  font-size: var(--aura-font-size-s);
+  color: var(--vaadin-text-color-secondary);
+
+  /* the AI's reasoning reads as the popover's text, the quotes under it as its evidence */
+  .source-reasoning {
+    margin-block-end: var(--vaadin-gap-xs);
+    color: var(--vaadin-text-color);
+  }
+}

@@ -179,7 +179,7 @@ public class ClaimsView extends PageView implements HasReadme {
             Conversations conversations,
             CurrentUser currentUser,
             ExampleDocuments examples) {
-        super("Claims", "Resolve customer issues");
+        super("claims", "Claims", "Resolve Customer Issues", "Claims");
         form = new ClaimForm(
                 customers,
                 contacts,
@@ -214,7 +214,7 @@ public class ClaimsView extends PageView implements HasReadme {
         var entry = new Section(title("Create Claim"), aiNotice(), form);
         entry.addClassName("claim-entry");
         var columns = new Div(source, entry);
-        columns.addClassName("claims");
+        columns.addClassName("claim-columns");
         add(columns);
     }
 

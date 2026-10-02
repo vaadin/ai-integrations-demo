@@ -2,8 +2,6 @@ package com.vaadin.demo.nordicsupply.ui.components;
 
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.Span;
 
 /**
  * The heading every page carries: the title as the page's {@code h1} in heavy italic capitals, a gold subtitle under
@@ -13,15 +11,8 @@ import com.vaadin.flow.component.html.Span;
  */
 public class PageHeading extends Div {
 
-    public PageHeading(String title, String subtitle) {
+    public PageHeading(String title, String subtitle, String watermark) {
         addClassName("page-heading");
-        var watermark = new Span(title);
-        watermark.addClassName("watermark");
-        watermark.getElement().setAttribute("aria-hidden", "true");
-        var heading = new H1(title);
-        heading.addClassName("page-title");
-        var sub = new Span(subtitle);
-        sub.addClassName("page-subtitle");
-        add(new DrawerToggle(), watermark, heading, sub);
+        add(new DrawerToggle(), new HeroTitle(title, subtitle, watermark));
     }
 }

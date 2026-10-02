@@ -29,7 +29,7 @@ class HelpTest {
     }
 
     private final ShownReadmes session = new ShownReadmes();
-    private final ReadmeDialog dialog = new ReadmeDialog();
+    private final ReadmePopover popover = new ReadmePopover();
 
     /** Held here: the current UI is kept only weakly, so a garbage collection would otherwise clear it mid-test. */
     private final UI ui = new UI();
@@ -46,64 +46,93 @@ class HelpTest {
 
     @Test
     void aViewsReadmeOpensByItselfOnItsFirstVisitUnderTheViewsTitle() {
-        var help = new Help(session, dialog);
+        var help = new Help(session, popover);
+        var view = new ReadmeView("Orders");
 
-        help.follow(new ReadmeView("Orders"), "Orders");
+        help.follow(view, "Orders");
 
-        assertThat(dialog.isOpened()).isTrue();
-        assertThat(dialog.getHeaderTitle()).isEqualTo("Orders");
+        assertThat(popover.isOpened()).isTrue();
+        assertThat(popover.getTarget()).isSameAs(help);
         assertThat(help.isVisible()).isTrue();
+        assertThat(view.getClassNames()).contains("first-visit");
     }
 
     @Test
-    void theReadmeStaysClosedOnALaterVisitInTheSameSession() {
-        var firstTab = new Help(session, new ReadmeDialog());
+    void thePopoverIsAnchoredToTheHelpButtonButLivesOnThePage() {
+        var help = new Help(session, popover);
+
+        ui.add(help);
+
+        assertThat(popover.getTarget()).isSameAs(help);
+        assertThat(help.getChildren()).noneMatch(ReadmePopover.class::isInstance);
+        assertThat(ui.getChildren()).anyMatch(ReadmePopover.class::isInstance);
+    }
+
+    @Test
+    void reloadingThePageRestoresTheClassButDoesNotReopenTheReadmeInTheSameSession() {
+        var firstTab = new Help(session, new ReadmePopover());
         firstTab.follow(new ReadmeView("Orders"), "Orders");
 
-        var secondTab = new Help(session, dialog);
-        secondTab.follow(new ReadmeView("Orders"), "Orders");
+        var reloadedPage = new Help(session, popover);
+        var firstVisitAfterReload = new ReadmeView("Orders");
+        reloadedPage.follow(firstVisitAfterReload, "Orders");
 
-        assertThat(dialog.isOpened()).isFalse();
-        assertThat(secondTab.isVisible()).isTrue();
+        assertThat(popover.isOpened()).isFalse();
+        assertThat(reloadedPage.isVisible()).isTrue();
+        assertThat(firstVisitAfterReload.getClassNames()).contains("first-visit");
     }
 
     @Test
     void eachViewsReadmeOpensOnItsOwnFirstVisit() {
-        var help = new Help(session, dialog);
+        var help = new Help(session, popover);
         help.follow(new ReadmeView("Orders"), "Orders");
-        dialog.close();
+        popover.close();
 
         help.follow(new ReadmeView("Customers"), "Customers");
 
-        assertThat(dialog.isOpened()).isTrue();
-        assertThat(dialog.getHeaderTitle()).isEqualTo("Customers");
+        assertThat(popover.isOpened()).isTrue();
     }
 
     @Test
-    void theButtonOpensTheCurrentViewsReadmeAgain() {
-        var help = new Help(session, dialog);
+    void theButtonTargetsTheCurrentViewsReadmeAfterItsFirstVisit() {
+        var help = new Help(session, popover);
         help.follow(new ReadmeView("Orders"), "Orders");
-        dialog.close();
+        popover.close();
+        var laterVisit = new ReadmeView("Orders");
 
-        help.click();
+        help.follow(laterVisit, "Orders");
 
-        assertThat(dialog.isOpened()).isTrue();
-        assertThat(dialog.getHeaderTitle()).isEqualTo("Orders");
+        assertThat(popover.getTarget()).isSameAs(help);
+        assertThat(popover.isOpenOnClick()).isTrue();
+        assertThat(laterVisit.getClassNames()).doesNotContain("first-visit");
     }
 
     @Test
     void aViewWithoutAReadmeOpensNothingAndHidesHelp() {
-        var help = new Help(session, dialog);
+        var help = new Help(session, popover);
+        var view = new Div();
 
-        help.follow(new Div(), "Home");
+        help.follow(view, "Home");
 
-        assertThat(dialog.isOpened()).isFalse();
+        assertThat(popover.isOpened()).isFalse();
         assertThat(help.isVisible()).isFalse();
+        assertThat(view.getClassNames()).contains("first-visit");
+    }
+
+    @Test
+    void aViewWithoutAReadmeOnlyHasTheClassOnItsFirstVisit() {
+        var help = new Help(session, popover);
+        help.follow(new Div(), "Home");
+        var laterVisit = new Div();
+
+        help.follow(laterVisit, "Home");
+
+        assertThat(laterVisit.getClassNames()).doesNotContain("first-visit");
     }
 
     @Test
     void helpReturnsWithTheNextViewThatHasAReadme() {
-        var help = new Help(session, dialog);
+        var help = new Help(session, popover);
         help.follow(new Div(), "Home");
 
         help.follow(new ReadmeView("Orders"), "Orders");
@@ -113,11 +142,11 @@ class HelpTest {
 
     @Test
     void aReadmeStillOpenClosesWhenTheViewChanges() {
-        var help = new Help(session, dialog);
+        var help = new Help(session, popover);
         help.follow(new ReadmeView("Orders"), "Orders");
 
         help.follow(new Div(), "Home");
 
-        assertThat(dialog.isOpened()).isFalse();
+        assertThat(popover.isOpened()).isFalse();
     }
 }

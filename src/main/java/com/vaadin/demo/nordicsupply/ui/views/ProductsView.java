@@ -24,7 +24,7 @@ public class ProductsView extends PageView implements HasReadme {
             """;
 
     public ProductsView(ProductRepository products) {
-        super("Products", "Catalogue");
+        super("products", "Products", "Manage Your Catalogue", "Products");
         var table = new DataTable<Row>(
                 "Products", Sort.by("sku"), products::search, "Search SKU, name, supplier or category");
         table.text("SKU", Row::sku);

@@ -75,14 +75,14 @@ public class ClaimsView extends PageView implements HasReadme {
 
     private static final String README = """
             A customer's complaint becomes a claim without retyping it. Drop the customer's message on the area on the
-            left, an email, a PDF, a screenshot or a photo, or paste its text there, and the AI fills in the claim
-            form: it finds the customer by the sender, then the contact, the order and the shipment the message is
-            about, and writes the description in English whatever the language of the message. It fills in every
-            field, also those the message only hints at, and tells how sure it is of each. Every field it filled
-            carries an AI badge, which says why the AI chose the value and also undoes the change. The message stays
-            in view while you check the form: focus a field, and the words the AI took its value from are outlined in
-            the message, green where it was sure of them, orange or red where less so. Create Claim is enabled once
-            the form holds a customer and a claim type.
+            left as a PDF, a screenshot or a photo, or paste its text there, for example an email copied from your
+            mail app, and the AI fills in the claim form: it finds the customer by the sender, then the contact, the
+            order and the shipment the message is about, and writes the description in English whatever the language
+            of the message. It fills in every field, also those the message only hints at, and tells how sure it is of
+            each. Every field it filled carries an AI badge, which says why the AI chose the value and also undoes the
+            change. The message stays in view while you check the form: focus a field, and the words the AI took its
+            value from are outlined in the message, green where it was sure of them, orange or red where less so.
+            Create Claim is enabled once the form holds a customer and a claim type.
 
             The example files are complaints from the demo data's own customers, in the shapes they arrive in: an
             exported email with the scanned delivery note, a letter, an invoice written on by hand, a photographed
@@ -242,8 +242,8 @@ public class ClaimsView extends PageView implements HasReadme {
         choose.addThemeVariants(ButtonVariant.TERTIARY);
         choose.addClassName("choose");
         var instructions = new Div(
-                new Div(choose, new Span(" or drop an email, PDF, screenshot or photo")),
-                new Div("or paste text here"));
+                new Div(choose, new Span(" or drop a PDF, screenshot or photo")),
+                new Div("or paste an email's text here"));
         instructions.addClassName("instructions");
 
         var zone = new UploadDropZone(instructions, manager);
@@ -266,6 +266,14 @@ public class ClaimsView extends PageView implements HasReadme {
                 .executeJs("this.addEventListener('paste', e => {"
                         + " const files = Array.from(e.clipboardData.files);"
                         + " if (files.length) { e.preventDefault(); this.manager.addFiles(files); } })");
+        // macOS Mail hands a dragged message to the browser only as a message: link, never as a file
+        zone.getElement()
+                .addEventListener(
+                        "drop",
+                        e -> warn("Mail does not hand over a dragged message. Drag it to the desktop first and drop"
+                                + " the file from there, or paste the message's text here."))
+                .setFilter("event.dataTransfer.files.length === 0"
+                        + " && event.dataTransfer.getData('text/uri-list').startsWith('message:')");
 
         var examples = DropTarget.create(zone);
         examples.setDropEffect(DropEffect.COPY);

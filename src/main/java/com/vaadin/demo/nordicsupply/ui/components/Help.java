@@ -48,9 +48,7 @@ public class Help extends Button {
         view.getElement().getClassList().set("first-visit", firstVisit);
         if (firstVisit) {
             view.getElement()
-                    .executeJs(
-                            "setTimeout(() => this.classList.remove('first-visit'), $0)",
-                            FIRST_VISIT_MILLIS);
+                    .executeJs("setTimeout(() => this.classList.remove('first-visit'), $0)", FIRST_VISIT_MILLIS);
         }
         setVisible(readme != null);
         if (readme != null && shownReadmes.firstTime(readme)) {

@@ -60,15 +60,21 @@ class ReadmePopoverTest {
     }
 
     private H2 title() {
-        return (H2) popover.getChildren().filter(H2.class::isInstance).findFirst().orElseThrow();
+        return (H2)
+                popover.getChildren().filter(H2.class::isInstance).findFirst().orElseThrow();
     }
 
     private Markdown markdown() {
-        return (Markdown)
-                popover.getChildren().filter(Markdown.class::isInstance).findFirst().orElseThrow();
+        return (Markdown) popover.getChildren()
+                .filter(Markdown.class::isInstance)
+                .findFirst()
+                .orElseThrow();
     }
 
     private Button closeButton() {
-        return (Button) popover.getChildren().filter(Button.class::isInstance).findFirst().orElseThrow();
+        return (Button) popover.getChildren()
+                .filter(Button.class::isInstance)
+                .findFirst()
+                .orElseThrow();
     }
 }

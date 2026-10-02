@@ -1,0 +1,79 @@
+.home.page {
+  height: auto;
+  overflow: visible;
+
+  hero-title {
+    margin-bottom: 100px;
+  }
+
+  .about {
+    display: grid;
+    gap: var(--vaadin-gap-xs);
+    max-width: 62ch;
+    margin-top: var(--vaadin-gap-xl);
+    color: var(--vaadin-text-color-secondary);
+    font-size: var(--aura-font-size-l);
+    line-height: var(--aura-line-height-l);
+
+    > p {
+      margin-top: 0;
+    }
+  }
+
+  .about-title {
+    font-size: var(--aura-font-size-xl);
+    line-height: var(--aura-line-height-xl);
+  }
+
+  .section-title {
+    font-size: var(--aura-font-size-s);
+    line-height: var(--aura-line-height-s);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--vaadin-text-color-secondary);
+    margin-block: var(--vaadin-gap-s);
+  }
+
+  .start-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--vaadin-gap-l);
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .start-card {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .start-card vaadin-card {
+    --vaadin-card-padding: var(--vaadin-padding-l);
+    --vaadin-card-title-color: var(--aura-accent-text-color);
+    --vaadin-card-title-font-size: var(--aura-font-size-l);
+    --vaadin-card-title-font-weight: 700;
+    height: 100%;
+  }
+
+  .start-card vaadin-card:hover {
+    --vaadin-card-border-color: var(--aura-accent-border-color);
+  }
+
+  .start-card vaadin-card .text {
+    font-size: var(--aura-font-size-m);
+    color: var(--vaadin-text-color-secondary);
+  }
+
+  &.first-visit {
+    .about,
+    .section-title,
+    .start-card {
+      animation: --slide-up-fade-in 0.5s 1.2s backwards;
+      animation-delay: calc(1s + sibling-index() * 0.03s);
+    }
+
+    .start-card {
+      animation-delay: calc(1.1s + sibling-index() * 0.02s);
+    }
+  }
+}

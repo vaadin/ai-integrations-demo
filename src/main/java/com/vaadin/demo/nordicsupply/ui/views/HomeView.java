@@ -13,6 +13,12 @@ import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
+import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.ui.MainLayout;
 
 /**
@@ -28,8 +34,15 @@ public class HomeView extends PageView {
     private static final String SOURCE = "https://github.com/vaadin/ai-integrations-demo";
     private static final String START = "https://start.vaadin.com";
 
-    public HomeView() {
-        super(MainLayout.COMPANY, "Order desk");
+    private static DateTimeFormatter formatter =
+        DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH);
+
+    public HomeView(CurrentUser currentUser) {
+        super(
+                "home",
+                "Good " + timeOfDay(LocalTime.now()) + ", " + currentUser.get().name(),
+                LocalDate.now().format(formatter),
+                "Home");
 
         var aboutTitle = new H2("About this demo");
         aboutTitle.addClassName("about-title");
@@ -65,5 +78,19 @@ public class HomeView extends PageView {
         link.setTarget(AnchorTarget.BLANK);
         link.addClassName("start-card");
         return link;
+    }
+
+    private static String timeOfDay(LocalTime time) {
+        int hour = time.getHour();
+
+        if (hour < 12) {
+            return "Morning";
+        } else if (hour < 17) {
+            return "Afternoon";
+        } else if (hour < 21) {
+            return "Evening";
+        } else {
+            return "Late Evening";
+        }
     }
 }

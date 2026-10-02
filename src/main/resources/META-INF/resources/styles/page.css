@@ -1,0 +1,48 @@
+.page {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--vaadin-gap-s);
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  --view-padding: var(--vaadin-padding-l);
+  padding: var(--view-padding);
+}
+
+:where(vaadin-app-layout:not([overlay]) .page) {
+  padding-inline-start: 0;
+}
+
+.page-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-gap-m);
+}
+
+.page:is(.first-visit, .home) {
+  --hero-title-scale: 1;
+  --hero-title-deco-translate: 2%;
+  --hero-title-translate: 85%;
+}
+
+.page.first-visit:not(.home) {
+  animation: --scale-down-hero-title 0s 1s linear forwards;
+}
+
+@keyframes --scale-down-hero-title {
+  100% {
+    --hero-title-scale: 0.71;
+    --hero-title-deco-translate: 0%;
+    --hero-title-translate: 0%;
+  }
+}
+
+.page:not(.first-visit) {
+  --hero-title-animation: none;
+}
+
+hero-title {
+  padding-top: var(--vaadin-padding-l);
+}

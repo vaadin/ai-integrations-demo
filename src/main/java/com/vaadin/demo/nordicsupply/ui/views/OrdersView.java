@@ -25,7 +25,7 @@ public class OrdersView extends PageView implements HasReadme {
             """;
 
     public OrdersView(SalesOrderRepository orders, CurrentUser currentUser) {
-        super("Orders", "Sales orders");
+        super("orders", "Orders", "Keep Orders Moving", "Orders");
         var countries = currentUser.get().scope().countries();
         var table = new DataTable<Row>(
                 "Orders",

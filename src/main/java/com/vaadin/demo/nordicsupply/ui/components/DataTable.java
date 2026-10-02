@@ -43,8 +43,10 @@ public class DataTable<T> extends VerticalLayout {
      * @param searchPlaceholder what the search box says it searches
      */
     public DataTable(String name, Sort sort, BiFunction<String, Pageable, Page<T>> fetch, String searchPlaceholder) {
-        addClassName("data-table");
+        addClassNames("data-table", "aura-surface");
         setPadding(false);
+        setSpacing(false);
+        setWidth(null);
         search.setPlaceholder(searchPlaceholder);
         search.setWidth("360px");
         search.setPrefixComponent(VaadinIcon.SEARCH.create());

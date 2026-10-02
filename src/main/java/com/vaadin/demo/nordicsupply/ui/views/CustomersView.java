@@ -24,7 +24,7 @@ public class CustomersView extends PageView implements HasReadme {
             """;
 
     public CustomersView(CustomerRepository customers, CurrentUser currentUser) {
-        super("Customers", "Retail accounts");
+        super("customers", "Customers", "Know Your Customers", "Customers");
         var countries = currentUser.get().scope().countries();
         var table = new DataTable<Row>(
                 "Customers",

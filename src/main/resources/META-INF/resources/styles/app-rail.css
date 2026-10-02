@@ -1,0 +1,143 @@
+html {
+  --vaadin-side-nav-item-font-weight: var(--aura-font-weight-semibold);
+  --vaadin-side-nav-item-padding: var(--vaadin-padding-block-container) var(--vaadin-padding-m);
+  --vaadin-side-nav-items-gap: var(--vaadin-gap-s);
+  --app-rail-inset: var(--vaadin-padding-xl);
+}
+
+vaadin-scroller.rail-nav[slot=drawer] {
+  --vaadin-scroller-padding-inline: var(--app-rail-inset);
+  padding-inline-start: max(0px, var(--app-rail-inset) - var(--safe-area-inset-inline-start));
+}
+
+vaadin-side-nav-item:not([current]) {
+  @media (any-hover: hover) {
+    &::part(content):hover {
+      --vaadin-side-nav-item-background: var(--aura-surface-color);
+    }
+  }
+}
+
+vaadin-side-nav-item[current] {
+  &::part(content) {
+    --aura-surface-opacity: 0.7;
+    --vaadin-side-nav-item-text-color: var(--vaadin-text-color);
+    --vaadin-side-nav-item-border-color: light-dark(var(--vaadin-border-color-secondary), var(--vaadin-border-color));
+  }
+
+  > vaadin-icon[slot=prefix] {
+    color: var(--aura-accent-text-color);
+  }
+}
+
+vaadin-button.rail-button {
+  --vaadin-button-background: transparent;
+  --vaadin-button-border-color: transparent;
+  --vaadin-button-border-width: var(--vaadin-side-nav-item-border-width, 1px);
+  --vaadin-button-border-radius: var(--vaadin-side-nav-item-border-radius, var(--vaadin-radius-m));
+  --vaadin-button-text-color: var(--vaadin-text-color-secondary);
+  --vaadin-button-font-weight: var(--aura-font-weight-semibold);
+  --vaadin-button-shadow: none;
+  --vaadin-avatar-size: var(--vaadin-icon-size, 1lh);
+  --aura-surface-level: 1;
+  --aura-surface-opacity: 0.5;
+  justify-content: flex-start;
+  text-align: start;
+  white-space: nowrap;
+  margin: var(--vaadin-gap-s) var(--vaadin-padding-xl) 0;
+  padding: var(--vaadin-side-nav-item-padding);
+  transition: color 80ms; /* match vaadin-side-nav-item */
+
+  &::part(label) {
+    flex: 1;
+  }
+
+  &[active]:not([disabled]) {
+    scale: 1;
+  }
+
+  > vaadin-icon[slot=prefix] {
+    opacity: 0.8;
+  }
+
+  > vaadin-icon.dropdown {
+    opacity: 0.5;
+    transition: opacity 80ms;
+  }
+
+  @media (any-hover: hover) {
+    &:hover {
+      --aura-surface-level: 4;
+      --aura-surface-opacity: 0.3;
+      --vaadin-button-text-color: var(--vaadin-text-color);
+      --vaadin-button-background: var(--aura-surface-color);
+
+      &:not([active])::before {
+        display: none;
+      }
+    }
+  }
+
+  &[aria-expanded=true] {
+    --aura-surface-level: 4;
+    --aura-surface-opacity: 0.3;
+    --vaadin-button-text-color: var(--vaadin-text-color);
+    --vaadin-button-background: var(--aura-surface-color);
+  }
+}
+
+/* one employee in the switcher: the initials, then the name over the region */
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-gap-s);
+
+  .name {
+    font-weight: var(--aura-font-weight-semibold);
+  }
+
+  .region {
+    font-size: var(--aura-font-size-s);
+    color: var(--vaadin-text-color-secondary);
+  }
+}
+
+.powered-by {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-side-nav-item-gap, var(--vaadin-gap-s));
+  margin: var(--vaadin-gap-s) var(--vaadin-padding-xl) var(--vaadin-padding-xl);
+  padding: var(--vaadin-side-nav-item-padding);
+  border: var(--vaadin-side-nav-item-border-width, 1px) solid transparent;
+  border-radius: var(--vaadin-side-nav-item-border-radius, var(--vaadin-radius-m));
+  color: var(--vaadin-text-color-disabled);
+  font-size: var(--aura-font-size-xs);
+  font-weight: var(--aura-font-weight-medium);
+  text-decoration: none;
+  --vaadin-icon-visual-size: 1.5em;
+  transition: color 80ms;
+
+  > vaadin-icon {
+    transition: inherit;
+  }
+
+  @media (any-hover: hover) {
+    &:hover {
+      color: var(--vaadin-text-color-secondary);
+
+      > vaadin-icon {
+        color: #056FF0;
+      }
+    }
+  }
+}
+
+vaadin-popover.help {
+  --vaadin-popover-padding: var(--vaadin-padding-xl);
+}
+
+/* Delay the opening of the help popover when it's shown for the first time */
+body:has(.first-visit) vaadin-popover.help[opening] {
+  --vaadin-overlay-animation-duration: 1s;
+  --vaadin-overlay-animation-delay: 1s;
+}

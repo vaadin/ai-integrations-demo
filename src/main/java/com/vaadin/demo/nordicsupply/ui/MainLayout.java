@@ -18,7 +18,7 @@ import com.vaadin.flow.server.menu.MenuConfiguration;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.ShownReadmes;
 import com.vaadin.demo.nordicsupply.ui.components.Help;
-import com.vaadin.demo.nordicsupply.ui.components.ReadmeDialog;
+import com.vaadin.demo.nordicsupply.ui.components.ReadmePopover;
 import com.vaadin.demo.nordicsupply.ui.components.UserSwitcher;
 
 /**
@@ -52,7 +52,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         scroller.addClassName("rail-nav");
         scroller.addThemeVariants(ScrollerVariant.OVERFLOW_INDICATORS);
 
-        help = new Help(shownReadmes, new ReadmeDialog());
+        help = new Help(shownReadmes, new ReadmePopover());
 
         var powered = new Anchor("https://vaadin.com", new SvgIcon("icons/vaadin.svg"), new Span("Powered by Vaadin"));
         powered.setTarget(AnchorTarget.BLANK);

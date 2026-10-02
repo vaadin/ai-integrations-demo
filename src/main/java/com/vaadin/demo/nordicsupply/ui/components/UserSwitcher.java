@@ -3,13 +3,11 @@ package com.vaadin.demo.nordicsupply.ui.components;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.SvgIcon;
 import com.vaadin.flow.component.listbox.ListBox;
 import com.vaadin.flow.component.popover.Popover;
 import com.vaadin.flow.component.popover.PopoverPosition;
-import com.vaadin.flow.component.popover.PopoverVariant;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
@@ -32,9 +30,10 @@ public class UserSwitcher extends Button implements AfterNavigationObserver {
     public UserSwitcher(CurrentUser currentUser) {
         super(currentUser.get().name(), new Avatar(currentUser.get().name()));
         var user = currentUser.get();
-        addClassNames("rail-button", "rail-user");
-        addThemeVariants(ButtonVariant.TERTIARY);
-        setTooltipText("Signed in as " + user.name() + ", " + user.scope().label() + ". Click to switch.");
+        addClassNames("rail-button");
+        var dropdownIcon = new SvgIcon("icons/chevron-down.svg");
+        dropdownIcon.addClassName("dropdown");
+        setSuffixComponent(dropdownIcon);
 
         var users = new ListBox<SignedInUser>();
         users.setItems(currentUser.all());
@@ -51,7 +50,6 @@ public class UserSwitcher extends Button implements AfterNavigationObserver {
         popover.setModal(true);
         popover.setAriaLabel("Switch user");
         popover.setPosition(PopoverPosition.TOP_START);
-        popover.addThemeVariants(PopoverVariant.NO_PADDING);
 
         // a switch, in this tab or another of the session, reloads the page: every view starts over as the new user
         Signal.effect(this, context -> {
@@ -70,9 +68,9 @@ public class UserSwitcher extends Button implements AfterNavigationObserver {
 
     /** One employee in the list: the initials, the name, and the region under it. */
     private static Div item(SignedInUser user) {
-        var name = new Span(user.name());
+        var name = new Div(user.name());
         name.addClassName("name");
-        var region = new Span(user.scope().label());
+        var region = new Div(user.scope().label());
         region.addClassName("region");
         var item = new Div(new Avatar(user.name()), new Div(name, region));
         item.addClassName("user-item");

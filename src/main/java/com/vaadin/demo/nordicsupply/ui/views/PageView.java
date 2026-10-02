@@ -10,9 +10,8 @@ import com.vaadin.demo.nordicsupply.ui.components.PageHeading;
  */
 public abstract class PageView extends Main {
 
-    protected PageView(String title, String subtitle) {
-        setSizeFull();
-        addClassName("page");
-        add(new PageHeading(title, subtitle));
+    protected PageView(String pageClassName, String title, String subtitle, String watermark) {
+        addClassNames("page", pageClassName);
+        add(new PageHeading(title, subtitle, watermark));
     }
 }

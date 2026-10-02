@@ -1,0 +1,55 @@
+.page > .data-table {
+  flex: 1;
+  align-self: stretch;
+  min-height: 0;
+  background-clip: padding-box;
+  border: 1px solid color-mix(in srgb, var(--vaadin-border-color) 70%, transparent);
+  border-radius: var(--vaadin-radius-l);
+  backdrop-filter: blur(8px);
+  --vaadin-grid-cell-padding: var(--vaadin-padding-l);
+  overflow: hidden;
+
+  > vaadin-text-field:first-child {
+    margin: var(--vaadin-padding-l);
+  }
+
+  > vaadin-grid {
+    --vaadin-grid-border-width: 0px;
+    --vaadin-grid-border-color: color-mix(in srgb, var(--vaadin-border-color-secondary), transparent);
+    box-shadow: 0 0 0 1px var(--vaadin-border-color-secondary);
+  }
+
+  vaadin-grid::part(header-cell) {
+    color: var(--aura-accent-text-color);
+    text-transform: uppercase;
+    font-size: var(--aura-font-size-s);
+    font-weight: 700;
+    font-style: italic;
+    font-width: 90%;
+    font-stretch: 90%;
+  }
+}
+
+:where(vaadin-app-layout[overlay] .page > .data-table) {
+  margin: calc(var(--view-padding) * -1);
+  margin-top: 0;
+}
+
+/* Register the property so that it works in Chromium as expected when combined with a ::part() selector.
+Without it, all rows compute to the same index (even though the inspector shows a different number for each row) */
+@property --row-index {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page.first-visit > .data-table {
+    animation: --slide-up-fade-in 0.5s 1.2s backwards;
+
+    vaadin-grid::part(body-row) {
+      --row-index: sibling-index();
+      animation: --slide-up-fade-in 0.4s calc(1.5s + var(--row-index) * 0.03s) backwards;
+    }
+  }
+}

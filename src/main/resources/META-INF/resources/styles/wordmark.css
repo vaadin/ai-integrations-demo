@@ -1,0 +1,29 @@
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: var(--vaadin-side-nav-item-gap, var(--vaadin-gap-s));
+  margin: var(--vaadin-padding-xl) var(--vaadin-padding-xl) var(--vaadin-gap-s);
+  padding: var(--vaadin-side-nav-item-padding);
+  --vaadin-icon-visual-size: 90%;
+
+  > .mark {
+    flex: none;
+    border-radius: var(--vaadin-radius-m);
+    background: var(--aura-accent-color);
+    color: var(--aura-accent-contrast-color);
+  }
+
+  > .name {
+    width: min-content;
+    font-weight: 700;
+    font-style: italic;
+    font-stretch: 90%;
+    font-width: 90%;
+    font-size: 0.95rem;
+    line-height: 0.9;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    color: var(--vaadin-text-color);
+    text-indent: 0.2em;
+  }
+}

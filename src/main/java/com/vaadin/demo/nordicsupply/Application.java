@@ -7,7 +7,7 @@ import com.vaadin.flow.component.page.AppShellConfigurator;
 import com.vaadin.flow.component.page.ColorScheme;
 import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.server.AppShellSettings;
-
+import com.vaadin.flow.theme.aura.Aura;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -17,6 +17,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * a view of its own.
  */
 @SpringBootApplication
+@StyleSheet(Aura.STYLESHEET)
 @StyleSheet("styles.css")
 @ColorScheme(ColorScheme.Value.DARK)
 @Push
@@ -35,10 +36,6 @@ public class Application implements AppShellConfigurator {
 
     @Override
     public void configurePage(AppShellSettings settings) {
-        settings.addFavIcon(
-            "icon",
-            "icons/favicon.svg",
-            "any"
-        );
+        settings.addFavIcon("icon", "icons/favicon.svg", "any");
     }
 }

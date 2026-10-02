@@ -21,14 +21,16 @@
   gap: var(--vaadin-gap-m);
 }
 
-.page:is(.first-visit, .home) {
-  --hero-title-scale: 1;
-  --hero-title-deco-translate: 2%;
-  --hero-title-translate: 85%;
-}
+@media (prefers-reduced-motion: no-preference) {
+  .page:is(.first-visit, .home) {
+    --hero-title-scale: 1;
+    --hero-title-deco-translate: 2%;
+    --hero-title-translate: 85%;
+  }
 
-.page.first-visit:not(.home) {
-  animation: --scale-down-hero-title 0s 1s linear forwards;
+  .page.first-visit:not(.home) {
+    animation: --scale-down-hero-title 0s 1s linear forwards;
+  }
 }
 
 @keyframes --scale-down-hero-title {
@@ -41,6 +43,12 @@
 
 .page:not(.first-visit) {
   --hero-title-animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    --hero-title-animation: none;
+  }
 }
 
 hero-title {

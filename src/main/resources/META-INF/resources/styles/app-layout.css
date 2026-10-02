@@ -19,12 +19,14 @@ vaadin-app-layout {
   }
 }
 
-vaadin-app-layout:not([overlay])::part(drawer) {
-  animation: --drawer-entry 0.4s 0s backwards;
-}
+@media (prefers-reduced-motion: no-preference) {
+  vaadin-app-layout:not([overlay])::part(drawer) {
+    animation: --drawer-entry 0.4s 0s backwards;
+  }
 
-body:has(.first-visit) vaadin-app-layout:not([overlay])::part(drawer) {
-  animation-delay: 1s;
+  body:has(.first-visit) vaadin-app-layout:not([overlay])::part(drawer) {
+    animation-delay: 1s;
+  }
 }
 
 @keyframes --drawer-entry {

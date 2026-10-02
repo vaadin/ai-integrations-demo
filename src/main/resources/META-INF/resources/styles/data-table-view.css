@@ -43,11 +43,13 @@ Without it, all rows compute to the same index (even though the inspector shows 
   initial-value: 1;
 }
 
-.page.first-visit > .data-table {
-  animation: --slide-up-fade-in 0.5s 1.2s backwards;
+@media (prefers-reduced-motion: no-preference) {
+  .page.first-visit > .data-table {
+    animation: --slide-up-fade-in 0.5s 1.2s backwards;
 
-  vaadin-grid::part(body-row) {
-    --row-index: sibling-index();
-    animation: --slide-up-fade-in 0.4s calc(1.5s + var(--row-index) * 0.03s) backwards;
+    vaadin-grid::part(body-row) {
+      --row-index: sibling-index();
+      animation: --slide-up-fade-in 0.4s calc(1.5s + var(--row-index) * 0.03s) backwards;
+    }
   }
 }

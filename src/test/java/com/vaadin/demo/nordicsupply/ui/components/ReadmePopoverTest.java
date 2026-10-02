@@ -4,19 +4,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.markdown.Markdown;
-import com.vaadin.flow.dom.Element;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** The dialog shows the readme it is given under the view's title and closes from its button. */
-class ReadmeDialogTest {
+/** The popover shows the readme it is given under the view's title and closes from its button. */
+class ReadmePopoverTest {
 
     private static final String ORDERS = "The order list.";
     private static final String PRODUCTS = "The catalogue.";
 
-    private final ReadmeDialog dialog = new ReadmeDialog();
+    private final ReadmePopover popover = new ReadmePopover();
 
     /** Held here: the current UI is kept only weakly, so a garbage collection would otherwise clear it mid-test. */
     private final UI ui = new UI();
@@ -32,47 +32,47 @@ class ReadmeDialogTest {
     }
 
     @Test
-    void showOpensTheDialogOnTheReadmesTitleAndText() {
-        dialog.show("Orders", ORDERS);
+    void showOpensThePopoverOnTheReadmesTitleAndText() {
+        popover.show("Orders", ORDERS);
 
-        assertThat(dialog.isOpened()).isTrue();
-        assertThat(dialog.getHeaderTitle()).isEqualTo("Orders");
+        assertThat(popover.isOpened()).isTrue();
+        assertThat(title().getText()).isEqualTo("Orders");
         assertThat(markdown().getContent()).isEqualTo(ORDERS);
     }
 
     @Test
     void showingAnotherReadmeReplacesTheTitleAndText() {
-        dialog.show("Orders", ORDERS);
+        popover.show("Orders", ORDERS);
 
-        dialog.show("Products", PRODUCTS);
+        popover.show("Products", PRODUCTS);
 
-        assertThat(dialog.getHeaderTitle()).isEqualTo("Products");
+        assertThat(title().getText()).isEqualTo("Products");
         assertThat(markdown().getContent()).isEqualTo(PRODUCTS);
     }
 
     @Test
-    void theCloseButtonClosesTheDialog() {
-        dialog.show("Orders", ORDERS);
+    void theCloseButtonClosesThePopover() {
+        popover.show("Orders", ORDERS);
 
         closeButton().click();
 
-        assertThat(dialog.isOpened()).isFalse();
+        assertThat(popover.isOpened()).isFalse();
+    }
+
+    private H2 title() {
+        return (H2)
+                popover.getChildren().filter(H2.class::isInstance).findFirst().orElseThrow();
     }
 
     private Markdown markdown() {
-        return (Markdown) dialog.getChildren()
+        return (Markdown) popover.getChildren()
                 .filter(Markdown.class::isInstance)
                 .findFirst()
                 .orElseThrow();
     }
 
-    /** The footer's components sit in an element slotted as the footer. */
     private Button closeButton() {
-        return (Button) dialog.getElement()
-                .getChildren()
-                .filter(element -> "footer".equals(element.getAttribute("slot")))
-                .flatMap(Element::getChildren)
-                .flatMap(element -> element.getComponent().stream())
+        return (Button) popover.getChildren()
                 .filter(Button.class::isInstance)
                 .findFirst()
                 .orElseThrow();

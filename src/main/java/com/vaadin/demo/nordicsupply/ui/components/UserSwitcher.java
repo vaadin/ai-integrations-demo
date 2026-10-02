@@ -35,7 +35,6 @@ public class UserSwitcher extends Button implements AfterNavigationObserver {
         dropdownIcon.addClassName("dropdown");
         setSuffixComponent(dropdownIcon);
 
-
         var users = new ListBox<SignedInUser>();
         users.setItems(currentUser.all());
         users.setValue(user);

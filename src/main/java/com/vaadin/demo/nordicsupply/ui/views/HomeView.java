@@ -1,5 +1,10 @@
 package com.vaadin.demo.nordicsupply.ui.views;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
 import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.card.CardVariant;
 import com.vaadin.flow.component.html.Anchor;
@@ -12,11 +17,6 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.ui.MainLayout;
@@ -34,8 +34,7 @@ public class HomeView extends PageView {
     private static final String SOURCE = "https://github.com/vaadin/ai-integrations-demo";
     private static final String START = "https://start.vaadin.com";
 
-    private static DateTimeFormatter formatter =
-        DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH);
+    private static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH);
 
     public HomeView(CurrentUser currentUser) {
         super(

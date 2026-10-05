@@ -1,8 +1,5 @@
 package com.vaadin.demo.nordicsupply.ui.components;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -31,7 +28,7 @@ import com.vaadin.flow.component.charts.util.ChartSerialization;
 import com.vaadin.flow.component.dashboard.DashboardWidget;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.icon.SvgIcon;
 import com.vaadin.flow.component.messages.MessageInputI18n;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
@@ -76,9 +73,6 @@ public class InsightWidget extends DashboardWidget {
     /** What the chat input suggests: the kinds of change a widget takes. */
     private static final String CHAT_PLACEHOLDER =
             "Change the chart type, add or remove a column, narrow the period, or ask which data this is based on";
-
-    /** The session context of every turn: the dataset's day at the real time of day, in the orchestrator's own form. */
-    private static final DateTimeFormatter CONTEXT_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mmXXX");
 
     private static final String SYSTEM_PROMPT = """
             You help an analyst answer questions about live operations by querying the database described by the schema
@@ -136,7 +130,7 @@ public class InsightWidget extends DashboardWidget {
     /** The model's one-sentence description of the widget, in business terms; shown at the top of its chat. */
     private String description = "";
 
-    private final Button ask = new Button("Edit", VaadinIcon.MAGIC.create());
+    private final Button ask = new Button("Edit", new SvgIcon("icons/sparkle.svg"));
     private final ProgressBar progress = new ProgressBar();
     private final Span thinking = new Span("Thinking…");
     private final AIOrchestrator orchestrator;
@@ -218,7 +212,7 @@ public class InsightWidget extends DashboardWidget {
                 .withMessageList(chat.messageList())
                 .withInput(chat.messageInput())
                 .withController(controller)
-                .withMetadata(InsightWidget::sessionContext)
+                .withMetadata(Conversations::sessionContext)
                 .withRequestInterceptor(InsightWidget::refuseALongQuestion)
                 .withRequestListener(event -> {
                     refocusWhenDone = !askingFromOutside;
@@ -253,6 +247,7 @@ public class InsightWidget extends DashboardWidget {
         progress.setVisible(false);
         progress.addClassName("widget-progress");
         thinking.addClassName("thinking");
+        thinking.getElement().setAttribute("role", "status");
         thinking.setVisible(false);
         var content = new VerticalLayout(progress, visual);
         content.setSizeFull();
@@ -278,16 +273,6 @@ public class InsightWidget extends DashboardWidget {
             event.reject(
                     "A question can have at most " + MAX_QUESTION_LENGTH + " characters; this one has " + length + ".");
         }
-    }
-
-    /**
-     * What the orchestrator tells the model about "now" on every turn: the demo's date and time, in the words and
-     * the form of the orchestrator's own default, which would otherwise give the server's clock.
-     */
-    private static String sessionContext() {
-        var now = ZonedDateTime.now(DemoClock.CLOCK);
-        return "Current date and time: " + now.format(CONTEXT_TIME) + " ("
-                + now.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + ", " + now.getZone() + ")";
     }
 
     /** "Thinking…", shown under the chat while a turn runs; owned by the widget so it follows its chat. */

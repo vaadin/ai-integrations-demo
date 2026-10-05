@@ -11,10 +11,11 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.icon.SvgIcon;
 import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
+import com.vaadin.flow.component.radiobutton.RadioGroupVariant;
 import com.vaadin.flow.component.textfield.TextArea;
 
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
@@ -77,7 +78,7 @@ public class QueryPanel extends Div {
         question.setMaxHeight(MAX_QUESTION_HEIGHT);
         question.setMaxLength(InsightWidget.MAX_QUESTION_LENGTH);
         question.setI18n(new TextArea.TextAreaI18n().setMaxLengthErrorMessage(TOO_LONG));
-        var send = new Button(VaadinIcon.ARROW_RIGHT.create(), e -> submit(question.getValue()));
+        var send = new Button(new SvgIcon("icons/arrow-right.svg"), e -> submit(question.getValue()));
         send.addThemeVariants(ButtonVariant.PRIMARY);
         send.setAriaLabel("Ask");
         // Enter sends; a shortcut matches the key without modifiers, so Shift+Enter stays a line break in the field.
@@ -86,7 +87,7 @@ public class QueryPanel extends Div {
                 .listenOn(question)
                 .resetFocusOnActiveElement();
         var bar = new HorizontalLayout(question, send);
-        bar.addClassName("prompt-bar");
+        bar.addClassNames("prompt-bar", "aura-surface");
         bar.setAlignItems(FlexLayout.Alignment.CENTER);
         bar.expand(question);
 
@@ -95,7 +96,9 @@ public class QueryPanel extends Div {
         type.setItemLabelGenerator(kind -> kind == WidgetType.CHART ? "Chart" : "Table");
         type.setValue(WidgetType.CHART);
         type.addClassName("prompt-type");
-        type.addClassName("segmented");
+        // the group is an Aura surface, as fields are, for its segments' pill to take the fields' colour
+        type.addClassNames("segmented", "aura-surface");
+        type.addThemeVariants(RadioGroupVariant.AURA_HORIZONTAL);
 
         tryChips.addClassName("chips");
         tryChips.setFlexWrap(FlexLayout.FlexWrap.WRAP);

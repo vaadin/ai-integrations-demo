@@ -32,6 +32,7 @@ import com.vaadin.flow.component.dashboard.Dashboard;
 import com.vaadin.flow.component.dashboard.DashboardItemMovedEvent;
 import com.vaadin.flow.component.dashboard.DashboardItemRemoveEvent;
 import com.vaadin.flow.component.dashboard.DashboardItemResizedEvent;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.messages.MessageListItem;
 import com.vaadin.flow.component.popover.Popover;
 import com.vaadin.flow.component.textfield.TextArea;
@@ -159,6 +160,8 @@ class InsightsViewTest {
 
     @Test
     void anEmptyDashboardIsOnePromptInTheMiddleOfThePage() {
+        // the page is marked empty, which keeps its title large
+        assertThat(view.hasClassName("empty")).isTrue();
         assertThat(empty().isVisible()).isTrue();
         assertThat(scroller().isVisible()).isFalse();
         assertThat(panel().getParent()).contains(empty());
@@ -170,6 +173,7 @@ class InsightsViewTest {
     void aQuestionBecomesAnActiveWidgetAndThePromptMovesIntoTheNewQueryTile() {
         ask("Late shipments last month");
 
+        assertThat(view.hasClassName("empty")).isFalse();
         assertThat(empty().isVisible()).isFalse();
         assertThat(scroller().isVisible()).isTrue();
         assertThat(dashboard().getWidgets()).hasSize(2);
@@ -184,6 +188,20 @@ class InsightsViewTest {
                 .isTrue();
         assertThat(panel().getElement().getAttribute("mode")).isEqualTo("tile");
         assertThat(descendants(dashboard().getWidgets().getLast())).contains(panel());
+    }
+
+    /**
+     * The chat opens beside a new widget before the model has answered; its intro, what the widget contains in
+     * business terms, follows the description the model then writes.
+     */
+    @Test
+    void theOpenChatSaysWhatTheModelWroteTheWidgetContains() {
+        ask("Late shipments last month");
+
+        assertThat(descendants(popover())
+                        .filter(c -> c.hasClassName("chat-intro"))
+                        .map(c -> ((Span) c).getText()))
+                .containsExactly("Shipments after the date.");
     }
 
     @Test

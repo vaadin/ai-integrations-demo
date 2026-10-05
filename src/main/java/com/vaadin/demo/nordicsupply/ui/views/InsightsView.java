@@ -13,8 +13,9 @@ import com.vaadin.flow.component.dashboard.Dashboard;
 import com.vaadin.flow.component.dashboard.DashboardWidget;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.icon.SvgIcon;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.popover.Popover;
 import com.vaadin.flow.component.popover.PopoverPosition;
 import com.vaadin.flow.router.Menu;
@@ -143,6 +144,10 @@ public class InsightsView extends PageView implements HasReadme {
     private final Dashboard dashboard = new Dashboard();
     private final QueryPanel query;
     private final Div empty = new Div();
+
+    /** What the active widget contains, in business terms, over its chat; the widget itself shows only its title. */
+    private final Span intro = new Span();
+
     private final Div scroller = new Div(dashboard);
     private final DashboardWidget newQuery = new DashboardWidget();
 
@@ -237,6 +242,7 @@ public class InsightsView extends PageView implements HasReadme {
             }
         });
         empty.addClassName("insights-empty");
+        intro.addClassName("chat-intro");
         scroller.addClassName("page-scroll");
 
         add(empty, scroller, popover);
@@ -271,10 +277,12 @@ public class InsightsView extends PageView implements HasReadme {
     /**
      * Empty: the prompt in the middle, nothing else. With widgets: the dashboard, ending with the New Query tile that
      * holds the prompt. Save Dashboard shows while there is something to save, a widget or the removal of the last
-     * one, and can be pressed while the dashboard differs from the saved one.
+     * one, and can be pressed while the dashboard differs from the saved one. An empty page is marked {@code empty},
+     * which keeps its title large, as the design draws the empty dashboard.
      */
     private void layout() {
         boolean hasWidgets = !widgets().isEmpty();
+        getElement().getClassList().set("empty", !hasWidgets);
         empty.setVisible(!hasWidgets);
         scroller.setVisible(hasWidgets);
         save.setVisible(hasWidgets || dirty);
@@ -314,15 +322,14 @@ public class InsightsView extends PageView implements HasReadme {
         var footnote = new Span(QueryPanel.FOOTNOTE);
         footnote.addClassName("footnote");
         var content = new Div();
-        // the widget itself shows only its title; what it contains, in business terms, is said here
-        var intro = new Span(widget.description());
-        intro.addClassName("chat-intro");
+        intro.setText(widget.description());
         content.add(intro, widget.chat(), widget.thinkingIndicator(), footnote);
         content.addClassName("popover-chat");
-        var close = new Button(VaadinIcon.CLOSE.create(), e -> popover.close());
+        var close = new Button(new SvgIcon("icons/x.svg"), e -> popover.close());
         close.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
         close.addClassName("popover-close");
-        close.setAriaLabel("Close");
+        close.setAriaLabel("Close the chat");
+        close.setTooltipText("Close the chat");
         popover.removeAll();
         popover.add(close, content);
         if (popover.getTarget() != widget) {
@@ -377,7 +384,13 @@ public class InsightsView extends PageView implements HasReadme {
         var widget =
                 new InsightWidget(type, title, db, conversations, user.get().name(), history);
         widget.onAsk(this::activate);
-        widget.onChanged(changed -> markDirty());
+        widget.onChanged(changed -> {
+            markDirty();
+            // the model may have described the widget anew; the chat beside it says so at once
+            if (changed == active) {
+                intro.setText(changed.description());
+            }
+        });
         return widget;
     }
 
@@ -426,11 +439,12 @@ public class InsightsView extends PageView implements HasReadme {
         dirty = false;
         layout();
         int left = widgets.size() - kept.size();
-        Notification.show(
+        var saved = Notification.show(
                 switch (left) {
                     case 0 -> "Dashboard saved";
                     case 1 -> "Dashboard saved; a widget without a result was not kept";
                     default -> "Dashboard saved; " + left + " widgets without a result were not kept";
                 });
+        saved.addThemeVariants(NotificationVariant.SUCCESS);
     }
 }

@@ -1,0 +1,48 @@
+/* a radio group as one pill of segments: the radio buttons without their circles, the chosen one raised. The group
+   is a surface of the fields' level only for its pill, which takes the colour; the group itself stays clear */
+vaadin-radio-group.segmented.aura-surface {
+  --aura-surface-level: 4;
+  --aura-surface-opacity: 0.7;
+  background: none;
+
+  &::part(group-field) {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--vaadin-gap-xs);
+    padding: 3px 7px;
+    border-radius: var(--vaadin-radius-l);
+    background: var(--aura-surface-color);
+  }
+
+  /* one grid cell for the label: the circle's column and the gap after it go with the circle */
+  > vaadin-radio-button {
+    flex: 1;
+    min-width: 0;
+    grid-template-columns: 1fr;
+    column-gap: 0;
+    border-radius: var(--vaadin-radius-l);
+    --vaadin-radio-button-label-color: var(--vaadin-text-color-secondary);
+    --vaadin-radio-button-label-font-weight: var(--aura-font-weight-medium);
+
+    &::part(radio) {
+      display: none;
+    }
+
+    > label {
+      grid-area: 1 / 1;
+      padding: 4px 0;
+      text-align: center;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    &[checked] {
+      background: color-mix(in srgb, var(--vaadin-text-color) 25%, transparent);
+      --vaadin-radio-button-label-color: var(--vaadin-text-color);
+    }
+
+    &[focus-ring] {
+      outline: var(--vaadin-focus-ring-width) solid var(--vaadin-focus-ring-color);
+    }
+  }
+}

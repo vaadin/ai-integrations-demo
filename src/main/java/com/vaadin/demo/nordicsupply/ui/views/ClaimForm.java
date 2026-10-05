@@ -39,6 +39,7 @@ import com.vaadin.flow.signals.local.ValueSignal;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.util.StringUtils;
 
+import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
@@ -333,7 +334,8 @@ class ClaimForm extends Div {
                         neededBy,
                         "The date the customer needs the resolution by: the date the message gives, or one it implies,"
                                 + " such as the start of a season or a campaign. When it gives none, estimate one from"
-                                + " how urgent it is, counting from the date the message was sent.")
+                                + " how urgent it is, counting from the date the message was sent. Never a date"
+                                + " before today.")
                 .describeField(
                         claimedAmount,
                         "The amount claimed in euros, as a sum of money: the amount the message states, the value"
@@ -404,8 +406,13 @@ class ClaimForm extends Div {
 
         neededBy.setId("needed-by");
         neededBy.setPlaceholder("Choose Date");
+        // a claim is made on the dataset's day, the demo's today, so the customer cannot need it sooner; an earlier
+        // date the AI writes is reported back to it, and it corrects the date in the same turn
+        neededBy.setMin(LocalDate.now(DemoClock.CLOCK));
         // written ISO, as the lists write their dates
-        neededBy.setI18n(new DatePicker.DatePickerI18n().setDateFormat("yyyy-MM-dd"));
+        neededBy.setI18n(new DatePicker.DatePickerI18n()
+                .setDateFormat("yyyy-MM-dd")
+                .setMinErrorMessage("The date cannot be in the past"));
 
         claimedAmount.setId("claimed-amount");
         claimedAmount.setPrefixComponent(new Span("€"));

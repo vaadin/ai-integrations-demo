@@ -35,48 +35,6 @@
   min-height: 3lh;
 }
 
-/* ---- the prompt's "Render as" as a segmented control: the radio circles go, the items become one pill each ---- */
-.query-panel .segmented::part(group-field) {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 0;
-  padding: 3px;
-  border-radius: 999px;
-  background: var(--vaadin-background-container-strong);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.query-panel .segmented vaadin-radio-button {
-  flex: 1 1 0;
-  min-width: 0;
-  margin: 0;
-  /* the radio's column and the gap after it go with the radio, so the label is centred in the whole pill */
-  grid-template-columns: 0 1fr;
-  column-gap: 0;
-  border-radius: 999px;
-  padding: 0.25rem 0.5rem;
-  color: var(--vaadin-text-color-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.query-panel .segmented vaadin-radio-button::part(radio) {
-  display: none;
-}
-
-.query-panel .segmented vaadin-radio-button > label {
-  text-align: center;
-}
-
-.query-panel .segmented vaadin-radio-button[checked] {
-  background: var(--vaadin-background-container);
-  color: var(--vaadin-text-color);
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
 /* ---- Insights: the prompt, the New Query tile that holds it, the popover beside the selected widget, and the
    widgets themselves ---- */
 /* the empty state and the dashboard's scroller take the page's width and the rest of its height */
@@ -95,6 +53,17 @@
 
 .page-scroll {
   overflow: auto;
+}
+
+/* on a first visit the dashboard, or the prompt while it is empty, comes in under the title as each page's content
+   does */
+@media (prefers-reduced-motion: no-preference) {
+  .insights.page.first-visit {
+    .insights-empty,
+    .page-scroll {
+      animation: --slide-up-fade-in 0.5s 1.2s backwards;
+    }
+  }
 }
 
 /* the prompt: centred on an empty dashboard, in the New Query tile otherwise */
@@ -140,7 +109,8 @@
   padding: 0.3rem 0.3rem 0.3rem 0.75rem;
   border: 1.5px solid var(--aura-accent-border-color);
   border-radius: 999px;
-  background: var(--vaadin-background-container);
+  --aura-surface-level: 4;
+  --aura-surface-opacity: 0.3;
 }
 
 .insights-empty .prompt-bar {

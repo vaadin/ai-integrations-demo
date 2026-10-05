@@ -42,14 +42,15 @@
   }
 }
 
+/* Home, Claims and an empty Insights dashboard keep the large title; another page shows it large on a first visit */
 @media (prefers-reduced-motion: no-preference) {
-  .page:is(.first-visit, .home, .claims) {
+  .page:is(.first-visit, .home, .claims, .insights.empty) {
     --hero-title-scale: 1;
     --hero-title-deco-translate: 2%;
     --hero-title-translate: 85%;
   }
 
-  .page.first-visit:not(.home, .claims) {
+  .page.first-visit:not(.home, .claims, .insights.empty) {
     animation: --scale-down-hero-title 0s 1s linear forwards;
   }
 }

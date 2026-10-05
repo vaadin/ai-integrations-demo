@@ -37,4 +37,25 @@ public interface CustomerRepository extends JpaRepository<Customer, Integer> {
                    or lower(c.city) like :term escape '\\')
             """)
     Page<Row> search(@Param("term") String term, @Param("countries") List<String> countries, Pageable pageable);
+
+    /**
+     * A customer to choose from: the name to show, and the number, city and mail domain that tell a message's sender
+     * apart.
+     */
+    record Option(Integer id, String customerNumber, String name, String city, String emailDomain) {}
+
+    /**
+     * The customers in the given countries matching a {@link SearchTerms#like} term on name, number, city or mail
+     * domain, by name; every customer of those countries for {@code ""}.
+     */
+    @Query("""
+            select new com.vaadin.demo.nordicsupply.data.CustomerRepository$Option(
+                c.id, c.customerNumber, c.name, c.city, c.emailDomain)
+            from Customer c
+            where c.country in :countries
+              and (:term = '' or lower(c.name) like :term escape '\\' or lower(c.customerNumber) like :term escape '\\'
+                   or lower(c.city) like :term escape '\\' or lower(c.emailDomain) like :term escape '\\')
+            order by c.name, c.id
+            """)
+    List<Option> options(@Param("term") String term, @Param("countries") List<String> countries, Pageable pageable);
 }

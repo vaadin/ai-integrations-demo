@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.vaadin.demo.nordicsupply.data.ClaimRepository;
+import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.ProductRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
@@ -33,6 +34,9 @@ class EntityMappingTest {
 
     @Autowired
     private CustomerRepository customers;
+
+    @Autowired
+    private CustomerContactRepository contacts;
 
     @Autowired
     private SalesOrderRepository orders;
@@ -65,6 +69,7 @@ class EntityMappingTest {
     void everyAggregateReadsOneRow() {
         Map<String, PagingAndSortingRepository<?, ?>> aggregates = new LinkedHashMap<>();
         aggregates.put("Customer", customers);
+        aggregates.put("CustomerContact", contacts);
         aggregates.put("SalesOrder", orders);
         aggregates.put("Shipment", shipments);
         aggregates.put("Claim", claims);
@@ -100,10 +105,12 @@ class EntityMappingTest {
         int orderId = firstId("orders", "customer_id is not null");
         int shipmentId = firstId("shipments", "order_id is not null");
         int productId = firstId("products", "category_id <> supplier_id");
+        int contactId = firstId("customer_contacts", "customer_id <> id");
         var claim = claims.findById(claimId).orElseThrow();
         var order = orders.findById(orderId).orElseThrow();
         var shipment = shipments.findById(shipmentId).orElseThrow();
         var product = products.findById(productId).orElseThrow();
+        var contact = contacts.findById(contactId).orElseThrow();
 
         assertThat(claim.getCustomer().getId()).isEqualTo(column("claims", "customer_id", claimId));
         assertThat(claim.getOrder().getId()).isEqualTo(column("claims", "order_id", claimId));
@@ -112,6 +119,7 @@ class EntityMappingTest {
         assertThat(shipment.getOrder().getId()).isEqualTo(column("shipments", "order_id", shipmentId));
         assertThat(product.getCategory().getId()).isEqualTo(column("products", "category_id", productId));
         assertThat(product.getSupplier().getId()).isEqualTo(column("products", "supplier_id", productId));
+        assertThat(contact.getCustomer().getId()).isEqualTo(column("customer_contacts", "customer_id", contactId));
     }
 
     /**
@@ -124,6 +132,7 @@ class EntityMappingTest {
     void aProxyEqualsTheEntityItStandsFor() {
         for (var type : List.of(
                 Customer.class,
+                CustomerContact.class,
                 Product.class,
                 Category.class,
                 Supplier.class,

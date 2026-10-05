@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,7 +56,7 @@ class ConversationsTest {
         return new ChatMessage(role, text, null, null);
     }
 
-    private static List<String> texts(List<Message> messages) {
+    private static List<String> texts(List<? extends Message> messages) {
         return messages.stream().map(Message::getText).toList();
     }
 
@@ -131,6 +132,18 @@ class ConversationsTest {
         assertThat(texts(repository.findByConversationId("widget-2"))).containsExactly("Open claims", "Done.");
         assertThat(texts(repository.findByConversationId("widget-3"))).containsExactly("Late shipments", "Done.");
         assertThat(texts(repository.findByConversationId("widget-1"))).containsExactly("Late shipments last month");
+    }
+
+    @Test
+    void aStandaloneTurnIsSentAloneAndLeavesNothingInTheMemory() {
+        var provider = conversations.standalone();
+        ask(provider, "The damaged pallet");
+        ask(provider, "The missing cartons");
+
+        var prompts = ArgumentCaptor.forClass(Prompt.class);
+        verify(model, times(2)).stream(prompts.capture());
+        assertThat(texts(prompts.getValue().getUserMessages())).containsExactly("The missing cartons");
+        assertThat(repository.findConversationIds()).isEmpty();
     }
 
     @Test

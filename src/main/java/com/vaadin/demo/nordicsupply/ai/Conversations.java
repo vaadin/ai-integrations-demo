@@ -26,7 +26,8 @@ import org.springframework.stereotype.Component;
  * parameter, since the Vaadin provider makes the calls and cannot pass the id per call as the Spring AI reference
  * shows. Because the application owns that memory, restoring a saved conversation means writing its turns into the
  * memory here; the Vaadin orchestrator restores the message list on screen from the same turns, and the provider's own
- * {@code setHistory} does nothing.
+ * {@code setHistory} does nothing. Turns that do not build on each other, such as a form filled from one message after
+ * another, have no conversation to keep: {@link #standalone} gives them a client without the memory.
  * <p>
  * Extension points, each one line where it applies:
  * <ul>
@@ -42,10 +43,13 @@ import org.springframework.stereotype.Component;
 public class Conversations {
 
     private final ChatClient base;
+    private final ChatClient standalone;
     private final ChatMemory memory;
 
     public Conversations(ChatClient.Builder clients, ChatMemory memory) {
         this.memory = memory;
+        // the same client without the memory, built from a copy before the advisor is added
+        this.standalone = clients.clone().build();
         this.base = clients.defaultAdvisors(
                         MessageChatMemoryAdvisor.builder(memory).build())
                 .build();
@@ -59,6 +63,15 @@ public class Conversations {
     /** A provider for a conversation with no history yet. */
     public LLMProvider start(String conversationId) {
         return restore(conversationId, List.of());
+    }
+
+    /**
+     * A provider whose every turn stands alone, with no memory of the turns before it and none kept of its own: for
+     * turns that do not build on each other, such as a form filled from one message after another, where an earlier
+     * message would only be sent again and read into the next.
+     */
+    public LLMProvider standalone() {
+        return new SpringAILLMProvider(standalone);
     }
 
     /**

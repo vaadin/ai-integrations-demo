@@ -2,6 +2,10 @@ package com.vaadin.demo.nordicsupply.data;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Comparator;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -88,5 +92,21 @@ class SalesOrderRepositoryTest {
         assertThat(rows)
                 .hasSize(42)
                 .allSatisfy(row -> assertThat(row.customer()).startsWith("Arcticstore"));
+    }
+
+    @Test
+    void aCustomersOrdersToChooseFromAreItsOwnNewestFirst() {
+        var options = orders.optionsOf(1186);
+
+        assertThat(options).hasSize(7).first().satisfies(order -> {
+            assertThat(order.orderNumber()).isEqualTo("SO-2026-006216");
+            assertThat(order.customerReference()).isEqualTo("PO-84764");
+            assertThat(order.promisedDeliveryDate()).isEqualTo(LocalDate.of(2026, 8, 31));
+            assertThat(order.lastDeliveredAt()).isEqualTo(LocalDateTime.of(2026, 8, 31, 15, 15, 42));
+            assertThat(order.totalNet()).isEqualByComparingTo("9525.07");
+        });
+        assertThat(options)
+                .extracting(SalesOrderRepository.Option::placedAt)
+                .isSortedAccordingTo(Comparator.reverseOrder());
     }
 }

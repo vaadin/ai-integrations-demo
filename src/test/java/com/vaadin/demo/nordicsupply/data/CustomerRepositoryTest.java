@@ -89,4 +89,32 @@ class CustomerRepositoryTest {
                         .getContent())
                 .isEmpty();
     }
+
+    @Test
+    void anOptionIsFoundByTheSendersMailDomain() {
+        var options = customers.options(
+                SearchTerms.like("aalborg.trekking.example"), Scopes.ALL.countries(), PageRequest.of(0, 10));
+
+        assertThat(options).singleElement().satisfies(option -> {
+            assertThat(option.name()).isEqualTo("Aalborg Trekking ApS");
+            assertThat(option.customerNumber()).isEqualTo("C-11186");
+            assertThat(option.city()).isEqualTo("Aalborg");
+        });
+    }
+
+    @Test
+    void theOptionsAreTheRegionsCustomersByName() {
+        var options = customers.options("", Scopes.FI_EE.countries(), ALL);
+
+        assertThat(options)
+                .hasSize(805)
+                .extracting(CustomerRepository.Option::name)
+                .isSorted();
+    }
+
+    @Test
+    void aCustomerOutsideTheRegionIsNoOption() {
+        assertThat(customers.options(SearchTerms.like("aalborg.trekking.example"), Scopes.FI_EE.countries(), ALL))
+                .isEmpty();
+    }
 }

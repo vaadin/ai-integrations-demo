@@ -164,7 +164,7 @@ body:has(.first-visit) vaadin-popover.help[opening] {
 }
 
 /* the "start here" marker on the rail's Insights entry */
-poi-indicator {
+.poi-indicator {
   display: inline-flex;
   border-radius: 50%;
   background: var(--aura-accent-surface);

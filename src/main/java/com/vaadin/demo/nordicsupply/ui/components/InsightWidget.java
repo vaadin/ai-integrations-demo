@@ -150,6 +150,12 @@ public class InsightWidget extends DashboardWidget {
      */
     private final DemoClock chatClock = DemoClock.forVisitor(UI.getCurrent());
 
+    /** Set while {@link #ask} sends a question, so that its turn can tell it was not typed into the chat. */
+    private boolean askingFromOutside;
+
+    /** Whether the running turn's question was typed into the chat, whose input gets the focus back when it ends. */
+    private boolean refocusWhenDone;
+
     /** The query a saved table was restored with; saved again if it did not run then. */
     private String restoredSql;
 
@@ -214,7 +220,10 @@ public class InsightWidget extends DashboardWidget {
                 .withController(controller)
                 .withMetadata(InsightWidget::sessionContext)
                 .withRequestInterceptor(InsightWidget::refuseALongQuestion)
-                .withRequestListener(event -> setBusy(true))
+                .withRequestListener(event -> {
+                    refocusWhenDone = !askingFromOutside;
+                    setBusy(true);
+                })
                 .withResponseListener(this::onResponse)
                 .withUserName(userName)
                 .withAssistantName(ASSISTANT_NAME);
@@ -318,7 +327,12 @@ public class InsightWidget extends DashboardWidget {
 
     /** Sends a question to this widget's chat. The widget has to be on the page: a reply is applied to a widget that is. */
     public void ask(String question) {
-        orchestrator.prompt(question);
+        askingFromOutside = true;
+        try {
+            orchestrator.prompt(question);
+        } finally {
+            askingFromOutside = false;
+        }
         keepTheDemosDate();
     }
 
@@ -414,12 +428,17 @@ public class InsightWidget extends DashboardWidget {
 
     /**
      * While a turn runs the widget shows it, and its chat takes no second question: the orchestrator would drop one
-     * sent now, after the input has already cleared it.
+     * sent now, after the input has already cleared it. Disabling the input takes the focus from it, so a question
+     * typed there gives the input its focus back with the answer. A chat closed in the meantime cannot take it, and
+     * one taken off the page is not asked to.
      */
     private void setBusy(boolean busy) {
         progress.setVisible(busy);
         thinking.setVisible(busy);
         chat.messageInput().setEnabled(!busy);
+        if (!busy && refocusWhenDone && chat.isAttached()) {
+            chat.messageInput().focus();
+        }
     }
 
     /**

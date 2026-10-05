@@ -2,6 +2,27 @@
    the popover beside the selected widget, and the widgets themselves */
 
 /* ---- chat panel: a message list over an input ---- */
+/* the list's screen-reader status line is absolutely positioned after the messages, and the component leaves the
+   list unpositioned; positioned, the list keeps the line within its own scrolling instead of lengthening the nearest
+   positioned ancestor by the whole chat */
+.chat-panel vaadin-message-list {
+  position: relative;
+}
+
+/* a reply stays as wide as the list: a long word breaks, and a code block scrolls on its own, where either would
+   otherwise widen the message and make the whole list scroll sideways */
+.chat-panel vaadin-message {
+  overflow-wrap: anywhere;
+}
+
+.chat-panel vaadin-message::part(content) {
+  min-width: 0;
+}
+
+.chat-panel vaadin-message pre {
+  overflow-x: auto;
+}
+
 /* the input grows with a multi-line message; the component caps it at half the viewport, which is more than the
    popover has, so here it stops at half the chat panel and scrolls inside, leaving the list its half */
 .chat-panel vaadin-message-input {
@@ -219,13 +240,13 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  position: relative;
 }
 
+/* placed against the overlay part: the content part scrolls, and a button past its edge would make it scroll */
 .insight-popover .popover-close {
   position: absolute;
-  top: -0.5rem;
-  right: -0.75rem;
+  top: 0.5rem;
+  right: 0.5rem;
   color: var(--vaadin-text-color-secondary);
 }
 

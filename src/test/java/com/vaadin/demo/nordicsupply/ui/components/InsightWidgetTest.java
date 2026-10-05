@@ -28,8 +28,10 @@ import com.vaadin.flow.component.charts.model.ChartType;
 import com.vaadin.flow.component.charts.model.Configuration;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridNoneSelectionModel;
+import com.vaadin.flow.component.internal.PendingJavaScriptInvocation;
 import com.vaadin.flow.component.messages.MessageInput;
 import com.vaadin.flow.component.messages.MessageListItem;
+import com.vaadin.flow.internal.StateNode;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -565,6 +567,41 @@ class InsightWidgetTest {
 
         assertThat(widget.thinkingIndicator().isVisible()).isFalse();
         assertThat(widget.chat().messageInput().isEnabled()).isTrue();
+    }
+
+    /**
+     * Disabling the input for a turn takes the focus from it, so a question typed into the chat gives the input its
+     * focus back with the answer, and the next question can be typed at once. A question sent from outside the chat, as
+     * the New Query tile sends a widget's first, leaves the focus where it is.
+     */
+    @Test
+    void aQuestionTypedIntoTheChatGivesTheInputItsFocusBackWithTheAnswer() {
+        var typed = new Waiting();
+        var sent = new Waiting();
+        when(conversations.restore(anyString(), anyList())).thenReturn(typed, sent);
+        var chatted = widget(WidgetType.GRID);
+        var asked = widget(WidgetType.GRID);
+        ui.add(chatted.chat(), asked.chat());
+        var input = chatted.chat().messageInput();
+
+        ComponentUtil.fireEvent(input, new MessageInput.SubmitEvent(input, true, "Late shipments last month"));
+        asked.ask("Late shipments last month");
+
+        assertThat(focusCalls()).isEmpty();
+
+        typed.answer("TITLE: Late shipments\nSUMMARY: Shipments after the promised date.");
+        sent.answer("TITLE: Late shipments\nSUMMARY: Shipments after the promised date.");
+
+        assertThat(focusCalls()).containsExactly(input.getElement().getNode());
+    }
+
+    /** The nodes whose element was told to take the focus since the last call, in order. */
+    private List<StateNode> focusCalls() {
+        ui.getInternals().getStateTree().runExecutionsBeforeClientResponse();
+        return ui.getInternals().dumpPendingJavaScriptInvocations().stream()
+                .filter(call -> call.getInvocation().getExpression().contains("this.focus("))
+                .map(PendingJavaScriptInvocation::getOwner)
+                .toList();
     }
 
     /** Removed from the dashboard or gone with the page, a widget's conversation is let go. */

@@ -40,8 +40,7 @@ class DataConfigTest {
             Map.entry("return_authorisations", 294),
             Map.entry("return_lines", 435),
             Map.entry("credit_notes", 687),
-            Map.entry("stock_movements", 77_081),
-            Map.entry("saved_widgets", 2));
+            Map.entry("stock_movements", 77_081));
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -53,11 +52,20 @@ class DataConfigTest {
                 .isEqualTo(rows));
     }
 
-    /** The application's own set-up scripts run after the dataset. */
+    /**
+     * The application's own set-up scripts run after the dataset: the demo users, and a seeded dashboard for each of
+     * them, two to five widgets with a question and a reply each (the dataset seeds Test User's first two widgets).
+     */
     @Test
     void theSetUpScriptsHaveRun() {
         assertThat(jdbc.queryForList("select user_id from scope_assignment order by user_id", Integer.class))
                 .containsExactly(1, 8, 9, 10);
+        assertThat(jdbc.queryForList(
+                        "select user_id, count(*) as widgets from saved_widgets group by user_id order by user_id"))
+                .extracting(row -> row.get("USER_ID"), row -> row.get("WIDGETS"))
+                .containsExactly(tuple(1, 4L), tuple(8, 5L), tuple(9, 3L), tuple(10, 2L));
+        assertThat(jdbc.queryForObject("select count(*) from saved_widget_messages", Integer.class))
+                .isEqualTo(28);
     }
 
     /** The data scope: one schema of filtered views per region under the base tables' names, and its account. */

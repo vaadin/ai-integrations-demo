@@ -5,6 +5,8 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.card.CardVariant;
 import com.vaadin.flow.component.html.Anchor;
@@ -17,13 +19,16 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouterLink;
 
+import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.ui.MainLayout;
 
 /**
- * The entry page: what the demo is, and cards that lead to the documentation, the source and Vaadin Start. It is the
- * readme of the application.
+ * The entry page: what the demo is, cards for the views to try, Insights marked as the place to start, and cards that
+ * lead to the documentation, the source and Vaadin Start. It is the readme of the application. Its greeting is dated
+ * on the dataset's day, the demo's today, at the visitor's own time of day.
  */
 @Route("")
 @PageTitle("Home")
@@ -39,8 +44,9 @@ public class HomeView extends PageView {
     public HomeView(CurrentUser currentUser) {
         super(
                 "home",
-                "Good " + timeOfDay(LocalTime.now()) + ", " + currentUser.get().name(),
-                LocalDate.now().format(formatter),
+                "Good " + timeOfDay(LocalTime.now(DemoClock.forVisitor(UI.getCurrent()))) + ", "
+                        + currentUser.get().name(),
+                LocalDate.now(DemoClock.CLOCK).format(formatter),
                 "Home");
 
         var aboutTitle = new H2("About this demo");
@@ -52,6 +58,21 @@ public class HomeView extends PageView {
         var about = new Div(aboutTitle, intro);
         about.addClassName("about");
 
+        var tryTitle = new H3("Try");
+        tryTitle.addClassName("section-title");
+        var badge = new Span("Start here");
+        badge.addClassName("badge");
+        var cards = new Div(
+                tryCard(
+                        new Span(new Span("Insights"), badge),
+                        "Ask a question about orders, shipments or claims and get a chart or a table.",
+                        InsightsView.class),
+                tryCard(
+                        new Span("Claims"),
+                        "Drop a customer's complaint and let the AI fill in the claim form.",
+                        ClaimsView.class));
+        cards.addClassName("start-cards");
+
         var readMore = new H3("Read more");
         readMore.addClassName("section-title");
         var docs = new Div(
@@ -62,7 +83,21 @@ public class HomeView extends PageView {
                         "Generate a Vaadin project of your own and add the AI components to it.",
                         START));
         docs.addClassName("start-cards");
-        add(about, readMore, docs);
+        add(about, tryTitle, cards, readMore, docs);
+    }
+
+    /** A card that is one link to a view of the demo: a title and one line saying what to try there. */
+    private static RouterLink tryCard(Component title, String text, Class<? extends Component> view) {
+        var card = new Card();
+        card.addThemeVariants(CardVariant.OUTLINED);
+        card.setTitle(title);
+        var line = new Span(text);
+        line.addClassName("text");
+        card.add(line);
+        var link = new RouterLink(view);
+        link.add(card);
+        link.addClassName("start-card");
+        return link;
     }
 
     /** A card that is one link, opening in a new tab: a title and one line saying what is there. */

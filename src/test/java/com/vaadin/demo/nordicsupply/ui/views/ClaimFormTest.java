@@ -13,6 +13,7 @@ import com.vaadin.flow.component.HasValidation;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.BigDecimalField;
@@ -33,8 +34,8 @@ import com.vaadin.demo.nordicsupply.domain.RequestedResolution;
 
 /**
  * The form offers each choice what the one before it leads to, and waits with a choice until there is something to
- * choose from; Create waits for a customer and what the claim is about, and for the AI to finish, and a created claim
- * empties the form.
+ * choose from; Create waits for a customer and what the claim is about, for valid values and for the AI to finish,
+ * and a created claim empties the form.
  */
 class ClaimFormTest {
 
@@ -82,6 +83,7 @@ class ClaimFormTest {
     private ComboBox<ShipmentRepository.Option> shipment;
     private Select<ClaimType> claimType;
     private RadioButtonGroup<Priority> priority;
+    private DatePicker neededBy;
     private BigDecimalField claimedAmount;
     private TextArea description;
     private Button create;
@@ -106,6 +108,7 @@ class ClaimFormTest {
         shipment = field("shipment", ComboBox.class);
         claimType = field("claim-type", Select.class);
         priority = field("priority", RadioButtonGroup.class);
+        neededBy = field("needed-by", DatePicker.class);
         claimedAmount = field("claimed-amount", BigDecimalField.class);
         description = field("description", TextArea.class);
         create = ComponentTree.descendants(form)
@@ -195,6 +198,20 @@ class ClaimFormTest {
         claimedAmount.setValue(new BigDecimal("-1"));
 
         assertThat(create.isEnabled()).isFalse();
+    }
+
+    /** A claim is made on the dataset's day, the demo's today, so the customer cannot need it sooner. */
+    @Test
+    void createWaitsForANeededByDateFromTheDatasetsDayOn() {
+        customer.setValue(AALBORG);
+        claimType.setValue(ClaimType.MISSING_ITEMS);
+
+        neededBy.setValue(LocalDate.of(2026, 9, 6));
+        assertThat(create.isEnabled()).isFalse();
+        assertThat(neededBy.getErrorMessage()).isEqualTo("The date cannot be in the past");
+
+        neededBy.setValue(LocalDate.of(2026, 9, 7));
+        assertThat(create.isEnabled()).isTrue();
     }
 
     @Test

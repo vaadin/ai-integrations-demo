@@ -64,6 +64,21 @@
     color: var(--vaadin-text-color-secondary);
   }
 
+  /* "Start here" beside the Insights card's title */
+  .start-card .badge {
+    display: inline-block;
+    margin-inline-start: var(--vaadin-gap-s);
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: var(--aura-font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    vertical-align: middle;
+    color: var(--aura-accent-contrast-color);
+    background: var(--aura-accent-color);
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     &.first-visit {
       .about,

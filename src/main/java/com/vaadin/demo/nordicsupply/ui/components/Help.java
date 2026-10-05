@@ -1,6 +1,7 @@
 package com.vaadin.demo.nordicsupply.ui.components;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.vaadin.flow.component.Component;
@@ -10,12 +11,12 @@ import com.vaadin.flow.component.icon.SvgIcon;
 import com.vaadin.demo.nordicsupply.session.ShownReadmes;
 
 /**
- * The rail's Help button, which opens the current view's readme in a {@link ReadmePopover}. The rail tells it which
- * view is showing and under what title; every view gets {@code first-visit} for four seconds the first time it is
- * shown since the browser page was loaded, while a view with a readme also shows the button and opens the readme by
- * itself once per session. A view without one, Home, has no Help: the page is the readme. The popover is anchored to
- * this button but is not its child: Flow adds it to the page, so it shows even when the rail is folded away on a
- * small window.
+ * The rail's Help button, which opens the current view's readme, with the documentation it links to, in a
+ * {@link ReadmePopover}. The rail tells it which view is showing and under what title; every view gets
+ * {@code first-visit} for four seconds the first time it is shown since the browser page was loaded, while a view
+ * with a readme also shows the button and opens the readme by itself once per session. A view without one, Home, has
+ * no Help: the page is the readme. The popover is anchored to this button but is not its child: Flow adds it to the
+ * page, so it shows even when the rail is folded away on a small window.
  */
 public class Help extends Button {
 
@@ -43,6 +44,7 @@ public class Help extends Button {
      */
     public void follow(Component view, String title) {
         var readme = view instanceof HasReadme withReadme ? withReadme.readme() : null;
+        var readMore = view instanceof HasReadme withReadme ? withReadme.readMore() : List.<HasReadme.Link>of();
         var introduction = readme != null ? readme : view.getClass().getName();
         var firstVisit = visited.add(introduction);
         view.getElement().getClassList().set("first-visit", firstVisit);
@@ -52,11 +54,11 @@ public class Help extends Button {
         }
         setVisible(readme != null);
         if (readme != null && shownReadmes.firstTime(readme)) {
-            popover.show(title, readme);
+            popover.show(title, readme, readMore);
         } else {
             popover.close();
             if (readme != null) {
-                popover.setReadme(title, readme);
+                popover.setReadme(title, readme, readMore);
             }
         }
     }

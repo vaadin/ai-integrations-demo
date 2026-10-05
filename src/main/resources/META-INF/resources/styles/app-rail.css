@@ -136,8 +136,68 @@ vaadin-popover.help {
   --vaadin-popover-padding: var(--vaadin-padding-xl);
 }
 
+/* "Read more" is the popover's own, outside vaadin-markdown, so it takes the Markdown's spacing: the space above a
+   section heading, and a list's indent, line height and muted bullets */
+vaadin-popover.help > h3 {
+  margin-top: 1.4em;
+}
+
+vaadin-popover.help > ul {
+  margin-block: 1.25em;
+  padding-inline-start: 1.625em;
+  line-height: 1.6;
+}
+
+vaadin-popover.help > ul > li {
+  margin-block: 0.5em;
+  padding-inline-start: 0.375em;
+}
+
+vaadin-popover.help > ul > li::marker {
+  color: var(--vaadin-text-color-disabled);
+}
+
 /* Delay the opening of the help popover when it's shown for the first time */
 body:has(.first-visit) vaadin-popover.help[opening] {
   --vaadin-overlay-animation-duration: 1s;
   --vaadin-overlay-animation-delay: 1s;
+}
+
+/* the "start here" marker on the rail's Insights entry */
+.poi-indicator {
+  display: inline-flex;
+  border-radius: 50%;
+  background: var(--aura-accent-surface);
+  color: var(--aura-accent-color);
+  padding: 4px;
+  cursor: help;
+  position: relative;
+
+  &::before {
+    content: "";
+    mask: url('data:image/svg+xml;utf8,<svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.15547 3.00625C7.34343 3.49496 7.43821 3.73897 7.58437 3.94453C7.71387 4.12665 7.87259 4.2861 8.05469 4.41563C8.26026 4.5618 8.50501 4.65577 8.99375 4.84375L12 6L8.99375 7.15625C8.50501 7.34423 8.26026 7.4382 8.05469 7.58437C7.87259 7.7139 7.71387 7.87335 7.58437 8.05547C7.43821 8.26103 7.34343 8.50504 7.15547 8.99375L6 12L4.84375 8.99375C4.65588 8.50528 4.56169 8.26097 4.41563 8.05547C4.28608 7.87329 4.12671 7.71393 3.94453 7.58437C3.73895 7.43819 3.49429 7.34426 3.00547 7.15625L0 6L3.00547 4.84375C3.49429 4.65574 3.73895 4.56181 3.94453 4.41563C4.12671 4.28607 4.28608 4.12671 4.41563 3.94453C4.56169 3.73903 4.65588 3.49472 4.84375 3.00625L6 0L7.15547 3.00625Z" fill="black"/></svg>');
+    width: 12px;
+    height: 12px;
+    background: currentColor;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--aura-accent-color);
+    opacity: 0;
+    animation: poi-pulse 3s 6s infinite;
+    scale: 0.25;
+  }
+}
+
+@keyframes poi-pulse {
+  20% {
+    opacity: 0.5;
+  }
+  100% {
+    scale: 1.5;
+  }
 }

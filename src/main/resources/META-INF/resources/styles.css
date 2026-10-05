@@ -6,8 +6,10 @@
 @import "./styles/wordmark.css";
 
 @import "./styles/page.css";
+@import "./styles/segmented.css";
 @import "./styles/home-view.css";
 @import "./styles/data-table-view.css";
+@import "./styles/insights-view.css";
 @import "./styles/claims-view.css";
 
 @keyframes --slide-up-fade-in {

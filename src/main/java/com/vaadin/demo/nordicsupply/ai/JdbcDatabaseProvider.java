@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 import com.vaadin.flow.component.ai.provider.DatabaseProvider;
 import com.vaadin.flow.component.ai.provider.ToolException;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.ColumnMapRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -63,6 +64,22 @@ public class JdbcDatabaseProvider implements DatabaseProvider {
     private static final Pattern QUOTED_OR_COMMENT =
             Pattern.compile("'(?:[^']|'')*'|\"(?:[^\"]|\"\")*\"|--[^\\n]*|/\\*.*?\\*/", Pattern.DOTALL);
 
+    /**
+     * A recursive query, of any bound: the check cannot tell a sound bound from a missing one, and a recursive query
+     * that counts to a hundred million fills the heap before the timeout or the row cap can act. H2 closes the whole
+     * in-memory database when a statement runs out of memory, so the word is refused by name. Like the number check
+     * below, this one is partial on purpose, as the others are: it names what a model is likely to write, and the
+     * deployment's restart on a closed database is what the demo relies on.
+     */
+    private static final Pattern RECURSIVE = Pattern.compile("\\bRECURSIVE\\b", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * A number of nine digits or more outside quoted text: as the length of a string or the size of a range it is
+     * gigabytes. It is not seen when written in quotes, in hexadecimal or as a power or a product, nor when a smaller
+     * count meets a long text.
+     */
+    private static final Pattern HUGE_LITERAL = Pattern.compile("\\b\\d{9,}\\b");
+
     /** Text and comments alone, leaving quoted names in place for the catalogue check. */
     private static final Pattern TEXT_OR_COMMENT =
             Pattern.compile("'(?:[^']|'')*'|--[^\\n]*|/\\*.*?\\*/", Pattern.DOTALL);
@@ -97,6 +114,17 @@ public class JdbcDatabaseProvider implements DatabaseProvider {
 
     /** The SQL state class of a data exception: a value that could not be converted, or is out of range. */
     private static final String DATA_EXCEPTION = "22";
+
+    /**
+     * The SQL states whose message only quotes the SQL the model wrote and the names in it, which is what it needs to
+     * correct the query: a syntax error, a column or a function that does not exist, a column missing from the GROUP
+     * BY, an ambiguous name, types that cannot be compared, a subquery with more than one row, a column count that
+     * does not match, a timeout. Any other state can carry a value from a row: a date that would not parse, an
+     * invalid format, a number that came from a value's length.
+     */
+    private static final Set<String> QUOTES_ONLY_THE_QUERY = Set.of(
+            "42000", "42001", "42S21", "42S22", "21S02", "57014", "90012", "90016", "90022", "90053", "90054", "90059",
+            "90068", "90110", "HY004");
 
     private static final String SCHEMA_TEXT = "sql/ai-schema-h2.txt";
 
@@ -133,6 +161,12 @@ public class JdbcDatabaseProvider implements DatabaseProvider {
         if (denied.find()) {
             throw new ToolException("The function " + denied.group(1).toUpperCase(Locale.ROOT)
                     + " is not available on this connection.");
+        }
+        if (RECURSIVE.matcher(code).find()) {
+            throw new ToolException("Recursive queries are not available on this connection.");
+        }
+        if (HUGE_LITERAL.matcher(code).find()) {
+            throw new ToolException("A number of nine or more digits is not needed here; use a smaller literal.");
         }
         if (CATALOGUE.matcher(TEXT_OR_COMMENT.matcher(sql).replaceAll(" ")).find()) {
             throw new ToolException(
@@ -171,27 +205,50 @@ public class JdbcDatabaseProvider implements DatabaseProvider {
     }
 
     /**
-     * Why the database refused a query, as the model is told: the database's own message, which quotes the SQL the
-     * model wrote and so says what to correct. Two kinds are reworded. A data exception's message quotes a value from
-     * a row, and the model is never shown rows, so for one it gets the SQL state and what to check. A name the account
-     * cannot use reads the same whether the table does not exist or exists out of its rights, so that the database's
-     * answer confirms nothing about tables the model was not told about.
+     * Why the database refused a query, as the model is told. A database that can run no query at all, closed after an
+     * out-of-memory or gone from the connection, is said to be unavailable and the model is told to stop: nothing in
+     * the query is wrong, and every retry is a paid call. The message of a state that only quotes the SQL and the
+     * names in it is the database's own, which says what to correct. For every other state the model gets the state
+     * and what to check, since the message can quote a value from a row and the model is never shown rows: a data
+     * exception says which value would not convert, and the functions that parse or format a value say which one they
+     * could not. A name the account cannot use reads the same whether the table does not exist or exists out of its
+     * rights, so that the database's answer confirms nothing about tables the model was not told about.
      */
     private static String forTheModel(DataAccessException e) {
+        var sql = sqlException(e);
+        var state = sql == null ? null : sql.getSQLState();
+        if (e instanceof DataAccessResourceFailureException) {
+            // Spring's class for a resource that is gone: H2 closes the whole in-memory database after an
+            // out-of-memory, and every pooled connection to it fails from then on
+            return "the database is not available right now" + (state == null ? "" : " (SQL state " + state + ")")
+                    + "; do not run another query, tell the user to try again later";
+        }
+        if (state == null) {
+            return Errors.rootMessage(e, ERROR_MESSAGE_LENGTH);
+        }
+        if (NAME_NOT_AVAILABLE.contains(state)) {
+            var name = QUOTED_NAME.matcher(String.valueOf(sql.getMessage()));
+            return "nothing named " + (name.find() ? name.group(1) : "that")
+                    + " is available on this connection; the schema text lists what you can read";
+        }
+        if (QUOTES_ONLY_THE_QUERY.contains(state)) {
+            return Errors.rootMessage(e, ERROR_MESSAGE_LENGTH);
+        }
+        return state.startsWith(DATA_EXCEPTION)
+                ? "a value in the data could not be converted or computed (SQL state " + state
+                        + "); check the casts, the literals and the arithmetic"
+                : "the database refused the query (SQL state " + state
+                        + "); check the functions and the arguments they are given";
+    }
+
+    /** The database's own exception in the cause chain, the first that carries a SQL state; null when none does. */
+    private static SQLException sqlException(Throwable e) {
         for (Throwable cause = e; cause != null; cause = cause.getCause()) {
             if (cause instanceof SQLException sql && sql.getSQLState() != null) {
-                if (sql.getSQLState().startsWith(DATA_EXCEPTION)) {
-                    return "a value in the data could not be converted or computed (SQL state " + sql.getSQLState()
-                            + "); check the casts, the literals and the arithmetic";
-                }
-                if (NAME_NOT_AVAILABLE.contains(sql.getSQLState())) {
-                    var name = QUOTED_NAME.matcher(String.valueOf(sql.getMessage()));
-                    return "nothing named " + (name.find() ? name.group(1) : "that")
-                            + " is available on this connection; the schema text lists what you can read";
-                }
+                return sql;
             }
         }
-        return Errors.rootMessage(e, ERROR_MESSAGE_LENGTH);
+        return null;
     }
 
     private static String schemaText(PackData pack) {

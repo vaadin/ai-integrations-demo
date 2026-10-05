@@ -19,8 +19,10 @@ import com.vaadin.flow.server.menu.MenuConfiguration;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.ShownReadmes;
 import com.vaadin.demo.nordicsupply.ui.components.Help;
+import com.vaadin.demo.nordicsupply.ui.components.POIIndicator;
 import com.vaadin.demo.nordicsupply.ui.components.ReadmePopover;
 import com.vaadin.demo.nordicsupply.ui.components.UserSwitcher;
+import com.vaadin.demo.nordicsupply.ui.views.InsightsView;
 
 /**
  * The app shell, the layout of every view: a left rail with the Nordic Supply wordmark, the views that list
@@ -47,7 +49,13 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         var nav = new SideNav();
         for (var entry : MenuConfiguration.getMenuEntries()) {
-            nav.addItem(new SideNavItem(entry.title(), entry.menuClass(), new SvgIcon(entry.icon())));
+            var item = new SideNavItem(entry.title(), entry.menuClass(), new SvgIcon(entry.icon()));
+            if (entry.menuClass() == InsightsView.class) {
+                // the entry the demo is built around, marked so that a visitor starts there
+                item.setSuffixComponent(
+                        new POIIndicator("Start here: the self-service dashboard the demo is built around"));
+            }
+            nav.addItem(item);
         }
         var scroller = new Scroller(nav);
         scroller.addClassName("rail-nav");

@@ -1,6 +1,10 @@
 package com.vaadin.demo.nordicsupply.ai;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import com.vaadin.flow.component.ai.common.ChatMessage;
@@ -13,6 +17,8 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Component;
+
+import com.vaadin.demo.nordicsupply.config.DemoClock;
 
 /**
  * Where the application meets the model. Every chat on screen is one conversation with its own id and its own
@@ -27,7 +33,8 @@ import org.springframework.stereotype.Component;
  * shows. Because the application owns that memory, restoring a saved conversation means writing its turns into the
  * memory here; the Vaadin orchestrator restores the message list on screen from the same turns, and the provider's own
  * {@code setHistory} does nothing. Turns that do not build on each other, such as a form filled from one message after
- * another, have no conversation to keep: {@link #standalone} gives them a client without the memory.
+ * another, have no conversation to keep: {@link #standalone} gives them a client without the memory. Whatever the
+ * conversation, every orchestrator tells the model the demo's date and time on each turn, {@link #sessionContext}.
  * <p>
  * Extension points, each one line where it applies:
  * <ul>
@@ -41,6 +48,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class Conversations {
+
+    /** The session context of every turn: the dataset's day at the real time of day, in the orchestrator's own form. */
+    private static final DateTimeFormatter CONTEXT_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mmXXX");
 
     private final ChatClient base;
     private final ChatClient standalone;
@@ -58,6 +68,17 @@ public class Conversations {
     /** An id for a conversation that starts now. */
     public static String newId() {
         return UUID.randomUUID().toString();
+    }
+
+    /**
+     * What an orchestrator tells the model about "now" on every turn, given to it with {@code withMetadata}: the
+     * demo's date and time, in the words and the form of the orchestrator's own default, which would give the server's
+     * clock and so a date after the dataset ends.
+     */
+    public static String sessionContext() {
+        var now = ZonedDateTime.now(DemoClock.CLOCK);
+        return "Current date and time: " + now.format(CONTEXT_TIME) + " ("
+                + now.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + ", " + now.getZone() + ")";
     }
 
     /** A provider for a conversation with no history yet. */
@@ -90,6 +111,27 @@ public class Conversations {
                 .defaultAdvisors(advisors -> advisors.param(ChatMemory.CONVERSATION_ID, conversationId))
                 .build();
         return new SpringAILLMProvider(client);
+    }
+
+    /** Forgets a conversation, when the widget that held it is removed; the memory otherwise keeps it for ever. */
+    public void forget(String conversationId) {
+        memory.clear(conversationId);
+    }
+
+    /**
+     * Drops the question of a turn that failed. The memory advisor writes the user's message before the model is
+     * called, so a turn that fails for a rate limit, the network or a missing key leaves its question behind, and
+     * the model would answer it again with the next one.
+     */
+    public void dropUnanswered(String conversationId) {
+        var messages = memory.get(conversationId);
+        if (!messages.isEmpty() && messages.getLast() instanceof UserMessage) {
+            memory.clear(conversationId);
+            var kept = messages.subList(0, messages.size() - 1);
+            if (!kept.isEmpty()) {
+                memory.add(conversationId, kept);
+            }
+        }
     }
 
     private static Message toMessage(ChatMessage turn) {

@@ -6,10 +6,14 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
+import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.dnd.DragSource;
 import com.vaadin.flow.component.html.NativeButton;
+import com.vaadin.flow.component.internal.PendingJavaScriptInvocation;
 import com.vaadin.flow.signals.shared.SharedValueSignal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,8 +21,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
+import tools.jackson.databind.node.NullNode;
 
 import com.vaadin.demo.nordicsupply.ai.Conversations;
+import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.config.DisplayLocale;
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
@@ -30,10 +36,11 @@ import com.vaadin.demo.nordicsupply.examples.PaintedExamples;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.CurrentUser.SignedInUser;
 import com.vaadin.demo.nordicsupply.session.Scopes;
+import com.vaadin.demo.nordicsupply.ui.TestUi;
 
 /**
  * The view offers the examples of the user's region to drag to the message area or click, each a document the view
- * accepts, and an email reaches the model as its text.
+ * accepts, and an email reaches the model as its text; the model reads a message on the demo's day.
  */
 class ClaimsViewTest {
 
@@ -92,19 +99,64 @@ class ClaimsViewTest {
                         assertThat(ClaimsView.mimeTypeOf("file" + extension)).isNotBlank());
     }
 
+    /**
+     * A message is read on the dataset's day, which a message without a date of its own counts from, and not on the
+     * server's: the session context of the turn that reads it says so.
+     */
+    @Test
+    void aMessageIsReadOnTheDatasetsDay() {
+        var withSession = TestUi.withSession();
+        withSession.setLocale(DisplayLocale.LOCALE);
+        var model = new ScriptedProvider("The form is filled in.");
+        var conversations = mock(Conversations.class);
+        when(conversations.standalone()).thenReturn(model);
+        var view = viewFor(HEAD_OFFICE, conversations);
+        withSession.add(view);
+        var example = examplesOf(view).getFirst();
+
+        ComponentUtil.fireEvent(example, new ClickEvent<>(example));
+        browserAnswers(withSession);
+
+        assertThat(model.requests()).singleElement().satisfies(request -> {
+            assertThat(request.attachments())
+                    .extracting(AIAttachment::name)
+                    .containsExactly(
+                            ((ExampleDocument) DragSource.configure(example).getDragData()).name());
+            // the orchestrator hands the session context to the model as a tool whose description carries it
+            assertThat(request.explicitTools())
+                    .filteredOn(tool -> tool.getName().equals("get_session_context"))
+                    .singleElement()
+                    .satisfies(tool -> assertThat(tool.getDescription())
+                            .contains("Current date and time: 2026-09-07T")
+                            .contains("(Monday, Europe/Helsinki)"));
+        });
+    }
+
     @Test
     void theReadmeSaysHowAMessageBecomesAClaim() {
         assertThat(viewFor(HEAD_OFFICE).readme())
                 .contains("Drop the customer's message", "AI badge", "outlined", "does not save claims");
     }
 
+    @Test
+    void theReadmePointsAtTheDocumentationOfTheFormFillerAndOfAttachments() {
+        assertThat(viewFor(HEAD_OFFICE).readMore())
+                .extracting(link -> link.text())
+                .contains("AI Form Filler", "File attachments");
+    }
+
     private static ClaimsView viewFor(SignedInUser user) {
+        return viewFor(
+                user,
+                new Conversations(
+                        ChatClient.builder(mock(ChatModel.class)),
+                        MessageWindowChatMemory.builder().build()));
+    }
+
+    private static ClaimsView viewFor(SignedInUser user, Conversations conversations) {
         var currentUser = mock(CurrentUser.class);
         when(currentUser.get()).thenReturn(user);
         when(currentUser.signal()).thenReturn(new SharedValueSignal<>(user));
-        var conversations = new Conversations(
-                ChatClient.builder(mock(ChatModel.class)),
-                MessageWindowChatMemory.builder().build());
         return new ClaimsView(
                 mock(CustomerRepository.class),
                 mock(CustomerContactRepository.class),
@@ -122,5 +174,13 @@ class ClaimsViewTest {
 
     private static boolean isExample(Component component) {
         return component instanceof NativeButton use && use.hasClassName("file-use");
+    }
+
+    /** Plays the browser for one round trip: every JavaScript call the page waits on returns, with nothing. */
+    private static void browserAnswers(UI ui) {
+        ui.getInternals().getStateTree().runExecutionsBeforeClientResponse();
+        ui.getInternals().dumpPendingJavaScriptInvocations().stream()
+                .filter(PendingJavaScriptInvocation::isSubscribed)
+                .forEach(call -> call.complete(NullNode.getInstance()));
     }
 }

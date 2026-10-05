@@ -92,6 +92,17 @@ public class ClaimsView extends PageView implements HasReadme {
             create the claim. The demo does not save claims, so the form then starts over.
             """;
 
+    private static final List<Link> READ_MORE = List.of(
+            new Link(
+                    "AI Form Filler",
+                    "https://vaadin.com/docs/latest/flow/ai-support/ai-powered-form",
+                    "the controller that fills in the claim form and tracks where each value came from"),
+            new Link(
+                    "File attachments",
+                    "https://vaadin.com/docs/latest/flow/ai-support/file-attachments",
+                    "how a message goes to the model with the prompt"),
+            new Link("AI support in Vaadin Flow", "https://vaadin.com/docs/latest/flow/ai-support", "the overview"));
+
     private static final String SYSTEM_PROMPT = """
             You work at the order desk of Nordic Supply, a wholesaler of outdoor equipment to retailers in Finland,
             Estonia, Sweden, Norway, Denmark and Germany. Each prompt comes with one message from a customer about a
@@ -194,9 +205,10 @@ public class ClaimsView extends PageView implements HasReadme {
                 currentUser.get().scope().countries(),
                 Signal.not(idle));
         // every message is a claim of its own: the model reads it alone, and no earlier message is sent again; the
-        // orchestrator's own session context tells it today's date, time and weekday
+        // session context tells it the demo's date, time and weekday, which a message without a date counts from
         orchestrator = AIOrchestrator.builder(conversations.standalone(), SYSTEM_PROMPT)
                 .withController(form.aiController())
+                .withMetadata(Conversations::sessionContext)
                 .withResponseListener(this::turnEnded)
                 .build();
 
@@ -227,6 +239,11 @@ public class ClaimsView extends PageView implements HasReadme {
     @Override
     public String readme() {
         return README;
+    }
+
+    @Override
+    public List<Link> readMore() {
+        return READ_MORE;
     }
 
     /**

@@ -42,7 +42,10 @@ customElements.define('hero-title', class extends HTMLElement {
           inset-inline-start: 0.5rem;
           letter-spacing: -3%;
           white-space: nowrap;
+          box-sizing: border-box;
           padding-inline-end: 0.2em;
+          max-width: 100%;
+          overflow: hidden;
           background: radial-gradient(68% 70% at 46% 50%, var(--aura-accent-color) 0%, transparent 100%);
           background-clip: text;
           color: transparent;

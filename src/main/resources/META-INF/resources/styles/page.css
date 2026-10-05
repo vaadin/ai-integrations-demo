@@ -11,24 +11,36 @@
   padding: var(--view-padding);
 }
 
-:where(vaadin-app-layout:not([overlay]) .page) {
+:where(vaadin-app-layout:not([overlay])) .page {
   padding-inline-start: 0;
 }
 
 .page-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--vaadin-gap-m);
+  display: grid;
+  justify-items: start;
+  width: 100%;
+
+  > * {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  vaadin-drawer-toggle {
+    z-index: 1;
+    border: 0;
+    background: transparent;
+    margin-top: -10px;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .page:is(.first-visit, .home) {
+  .page:is(.first-visit, .home, .claims) {
     --hero-title-scale: 1;
     --hero-title-deco-translate: 2%;
     --hero-title-translate: 85%;
   }
 
-  .page.first-visit:not(.home) {
+  .page.first-visit:not(.home, .claims) {
     animation: --scale-down-hero-title 0s 1s linear forwards;
   }
 }

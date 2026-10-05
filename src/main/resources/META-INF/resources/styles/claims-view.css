@@ -2,6 +2,20 @@
 .claims.page {
   height: auto;
   overflow: visible;
+
+  @media (prefers-reduced-motion: no-preference) {
+    &.first-visit {
+      .claim-source,
+      .claim-entry {
+        animation: --slide-up-fade-in 0.5s 1.2s backwards;
+        animation-delay: calc(1s + sibling-index() * 0.1s);
+      }
+    }
+  }
+
+  hero-title {
+    margin-bottom: 100px;
+  }
 }
 
 /* the customer's message on the left, the claim form on the right: side by side where they fit, one above the other

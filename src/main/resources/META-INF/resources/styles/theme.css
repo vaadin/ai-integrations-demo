@@ -6,12 +6,12 @@ html {
   --aura-base-radius: 8;
   --aura-app-background: radial-gradient(70% 70% at 50% 100%, light-dark(rgba(255, 255, 255), rgba(59, 59, 59, 0.5)), transparent) var(--aura-background-color);
   --vaadin-popover-arrow-inset: var(--vaadin-radius-l);
-  --vaadin-input-field-padding: var(--vaadin-padding-s);
+  --vaadin-input-field-padding: var(--vaadin-padding-s) var(--vaadin-padding-m);
   --vaadin-field-baseline-input-height: calc(1lh + var(--vaadin-padding-s) * 2 + var(--vaadin-input-field-border-width, 1px) * 2);
   /* TODO workaround to a Vaadin bug, that the loading indicator color doesn't adapt to the theme */
   --lumo-primary-color: var(--aura-accent-color);
   --lumo-primary-contrast-color: var(--aura-accent-contrast-color);
-  --v-status-text-color-offline: #fff;
+  --status-text-color-offline: #fff;
 }
 
 :not([focused]) > :focus-visible {

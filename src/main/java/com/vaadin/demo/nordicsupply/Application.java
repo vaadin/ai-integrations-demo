@@ -6,10 +6,12 @@ import com.vaadin.flow.component.dependency.StyleSheet;
 import com.vaadin.flow.component.page.AppShellConfigurator;
 import com.vaadin.flow.component.page.ColorScheme;
 import com.vaadin.flow.component.page.Push;
+import com.vaadin.flow.router.PageTitleGenerator;
 import com.vaadin.flow.server.AppShellSettings;
 import com.vaadin.flow.theme.aura.Aura;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 
 /**
  * AI integrations demo: the Vaadin AI components at work in the back office of Nordic Supply, a fictional
@@ -37,5 +39,10 @@ public class Application implements AppShellConfigurator {
     @Override
     public void configurePage(AppShellSettings settings) {
         settings.addFavIcon("icon", "icons/favicon.svg", "any");
+    }
+
+    @Bean
+    PageTitleGenerator pageTitleGenerator() {
+        return context -> context.value() + " | Nordic Supply (Vaadin AI Integrations Demo)";
     }
 }

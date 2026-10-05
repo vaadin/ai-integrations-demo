@@ -13,6 +13,7 @@ import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.Layout;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.server.menu.MenuConfiguration;
 
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
@@ -61,10 +62,15 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         addToDrawer(wordmark, scroller, help, new UserSwitcher(currentUser), powered);
     }
 
-    /** Help follows the view that navigation has just shown, under its page title. */
+    /**
+     * Help follows the view that navigation has just shown, under the page title the view declares. Not
+     * {@code MenuConfiguration.getPageHeader}: that goes through the application's {@code PageTitleGenerator}, which
+     * adds the application's name for the browser tab.
+     */
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
         var view = getContent();
-        help.follow(view, MenuConfiguration.getPageHeader(view).orElse(""));
+        var title = view.getClass().getAnnotation(PageTitle.class);
+        help.follow(view, title != null ? title.value() : "");
     }
 }

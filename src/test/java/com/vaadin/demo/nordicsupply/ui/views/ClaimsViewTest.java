@@ -1,10 +1,13 @@
 package com.vaadin.demo.nordicsupply.ui.views;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.Component;
@@ -13,7 +16,13 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.dnd.DragSource;
 import com.vaadin.flow.component.html.NativeButton;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.internal.PendingJavaScriptInvocation;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.upload.UploadDropZone;
+import com.vaadin.flow.dom.DomEvent;
+import com.vaadin.flow.dom.Element;
+import com.vaadin.flow.internal.nodefeature.ElementListenerMap;
 import com.vaadin.flow.signals.shared.SharedValueSignal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,10 +30,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.NullNode;
 
 import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Address;
+import com.vaadin.demo.nordicsupply.ai.budget.Budgets;
 import com.vaadin.demo.nordicsupply.config.DisplayLocale;
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
@@ -37,6 +50,7 @@ import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.CurrentUser.SignedInUser;
 import com.vaadin.demo.nordicsupply.session.Scopes;
 import com.vaadin.demo.nordicsupply.ui.TestUi;
+import com.vaadin.demo.nordicsupply.ui.components.AIPausedNotice;
 
 /**
  * The view offers the examples of the user's region to drag to the message area or click, each a document the view
@@ -129,6 +143,117 @@ class ClaimsViewTest {
         });
     }
 
+    /** The budget admits a message before it is read: refused, the visitor is told why and nothing reaches the model. */
+    @Test
+    void aMessageTheBudgetRefusesIsAnsweredWithANoticeAndNeverReachesTheModel() {
+        var withSession = TestUi.withSession();
+        var model = new ScriptedProvider("The form is filled in.");
+        var conversations = mock(Conversations.class);
+        when(conversations.standalone()).thenReturn(model);
+        var view = viewFor(HEAD_OFFICE, conversations, Budgets.disabled());
+        withSession.add(view);
+        var example = examplesOf(view).getFirst();
+
+        ComponentUtil.fireEvent(example, new ClickEvent<>(example));
+        browserAnswers(withSession);
+
+        assertThat(model.requests()).isEmpty();
+        assertThat(notices(withSession))
+                .containsExactly(
+                        "The AI features are switched off right now; the rest of the application works as usual.");
+        // and the page said so before the click
+        assertThat(pausedNoticeOf(view))
+                .satisfies(notice -> assertThat(notice.isVisible()).isTrue())
+                .extracting(notice -> ComponentTree.descendants(notice)
+                        .filter(Span.class::isInstance)
+                        .map(Component::getElement)
+                        .map(Element::getText)
+                        .toList())
+                .isEqualTo(List.of(
+                        "", "The AI features are switched off right now; the rest of the application works as usual."));
+    }
+
+    @Test
+    void thePageSaysNothingOfTheAIWhileItAnswers() {
+        assertThat(pausedNoticeOf(viewFor(HEAD_OFFICE)).isVisible()).isFalse();
+    }
+
+    private static AIPausedNotice pausedNoticeOf(ClaimsView view) {
+        return (AIPausedNotice) ComponentTree.descendants(view)
+                .filter(AIPausedNotice.class::isInstance)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    /**
+     * A turn is counted when its model request starts, one round trip after the message was chosen, not before: a
+     * browser that never answers that round trip holds no turn, so another tab of the same visitor is not held back.
+     */
+    @Test
+    void aMessageWhoseBrowserNeverAnswersHoldsNoTurn() {
+        var withSession = TestUi.withSession();
+        // a provider serves one orchestrator: one per view
+        var goneModel = new ScriptedProvider("The form is filled in.");
+        var stayingModel = new ScriptedProvider("The form is filled in.");
+        var conversations = mock(Conversations.class);
+        when(conversations.standalone()).thenReturn(goneModel, stayingModel);
+        var oneAtATime = Budgets.withAddress(new Address(15, 120, 1));
+        var gone = viewFor(HEAD_OFFICE, conversations, oneAtATime);
+        var staying = viewFor(HEAD_OFFICE, conversations, oneAtATime);
+        withSession.add(gone, staying);
+
+        var left = examplesOf(gone).getFirst();
+        ComponentUtil.fireEvent(left, new ClickEvent<>(left));
+        var chosen = examplesOf(staying).getFirst();
+        ComponentUtil.fireEvent(chosen, new ClickEvent<>(chosen));
+        browserAnswersOnly(withSession, staying);
+
+        assertThat(goneModel.requests()).isEmpty();
+        assertThat(stayingModel.requests()).hasSize(1);
+        assertThat(notices(withSession)).isEmpty();
+    }
+
+    /** A pasted text is read as a message of its own; one over the cap is refused with the reason, before it is one. */
+    @Test
+    void aPastedTextIsReadAsAMessageAndOneOverTheCapIsRefused() {
+        var withSession = TestUi.withSession();
+        var model = new ScriptedProvider("The form is filled in.");
+        var conversations = mock(Conversations.class);
+        when(conversations.standalone()).thenReturn(model);
+        var view = viewFor(HEAD_OFFICE, conversations);
+        withSession.add(view);
+
+        paste(view, "x".repeat(20_001));
+        browserAnswers(withSession);
+
+        assertThat(model.requests()).isEmpty();
+        assertThat(notices(withSession))
+                .containsExactly("A message can have at most 20000 characters of text; this one has 20001.");
+
+        paste(view, "Hello,\n\nthree cartons were missing from order SO-1.");
+        browserAnswers(withSession);
+
+        assertThat(model.requests())
+                .singleElement()
+                .satisfies(request -> assertThat(request.attachments())
+                        .extracting(AIAttachment::name, AIAttachment::mimeType)
+                        .containsExactly(tuple("Pasted text", "text/plain")));
+    }
+
+    /** The cap on a text holds for an uploaded file as for a pasted text; a PDF or an image is bounded otherwise. */
+    @Test
+    void anUploadedTextIsCappedLikeAPastedOne() {
+        var longText = new AIAttachment(
+                "Order 17.eml", "text/plain", "x".repeat(50_000).getBytes(UTF_8));
+        var shortText = new AIAttachment("note.txt", "text/plain", "Three cartons missing.".getBytes(UTF_8));
+        var longPdf = new AIAttachment("scan.pdf", "application/pdf", new byte[60_000]);
+
+        assertThat(ClaimsView.overTheTextCap(longText, 20_000))
+                .contains("A message can have at most 20000 characters of text; this one has 50000.");
+        assertThat(ClaimsView.overTheTextCap(shortText, 20_000)).isEmpty();
+        assertThat(ClaimsView.overTheTextCap(longPdf, 20_000)).isEmpty();
+    }
+
     @Test
     void theReadmeSaysHowAMessageBecomesAClaim() {
         assertThat(viewFor(HEAD_OFFICE).readme())
@@ -151,6 +276,10 @@ class ClaimsViewTest {
     }
 
     private static ClaimsView viewFor(SignedInUser user, Conversations conversations) {
+        return viewFor(user, conversations, Budgets.budget());
+    }
+
+    private static ClaimsView viewFor(SignedInUser user, Conversations conversations, AIBudget budget) {
         var currentUser = mock(CurrentUser.class);
         when(currentUser.get()).thenReturn(user);
         when(currentUser.signal()).thenReturn(new SharedValueSignal<>(user));
@@ -160,8 +289,31 @@ class ClaimsViewTest {
                 mock(SalesOrderRepository.class),
                 mock(ShipmentRepository.class),
                 conversations,
+                budget,
                 currentUser,
                 EXAMPLES);
+    }
+
+    /** The notices shown on the UI, oldest first. */
+    private static List<String> notices(UI ui) {
+        return ui.getChildren()
+                .filter(Notification.class::isInstance)
+                .map(notice -> notice.getElement().getProperty("text"))
+                .toList();
+    }
+
+    /** Pastes text into the message area, as the browser reports a paste without files. */
+    private static void paste(ClaimsView view, String text) {
+        var zone = ComponentTree.descendants(view)
+                .filter(UploadDropZone.class::isInstance)
+                .findFirst()
+                .orElseThrow()
+                .getElement();
+        var data = JsonMapper.builder().build().createObjectNode();
+        data.put("event.clipboardData.getData('text/plain')", text);
+        // the listener's filter, which the browser evaluates and sends along: no files in the paste
+        data.put("event.clipboardData.files.length === 0", true);
+        zone.getNode().getFeature(ElementListenerMap.class).fireEvent(new DomEvent(zone, "paste", data));
     }
 
     /** Each example tile's button, which reads the example when clicked and carries it when dragged. */
@@ -174,10 +326,22 @@ class ClaimsViewTest {
     }
 
     /** Plays the browser for one round trip: every JavaScript call the page waits on returns, with nothing. */
+    /** The browser answers every pending call, and what the answers set up for the next response is run as well. */
     private static void browserAnswers(UI ui) {
+        browserAnswers(ui, call -> true);
+    }
+
+    /** The browser answers the given view's calls alone; the others are never answered, as by a browser that went. */
+    private static void browserAnswersOnly(UI ui, ClaimsView view) {
+        browserAnswers(ui, call -> call.getOwner() == view.getElement().getNode());
+    }
+
+    private static void browserAnswers(UI ui, Predicate<PendingJavaScriptInvocation> answered) {
         ui.getInternals().getStateTree().runExecutionsBeforeClientResponse();
         ui.getInternals().dumpPendingJavaScriptInvocations().stream()
                 .filter(PendingJavaScriptInvocation::isSubscribed)
+                .filter(answered)
                 .forEach(call -> call.complete(NullNode.getInstance()));
+        ui.getInternals().getStateTree().runExecutionsBeforeClientResponse();
     }
 }

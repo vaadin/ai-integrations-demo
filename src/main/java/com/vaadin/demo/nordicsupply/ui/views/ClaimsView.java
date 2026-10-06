@@ -1,11 +1,14 @@
 package com.vaadin.demo.nordicsupply.ui.views;
 
 import java.io.ByteArrayInputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ai.common.AIAttachment;
@@ -44,6 +47,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.vaadin.demo.nordicsupply.ai.Conversations;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
+import com.vaadin.demo.nordicsupply.ai.budget.Caller;
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
@@ -51,6 +56,7 @@ import com.vaadin.demo.nordicsupply.data.ShipmentRepository;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocument;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
+import com.vaadin.demo.nordicsupply.ui.components.AIPausedNotice;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 import com.vaadin.demo.nordicsupply.util.Pdfs;
 
@@ -167,6 +173,9 @@ public class ClaimsView extends PageView implements HasReadme {
 
     private static final long MAX_FILE_SIZE = 10L * 1024 * 1024;
 
+    /** How the budget names the form's turns. */
+    private static final String FEATURE = "claims";
+
     /** The name a pasted text is read under. */
     private static final String PASTED_TEXT = "Pasted text";
 
@@ -174,6 +183,10 @@ public class ClaimsView extends PageView implements HasReadme {
 
     private final ClaimForm form;
     private final AIOrchestrator orchestrator;
+    private final AIBudget budget;
+
+    /** The turn under way, admitted by the budget, until its response closes it; {@code null} between turns. */
+    private final AtomicReference<AIBudget.Turn> turn = new AtomicReference<>();
 
     /** The name of the message the AI is reading, or {@code null} while it waits for one. */
     private final ValueSignal<String> reading = new ValueSignal<>(null);
@@ -194,9 +207,11 @@ public class ClaimsView extends PageView implements HasReadme {
             SalesOrderRepository orders,
             ShipmentRepository shipments,
             Conversations conversations,
+            AIBudget budget,
             CurrentUser currentUser,
             ExampleDocuments examples) {
         super("claims", "Claims", "Resolve Customer Issues", "Claims");
+        this.budget = budget;
         form = new ClaimForm(
                 customers,
                 contacts,
@@ -233,7 +248,7 @@ public class ClaimsView extends PageView implements HasReadme {
         entry.addClassName("claim-entry");
         var columns = new Div(source, entry);
         columns.addClassName("claim-columns");
-        add(columns);
+        add(new AIPausedNotice(budget), columns);
     }
 
     @Override
@@ -370,23 +385,85 @@ public class ClaimsView extends PageView implements HasReadme {
         return tile;
     }
 
-    /** Hands a message to the AI on an empty form, unless it is still reading the one before. */
+    /**
+     * Hands a message to the AI on an empty form, unless it is still reading the one before. A text over the cap,
+     * pasted or uploaded, is refused with the reason. A PDF is cut to the pages the viewer shows, so that the model
+     * reads what the user sees and no more; one PDFBox cannot read is not sent at all. The turn itself starts, and is
+     * admitted, one round trip later in {@link #start}.
+     */
     private void read(AIAttachment attachment) {
         if (reading.peek() != null) {
             return;
         }
+        var tooLong = overTheTextCap(attachment, budget.limits().maxTextLength());
+        if (tooLong.isPresent()) {
+            warn(tooLong.get());
+            return;
+        }
+        AIAttachment message;
+        try {
+            message = withinThePageCap(attachment);
+        } catch (UncheckedIOException e) {
+            LOG.warn("A PDF could not be read, so it was not sent to the model", e);
+            warn("The PDF could not be read. Try another file, or fill in the form yourself.");
+            return;
+        }
         form.clear();
-        reading.set(attachment.name());
-        var shown = new AttachmentViewer(attachment);
-        openMessage(attachment.name(), shown);
+        reading.set(message.name());
+        var shown = new AttachmentViewer(message);
+        openMessage(message.name(), shown);
         // the model is told the attachment's shape, to place the regions it reports on its pages
         var prompt = shown.geometry().isEmpty() ? PROMPT : PROMPT + " It is " + shown.geometry() + ".";
         // A workaround, to be filed on flow-components and dropped when the form filler handles it: the filler guards
         // the fields on the client when a turn starts, and a value emptied in that same round trip stays on screen
         // for a moment. So the turn starts one round trip later, once the browser has shown the empty form.
-        getElement()
-                .executeJs("return null")
-                .then(ignored -> orchestrator.prompt(prompt, List.of(attachment)), error -> reading.set(null));
+        getElement().executeJs("return null").then(ignored -> start(prompt, message), error -> reading.set(null));
+    }
+
+    /**
+     * Starts the turn once the browser has shown the empty form. The budget admits it here, on the request thread
+     * that brought the browser's answer, so that a turn is counted only when its model request is about to start and a
+     * browser that never answers leaves nothing held. Admitted, the turn is held in {@link #turn} until
+     * {@link #turnEnded} closes it; refused, the visitor is told why, the message stays open to look at and the form
+     * stays empty.
+     */
+    private void start(String prompt, AIAttachment message) {
+        switch (budget.admit(Caller.current(), FEATURE)) {
+            case AIBudget.Turn admitted -> {
+                turn.set(admitted);
+                orchestrator.prompt(prompt, List.of(message));
+            }
+            case AIBudget.Refusal refused -> {
+                reading.set(null);
+                warn(refused.reason());
+            }
+        }
+    }
+
+    /**
+     * Why a text message is not read, when it is longer than the cap: the sentence for the visitor. Empty for a text
+     * within the cap, and for a message that is not a text, a PDF or an image, whose size is bounded in other ways.
+     */
+    static Optional<String> overTheTextCap(AIAttachment attachment, int cap) {
+        if (!TEXT.equals(attachment.mimeType())) {
+            return Optional.empty();
+        }
+        var length = new String(attachment.data(), StandardCharsets.UTF_8).length();
+        if (length <= cap) {
+            return Optional.empty();
+        }
+        return Optional.of("A message can have at most " + cap + " characters of text; this one has " + length + ".");
+    }
+
+    /** A PDF cut to the pages the viewer shows, {@link AttachmentViewer#MAX_PAGES}; any other message as it is. */
+    private static AIAttachment withinThePageCap(AIAttachment attachment) {
+        if (!Pdfs.MIME_TYPE.equals(attachment.mimeType())) {
+            return attachment;
+        }
+        var pages = Pdfs.firstPages(attachment.data(), AttachmentViewer.MAX_PAGES);
+        return pages == attachment.data()
+                ? attachment
+                : new AIAttachment(attachment.name(), attachment.mimeType(), pages);
     }
 
     /**
@@ -437,6 +514,10 @@ public class ClaimsView extends PageView implements HasReadme {
 
     /** The turn is over: the area takes the next message, after saying why the AI could not read this one. */
     private void turnEnded(ResponseEvent event) {
+        var ended = turn.getAndSet(null);
+        if (ended != null) {
+            ended.close(event);
+        }
         getUI().ifPresent(ui -> ui.access(() -> {
             event.getError().ifPresent(error -> {
                 LOG.warn("The AI could not fill in the claim form from {}", reading.peek(), error);

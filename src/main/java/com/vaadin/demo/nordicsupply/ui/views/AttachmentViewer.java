@@ -90,7 +90,7 @@ class AttachmentViewer extends Div {
                 shape = geometry(document);
                 layout = PdfText.of(document, MAX_PAGES);
             } catch (IOException e) {
-                // the model may still read what cannot be shown here; the viewer then shows no pages
+                // the view reads a PDF before it shows it here, so this is not expected; the viewer then shows no pages
                 LOG.warn("A PDF could not be read", e);
             }
             geometry = shape;

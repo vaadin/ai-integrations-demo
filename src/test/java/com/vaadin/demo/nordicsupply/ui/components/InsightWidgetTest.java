@@ -55,6 +55,10 @@ import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider.ToolCall;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Address;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Session;
+import com.vaadin.demo.nordicsupply.ai.budget.Budgets;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.config.PackData;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
@@ -101,6 +105,7 @@ class InsightWidgetTest {
         }
     };
     private final JdbcDatabaseProvider db = new JdbcDatabaseProvider(() -> null, new PackData());
+    private final AIBudget budget = Budgets.budget();
 
     private final UI ui = TestUi.withSession();
 
@@ -139,7 +144,16 @@ class InsightWidgetTest {
 
     /** A widget on the page, so that the model's reply reaches it. */
     private InsightWidget widget(WidgetType type) {
-        var widget = new InsightWidget(type, "Late shipments last month", db, conversations, "Lars", List.of());
+        var widget = new InsightWidget(type, "Late shipments last month", db, conversations, budget, "Lars", List.of());
+        ui.add(widget);
+        return widget;
+    }
+
+    /** A widget on the page whose questions the given budget admits. */
+    private InsightWidget widget(WidgetType type, LLMProvider provider, AIBudget admitting) {
+        var own = mock(Conversations.class);
+        when(own.restore(anyString(), anyList())).thenReturn(provider);
+        var widget = new InsightWidget(type, "Late shipments last month", db, own, admitting, "Lars", List.of());
         ui.add(widget);
         return widget;
     }
@@ -153,6 +167,7 @@ class InsightWidgetTest {
                 "Orders per week",
                 new JdbcDatabaseProvider(() -> new JdbcTemplate(weekly), new PackData()),
                 own,
+                budget,
                 "Lars",
                 List.of());
         ui.add(widget);
@@ -340,6 +355,55 @@ class InsightWidgetTest {
     }
 
     /**
+     * Every question is admitted by the budget before it is a request: one over it is answered by the chat with the
+     * reason, and nothing reaches the model.
+     */
+    @Test
+    void aQuestionOverTheBudgetIsAnsweredByTheChatAndNeverReachesTheModel() {
+        var widget = widget(WidgetType.GRID, model, Budgets.withSession(new Session(10, 1)));
+
+        widget.ask("Late shipments last month");
+        widget.ask("And the month before");
+
+        assertThat(model.requests()).hasSize(1);
+        assertThat(widget.chat().messageList().getItems().getLast())
+                .extracting(MessageListItem::getUserName, MessageListItem::getText)
+                .containsExactly(
+                        InsightWidget.ASSISTANT_NAME,
+                        "You have reached today's limit of 1 questions; the AI is available to you again tomorrow.");
+        assertThat(progressOf(widget).isVisible()).isFalse();
+    }
+
+    /** A turn holds one of its caller's slots while it runs, and gives it back when it ends, answered or failed. */
+    @Test
+    void aTurnGivesItsSlotBackWhenItEndsAnsweredOrFailed() {
+        var oneAtATime = Budgets.withAddress(new Address(15, 120, 1));
+        var answered = widget(WidgetType.GRID, model, oneAtATime);
+        answered.ask("Late shipments last month");
+        answered.ask("And the month before");
+        assertThat(model.requests()).hasSize(2);
+
+        var failing = new ScriptedProvider("TITLE: Late shipments\nSUMMARY: Shipments after the promised date.") {
+            private boolean failed;
+
+            @Override
+            public Flux<String> stream(LLMRequest request) {
+                var answer = super.stream(request);
+                if (!failed) {
+                    failed = true;
+                    return Flux.error(new IllegalStateException("The model is down"));
+                }
+                return answer;
+            }
+        };
+        var recovered = widget(WidgetType.GRID, failing, oneAtATime);
+        recovered.ask("Late shipments last month");
+        recovered.ask("Late shipments last month");
+
+        assertThat(failing.requests()).hasSize(2);
+    }
+
+    /**
      * Every question is a paid model call, so a widget's chat takes a sentence or two: a longer question is answered by
      * the chat and never reaches the model, and one at the cap is asked.
      */
@@ -443,6 +507,7 @@ class InsightWidgetTest {
                     "Orders per week",
                     new JdbcDatabaseProvider(connection::get, new PackData()),
                     conversations,
+                    budget,
                     "Lars",
                     List.of());
             ui.add(widget);
@@ -607,7 +672,7 @@ class InsightWidgetTest {
     @Test
     void aSavedWidgetsChatIsShownAndRemembered() {
         answers.add(() -> Flux.just("TITLE: Late shipments by carrier\nSUMMARY: Per carrier.\n\nGrouped by carrier."));
-        var widget = new InsightWidget(WidgetType.GRID, "Late shipments", db, remembering, "Lars", savedChat());
+        var widget = new InsightWidget(WidgetType.GRID, "Late shipments", db, remembering, budget, "Lars", savedChat());
         ui.add(widget);
 
         assertThat(widget.chat().messageList().getItems())
@@ -638,8 +703,8 @@ class InsightWidgetTest {
      */
     @Test
     void twoWidgetsRestoredFromOneSavedChatKeepTheirOwnMemories() {
-        var first = new InsightWidget(WidgetType.GRID, "Late shipments", db, remembering, "Lars", savedChat());
-        var second = new InsightWidget(WidgetType.GRID, "Late shipments", db, remembering, "Lars", savedChat());
+        var first = new InsightWidget(WidgetType.GRID, "Late shipments", db, remembering, budget, "Lars", savedChat());
+        var second = new InsightWidget(WidgetType.GRID, "Late shipments", db, remembering, budget, "Lars", savedChat());
         ui.add(first, second);
 
         assertThat(repository.findConversationIds()).hasSize(2);
@@ -871,8 +936,8 @@ class InsightWidgetTest {
 
     /** A widget whose conversation lives in a real memory. */
     private InsightWidget rememberingWidget() {
-        var widget =
-                new InsightWidget(WidgetType.GRID, "Late shipments last month", db, remembering, "Lars", List.of());
+        var widget = new InsightWidget(
+                WidgetType.GRID, "Late shipments last month", db, remembering, budget, "Lars", List.of());
         ui.add(widget);
         return widget;
     }

@@ -25,6 +25,7 @@ class QueryPanelTest {
             Map.of(
                     WidgetType.GRID, List.of("Claims open over 7 days"),
                     WidgetType.CHART, List.of("Orders per month", "Open claims by type")),
+            500,
             (question, kind) -> asked.add(new Asked(question, kind)));
 
     @Test

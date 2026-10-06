@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
@@ -39,6 +40,8 @@ import tools.jackson.databind.json.JsonMapper;
 import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.WidgetReply;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
+import com.vaadin.demo.nordicsupply.ai.budget.Caller;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 
@@ -53,8 +56,8 @@ public class InsightWidget extends DashboardWidget {
     /** How the chat names the model's turns. */
     public static final String ASSISTANT_NAME = "Assistant";
 
-    /** The longest question a chat takes: a sentence or two, since every question is a paid model call. */
-    public static final int MAX_QUESTION_LENGTH = 500;
+    /** How the budget names a widget's turns. */
+    private static final String FEATURE = "insights";
 
     /** Long enough to read the notice of a failed turn before it disappears. */
     private static final int ERROR_NOTIFICATION_MS = 8000;
@@ -125,6 +128,10 @@ public class InsightWidget extends DashboardWidget {
     private final ChatPanel chat = new ChatPanel();
     private final Conversations conversations;
     private final String conversationId = Conversations.newId();
+    private final AIBudget budget;
+
+    /** The turn under way, admitted by the budget, until its response closes it; {@code null} between turns. */
+    private final AtomicReference<AIBudget.Turn> turn = new AtomicReference<>();
 
     /** The model's one-sentence description of the widget, in business terms; shown at the top of its chat. */
     private String description = "";
@@ -152,6 +159,7 @@ public class InsightWidget extends DashboardWidget {
      * @param title the widget's title until the model names it: the question that made it, or the saved title
      * @param db the model's way into the data, on the signed-in user's connection
      * @param conversations where the widget's conversation lives, and is let go when the widget leaves the page
+     * @param budget what admits a question before it is sent, and takes the turn's cost when it ends
      * @param userName how the chat names the user's turns
      * @param history the chat so far, oldest first: empty for a new widget, and for a saved one its saved chat, which
      *     the chat shows and the model is given as its memory
@@ -161,11 +169,13 @@ public class InsightWidget extends DashboardWidget {
             String title,
             JdbcDatabaseProvider db,
             Conversations conversations,
+            AIBudget budget,
             String userName,
             List<ChatMessage> history) {
         super(title);
         this.type = type;
         this.conversations = conversations;
+        this.budget = budget;
         addClassName("insight-widget");
         Component visual;
         AIController controller;
@@ -205,7 +215,7 @@ public class InsightWidget extends DashboardWidget {
                 .withInput(chat.messageInput())
                 .withController(controller)
                 .withMetadata(Conversations::sessionContext)
-                .withRequestInterceptor(InsightWidget::refuseALongQuestion)
+                .withRequestInterceptor(this::admit)
                 // the wait shows where the answer will appear, also while the chat is closed
                 .withRequestListener(event -> progress.setVisible(true))
                 .withResponseListener(this::onResponse)
@@ -253,12 +263,21 @@ public class InsightWidget extends DashboardWidget {
                 : SYSTEM_PROMPT.formatted("table", "chart");
     }
 
-    /** A question over the cap is answered by the chat, before it is a request: nothing is sent to the model. */
-    private static void refuseALongQuestion(RequestInterceptor.RequestInterceptEvent event) {
+    /**
+     * Before a question is a request: one over the length cap, or one the budget refuses, is answered by the chat
+     * with the reason, and nothing is sent to the model. An admitted turn is held until {@link #onResponse} closes it.
+     * Runs on the request thread, where the caller can be read.
+     */
+    private void admit(RequestInterceptor.RequestInterceptEvent event) {
         var length = event.getUserMessage().length();
-        if (length > MAX_QUESTION_LENGTH) {
-            event.reject(
-                    "A question can have at most " + MAX_QUESTION_LENGTH + " characters; this one has " + length + ".");
+        var cap = budget.limits().maxQuestionLength();
+        if (length > cap) {
+            event.reject("A question can have at most " + cap + " characters; this one has " + length + ".");
+            return;
+        }
+        switch (budget.admit(Caller.current(), FEATURE)) {
+            case AIBudget.Refusal refused -> event.reject(refused.reason());
+            case AIBudget.Turn admitted -> turn.set(admitted);
         }
     }
 
@@ -419,10 +438,15 @@ public class InsightWidget extends DashboardWidget {
     }
 
     /**
-     * Runs on the provider's thread: anything that touches the UI goes through {@code ui.access}. A failed turn is
-     * reported and its question dropped from the memory, so that the next question is not answered twice over.
+     * Runs on the provider's thread: anything that touches the UI goes through {@code ui.access}. The turn is closed
+     * first, whatever became of the widget, so that the budget gets its slot back. A failed turn is reported and its
+     * question dropped from the memory, so that the next question is not answered twice over.
      */
     private void onResponse(ResponseListener.ResponseEvent event) {
+        var ended = turn.getAndSet(null);
+        if (ended != null) {
+            ended.close(event);
+        }
         if (!isAttached()) {
             // the widget went while the turn ran, and the memory advisor has written the turn since it was forgotten
             conversations.forget(conversationId);

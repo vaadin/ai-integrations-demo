@@ -142,12 +142,6 @@ public class InsightWidget extends DashboardWidget {
      */
     private final DemoClock chatClock = DemoClock.forVisitor(UI.getCurrent());
 
-    /** Set while {@link #ask} sends a question, so that its turn can tell it was not typed into the chat. */
-    private boolean askingFromOutside;
-
-    /** Whether the running turn's question was typed into the chat, whose input gets the focus back when it ends. */
-    private boolean refocusWhenDone;
-
     /** The query a saved table was restored with; saved again if it did not run then. */
     private String restoredSql;
 
@@ -212,10 +206,8 @@ public class InsightWidget extends DashboardWidget {
                 .withController(controller)
                 .withMetadata(Conversations::sessionContext)
                 .withRequestInterceptor(InsightWidget::refuseALongQuestion)
-                .withRequestListener(event -> {
-                    refocusWhenDone = !askingFromOutside;
-                    setBusy(true);
-                })
+                // the wait shows where the answer will appear, also while the chat is closed
+                .withRequestListener(event -> progress.setVisible(true))
                 .withResponseListener(this::onResponse)
                 .withUserName(userName)
                 .withAssistantName(ASSISTANT_NAME);
@@ -302,12 +294,7 @@ public class InsightWidget extends DashboardWidget {
 
     /** Sends a question to this widget's chat. The widget has to be on the page: a reply is applied to a widget that is. */
     public void ask(String question) {
-        askingFromOutside = true;
-        try {
-            orchestrator.prompt(question);
-        } finally {
-            askingFromOutside = false;
-        }
+        orchestrator.prompt(question);
         keepTheDemosDate();
     }
 
@@ -402,20 +389,6 @@ public class InsightWidget extends DashboardWidget {
     }
 
     /**
-     * While a turn runs the widget shows it, and its chat takes no second question: the orchestrator would drop one
-     * sent now, after the input has already cleared it. Disabling the input takes the focus from it, so a question
-     * typed there gives the input its focus back with the answer. A chat closed in the meantime cannot take it, and
-     * one taken off the page is not asked to.
-     */
-    private void setBusy(boolean busy) {
-        progress.setVisible(busy);
-        chat.messageInput().setEnabled(!busy);
-        if (!busy && refocusWhenDone && chat.isAttached()) {
-            chat.messageInput().focus();
-        }
-    }
-
-    /**
      * After every render: hide raw id columns the model may still have selected. The renderer's own columns and
      * headers stay as they are; the rows belong to the controller and are not read here.
      */
@@ -443,7 +416,7 @@ public class InsightWidget extends DashboardWidget {
             conversations.forget(conversationId);
             return;
         }
-        getUI().ifPresent(ui -> ui.access(() -> setBusy(false)));
+        getUI().ifPresent(ui -> ui.access(() -> progress.setVisible(false)));
         if (event.getError().isPresent()) {
             conversations.dropUnanswered(conversationId);
             getUI().ifPresent(ui -> ui.access(() -> {

@@ -28,11 +28,10 @@ import com.vaadin.flow.component.charts.model.ChartType;
 import com.vaadin.flow.component.charts.model.Configuration;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridNoneSelectionModel;
-import com.vaadin.flow.component.internal.PendingJavaScriptInvocation;
 import com.vaadin.flow.component.messages.MessageInput;
 import com.vaadin.flow.component.messages.MessageListItem;
 import com.vaadin.flow.component.messages.MessageListUser;
-import com.vaadin.flow.internal.StateNode;
+import com.vaadin.flow.component.progressbar.ProgressBar;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -358,7 +357,7 @@ class InsightWidgetTest {
         assertThat(widget.chat().messageList().getItems().getLast().getText())
                 .isEqualTo("A question can have at most 500 characters; this one has 501.");
         assertThat(typing(widget)).isEmpty();
-        assertThat(widget.chat().messageInput().isEnabled()).isTrue();
+        assertThat(progressOf(widget).isVisible()).isFalse();
 
         widget.ask("x".repeat(500));
 
@@ -507,8 +506,8 @@ class InsightWidgetTest {
     }
 
     /**
-     * A turn that fails ends the loading state, and its question does not stay in the memory to be answered again
-     * with the next one. The error notification is only on the page when Flow writes a response; the manual cases
+     * A turn that fails ends the wait, and its question does not stay in the memory to be answered again with the
+     * next one. The error notification is only on the page when Flow writes a response; the manual cases
      * check it.
      */
     @Test
@@ -524,7 +523,7 @@ class InsightWidgetTest {
                 .containsExactly(
                         "Late shipments last month", "TITLE: Late shipments\nSUMMARY: Shipments after the date.");
         assertThat(typing(widget)).isEmpty();
-        assertThat(widget.chat().messageInput().isEnabled()).isTrue();
+        assertThat(progressOf(widget).isVisible()).isFalse();
         assertThat(widget.getTitle()).isEqualTo("Late shipments");
     }
 
@@ -550,8 +549,12 @@ class InsightWidgetTest {
         }
     }
 
+    /**
+     * While a turn runs, the widget shows the wait with its progress bar and its chat shows the assistant typing; the
+     * chat's input stays enabled, so it keeps the focus. The answer ends the wait.
+     */
     @Test
-    void whileATurnRunsTheWidgetShowsItAndItsChatTakesNoSecondQuestion() {
+    void whileATurnRunsTheWidgetAndItsChatShowTheWait() {
         var waiting = new Waiting();
         when(conversations.restore(anyString(), anyList())).thenReturn(waiting);
         var widget = widget(WidgetType.GRID);
@@ -559,12 +562,13 @@ class InsightWidgetTest {
         widget.ask("Late shipments last month");
 
         assertThat(typing(widget)).containsExactly(InsightWidget.ASSISTANT_NAME);
-        assertThat(widget.chat().messageInput().isEnabled()).isFalse();
+        assertThat(progressOf(widget).isVisible()).isTrue();
+        assertThat(widget.chat().messageInput().isEnabled()).isTrue();
 
         waiting.answer("TITLE: Late shipments\nSUMMARY: Shipments after the promised date.");
 
         assertThat(typing(widget)).isEmpty();
-        assertThat(widget.chat().messageInput().isEnabled()).isTrue();
+        assertThat(progressOf(widget).isVisible()).isFalse();
     }
 
     /** Who the widget's chat shows typing. */
@@ -574,39 +578,13 @@ class InsightWidgetTest {
                 .toList();
     }
 
-    /**
-     * Disabling the input for a turn takes the focus from it, so a question typed into the chat gives the input its
-     * focus back with the answer, and the next question can be typed at once. A question sent from outside the chat, as
-     * the New Query tile sends a widget's first, leaves the focus where it is.
-     */
-    @Test
-    void aQuestionTypedIntoTheChatGivesTheInputItsFocusBackWithTheAnswer() {
-        var typed = new Waiting();
-        var sent = new Waiting();
-        when(conversations.restore(anyString(), anyList())).thenReturn(typed, sent);
-        var chatted = widget(WidgetType.GRID);
-        var asked = widget(WidgetType.GRID);
-        ui.add(chatted.chat(), asked.chat());
-        var input = chatted.chat().messageInput();
-
-        ComponentUtil.fireEvent(input, new MessageInput.SubmitEvent(input, true, "Late shipments last month"));
-        asked.ask("Late shipments last month");
-
-        assertThat(focusCalls()).isEmpty();
-
-        typed.answer("TITLE: Late shipments\nSUMMARY: Shipments after the promised date.");
-        sent.answer("TITLE: Late shipments\nSUMMARY: Shipments after the promised date.");
-
-        assertThat(focusCalls()).containsExactly(input.getElement().getNode());
-    }
-
-    /** The nodes whose element was told to take the focus since the last call, in order. */
-    private List<StateNode> focusCalls() {
-        ui.getInternals().getStateTree().runExecutionsBeforeClientResponse();
-        return ui.getInternals().dumpPendingJavaScriptInvocations().stream()
-                .filter(call -> call.getInvocation().getExpression().contains("this.focus("))
-                .map(PendingJavaScriptInvocation::getOwner)
-                .toList();
+    /** The bar that shows the wait on the widget itself, where the answer will appear. */
+    private static ProgressBar progressOf(InsightWidget widget) {
+        return (ProgressBar) widget.getContent()
+                .getChildren()
+                .filter(ProgressBar.class::isInstance)
+                .findFirst()
+                .orElseThrow();
     }
 
     /** Removed from the dashboard or gone with the page, a widget's conversation is let go. */

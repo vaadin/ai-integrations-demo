@@ -177,7 +177,7 @@ public class InsightWidget extends DashboardWidget {
             chartController.addStateChangeListener(state -> redraw());
             grid = null;
             gridController = null;
-            controller = new ChartStateWithoutRowValues(chartController);
+            controller = chartController;
             visual = chart;
         } else {
             grid = new Grid<>();

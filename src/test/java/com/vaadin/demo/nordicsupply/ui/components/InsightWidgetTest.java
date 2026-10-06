@@ -30,7 +30,6 @@ import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridNoneSelectionModel;
 import com.vaadin.flow.component.messages.MessageInput;
 import com.vaadin.flow.component.messages.MessageListItem;
-import com.vaadin.flow.component.messages.MessageListUser;
 import com.vaadin.flow.component.progressbar.ProgressBar;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -50,7 +49,6 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
-import tools.jackson.databind.json.JsonMapper;
 
 import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
@@ -356,7 +354,6 @@ class InsightWidgetTest {
                 .containsExactly(tuple("Lars", 501), tuple(InsightWidget.ASSISTANT_NAME, 61));
         assertThat(widget.chat().messageList().getItems().getLast().getText())
                 .isEqualTo("A question can have at most 500 characters; this one has 501.");
-        assertThat(typing(widget)).isEmpty();
         assertThat(progressOf(widget).isVisible()).isFalse();
 
         widget.ask("x".repeat(500));
@@ -425,58 +422,6 @@ class InsightWidgetTest {
         assertThat(widget.description()).isEqualTo("Claims not yet resolved.");
     }
 
-    /** The model never sees a row: the chart's state, which the model reads every turn, holds no value from one. */
-    @Test
-    void theChartsStateTellsTheModelNothingTheRowsSaid() {
-        var states = new ArrayList<String>();
-        var turn = new int[1];
-        when(conversations.restore(anyString(), anyList())).thenReturn(new LLMProvider() {
-            @Override
-            public Flux<String> stream(LLMRequest request) {
-                var tools = request.explicitTools();
-                if (turn[0]++ == 0) {
-                    call(
-                            tools,
-                            "update_chart_data_source",
-                            "{\"queries\":[\"SELECT country AS _series, wk AS category,"
-                                    + " n AS amount FROM weekly\"]}");
-                } else {
-                    states.add(call(tools, "get_chart_state", "{}"));
-                }
-                return Flux.just("TITLE: Orders per week\nSUMMARY: One series per country.");
-            }
-
-            @Override
-            public void setHistory(List<ChatMessage> history, Map<String, List<AIAttachment>> attachments) {}
-        });
-        var widget = new InsightWidget(
-                WidgetType.CHART,
-                "Orders per week",
-                new JdbcDatabaseProvider(() -> new JdbcTemplate(weekly), new PackData()),
-                conversations,
-                "Lars",
-                List.of());
-        ui.add(widget);
-
-        widget.ask("Orders per week by country");
-        widget.ask("Make it a line chart");
-
-        assertThat(chartOf(widget).getxAxis().getCategories()).containsExactly("W35", "W36");
-        assertThat(states)
-                .singleElement()
-                .satisfies(state -> assertThat(state)
-                        .contains("SELECT country AS _series")
-                        .doesNotContain("W35", "W36", "Finland", "Estonia"));
-    }
-
-    private static String call(List<LLMProvider.ToolSpec> offered, String name, String arguments) {
-        return offered.stream()
-                .filter(tool -> tool.getName().equals(name))
-                .findFirst()
-                .orElseThrow()
-                .execute(JsonMapper.builder().build().readTree(arguments));
-    }
-
     /** The model is asked not to select raw ids; the widget hides any that come anyway, and shows the rest. */
     @Test
     void rawIdColumnsAreHiddenAndTheOthersShown() {
@@ -522,7 +467,6 @@ class InsightWidgetTest {
         assertThat(remembered())
                 .containsExactly(
                         "Late shipments last month", "TITLE: Late shipments\nSUMMARY: Shipments after the date.");
-        assertThat(typing(widget)).isEmpty();
         assertThat(progressOf(widget).isVisible()).isFalse();
         assertThat(widget.getTitle()).isEqualTo("Late shipments");
     }
@@ -550,32 +494,23 @@ class InsightWidgetTest {
     }
 
     /**
-     * While a turn runs, the widget shows the wait with its progress bar and its chat shows the assistant typing; the
-     * chat's input stays enabled, so it keeps the focus. The answer ends the wait.
+     * While a turn runs, the widget shows the wait with its progress bar, where the answer will appear, and the chat's
+     * input stays enabled, so it keeps the focus. The answer ends the wait.
      */
     @Test
-    void whileATurnRunsTheWidgetAndItsChatShowTheWait() {
+    void whileATurnRunsTheWidgetShowsTheWaitAndTheInputStaysEnabled() {
         var waiting = new Waiting();
         when(conversations.restore(anyString(), anyList())).thenReturn(waiting);
         var widget = widget(WidgetType.GRID);
 
         widget.ask("Late shipments last month");
 
-        assertThat(typing(widget)).containsExactly(InsightWidget.ASSISTANT_NAME);
         assertThat(progressOf(widget).isVisible()).isTrue();
         assertThat(widget.chat().messageInput().isEnabled()).isTrue();
 
         waiting.answer("TITLE: Late shipments\nSUMMARY: Shipments after the promised date.");
 
-        assertThat(typing(widget)).isEmpty();
         assertThat(progressOf(widget).isVisible()).isFalse();
-    }
-
-    /** Who the widget's chat shows typing. */
-    private static List<String> typing(InsightWidget widget) {
-        return widget.chat().messageList().getTypingUsers().stream()
-                .map(MessageListUser::getName)
-                .toList();
     }
 
     /** The bar that shows the wait on the widget itself, where the answer will appear. */

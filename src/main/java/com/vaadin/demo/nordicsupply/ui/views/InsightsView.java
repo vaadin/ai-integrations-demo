@@ -38,16 +38,17 @@ import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
  * The self-service dashboard, "Insights". The page opens with the signed-in user's dashboard of this visit, the
  * seeded one until the visitor saves their own: its widgets with their chats, their queries run anew. An empty
  * dashboard shows one prompt in the middle of the page. A question adds a grid or chart widget and opens its chat in
- * a popover beside it; the Edit button in a widget's header opens it again. The last tile of the dashboard is "New
- * Query" and holds the same prompt, so the next question is typed where the next widget will appear. The popover
- * closes with Escape or its close button. Widgets can be moved, resized and removed; Save Dashboard, in the page's
- * heading, keeps the dashboard as it is on screen for the rest of the visit, and until then a reload goes back to
- * the saved one.
+ * a popover beside it; the Edit button in a widget's header opens it again, and closes it while it is open. The last
+ * tile of the dashboard is "New Query" and holds the same prompt, so the next question is typed where the next
+ * widget will appear. The popover also closes with Escape, its close button, or a click anywhere else on the page;
+ * its own widget is not elsewhere, so the table or chart can be used while the chat is open. Widgets can be moved,
+ * resized and removed; Save Dashboard, in the page's heading, keeps the dashboard as it is on screen for the rest of
+ * the visit, and until then a reload goes back to the saved one.
  * <p>
  * The dashboard's own selection (the state its move, resize and remove controls need) follows keyboard focus and is
  * cleared as soon as focus leaves the widget, which it does when the user types into the chat. The view therefore
- * keeps its own notion of the <em>active</em> widget, set when its chat opens, and never reads the dashboard's
- * selection.
+ * keeps its own notion of the <em>active</em> widget, the one whose chat the popover shows, and never reads the
+ * dashboard's selection.
  */
 @Route("insights")
 @PageTitle("Insights")
@@ -229,18 +230,22 @@ public class InsightsView extends PageView implements HasReadme {
                         """));
 
         popover.setOpenOnClick(false);
+        // not modal, and closed by a click elsewhere: the popover counts a click on its target, the widget, as
+        // inside, so the table or chart beside the chat stays usable while the chat is open
         popover.setModal(false);
-        popover.setCloseOnOutsideClick(false);
+        popover.setCloseOnOutsideClick(true);
         popover.setPosition(PopoverPosition.END_TOP);
         popover.setWidth(POPOVER_WIDTH);
         popover.setHeight(POPOVER_HEIGHT);
         popover.setAutofocus(true);
         popover.addClassName("insight-popover");
-        popover.addOpenedChangeListener(e -> {
-            if (!e.isOpened()) {
-                setActive(null); // Escape on the client, or a close from the view: either way nothing is active
-            }
-        });
+        // The client reports every opening and closing, whether the user, the browser or the view caused it, and
+        // a report can arrive after the view has moved on: Edit on another widget closes the popover on the client
+        // before the click reaches the server, the view then opens it beside that widget, and the report of the
+        // closing comes in between. So the active widget follows the reports: the popover's target while it is
+        // open, none while it is closed.
+        popover.addOpenedChangeListener(
+                e -> setActive(e.isOpened() && popover.getTarget() instanceof InsightWidget widget ? widget : null));
         empty.addClassName("insights-empty");
         intro.addClassName("chat-intro");
         scroller.addClassName("page-scroll");
@@ -313,9 +318,10 @@ public class InsightsView extends PageView implements HasReadme {
         }
     }
 
-    /** Opens the popover with the widget's chat beside it. */
+    /** Opens the popover with the widget's chat beside it, or closes it when it is open beside this widget. */
     private void activate(InsightWidget widget) {
         if (widget == active && popover.isOpened()) {
+            popover.close(); // Edit again: the client reports the closing, and nothing is active then
             return;
         }
         setActive(widget);

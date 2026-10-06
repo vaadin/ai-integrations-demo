@@ -236,6 +236,58 @@ class InsightsViewTest {
         assertThat(descendants(popover())).contains(second.chat()).doesNotContain(first.chat());
     }
 
+    /** The chat stays beside its widget until the user is done with it: not modal, and a click elsewhere closes it. */
+    @Test
+    void theChatIsNotModalAndAClickElsewhereClosesIt() {
+        assertThat(popover().isModal()).isFalse();
+        assertThat(popover().isCloseOnOutsideClick()).isTrue();
+    }
+
+    /**
+     * Edit on the widget whose chat is open closes the chat; the client reports the closing, and nothing is active
+     * then. Edit once more opens the chat again.
+     */
+    @Test
+    void editClosesTheOpenChatAndOpensItAgain() {
+        ask("Late shipments last month");
+        var widget = (InsightWidget) dashboard().getWidgets().getFirst();
+        clientReportsOpened(true);
+
+        edit(widget).click();
+
+        assertThat(popover().isOpened()).isFalse();
+        clientReportsOpened(false);
+        assertThat(widget.hasClassName("active")).isFalse();
+
+        edit(widget).click();
+        clientReportsOpened(true);
+
+        assertThat(popover().getTarget()).isSameAs(widget);
+        assertThat(widget.hasClassName("active")).isTrue();
+    }
+
+    /**
+     * Edit on another widget while a chat is open: the client closes the popover before the click reaches the server
+     * and reports the closing after the view has opened the chat beside the other widget. That widget is the active
+     * one once the client reports the opening.
+     */
+    @Test
+    void editOnAnotherWidgetMovesTheChatThereWhateverTheClientReportsInBetween() {
+        ask("Late shipments last month");
+        ask("Open claims by type");
+        var first = (InsightWidget) dashboard().getWidgets().get(0);
+        var second = (InsightWidget) dashboard().getWidgets().get(1);
+        clientReportsOpened(true);
+
+        edit(first).click();
+        clientReportsOpened(false);
+        clientReportsOpened(true);
+
+        assertThat(popover().getTarget()).isSameAs(first);
+        assertThat(first.hasClassName("active")).isTrue();
+        assertThat(second.hasClassName("active")).isFalse();
+    }
+
     /** The data scope follows the person signed in: every query of a widget runs on their region's connection. */
     @Test
     void aQuestionIsAnsweredOnTheSignedInUsersRegion() {
@@ -469,6 +521,21 @@ class InsightsViewTest {
         return descendants(panel())
                 .filter(TextArea.class::isInstance)
                 .map(TextArea.class::cast)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    /** What the client reports when the popover opens or closes there; a close by the server fires nothing. */
+    private void clientReportsOpened(boolean opened) {
+        popover().getElement().setProperty("opened", opened);
+        ComponentUtil.fireEvent(popover(), new Popover.OpenedChangeEvent(popover(), true));
+    }
+
+    private static Button edit(InsightWidget widget) {
+        return descendants(widget)
+                .filter(Button.class::isInstance)
+                .map(Button.class::cast)
+                .filter(button -> "Edit this widget".equals(button.getElement().getAttribute("aria-label")))
                 .findFirst()
                 .orElseThrow();
     }

@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-/** The regions a demo user can be responsible for are the four the database names, and nothing else. */
+/**
+ * The regions a demo user can be responsible for are the four the database names, and nothing else; the country filter
+ * narrows a region to one of its own countries.
+ */
 class ScopesTest {
 
     @Test
@@ -24,5 +27,13 @@ class ScopesTest {
     void anyOtherKeyNamesNothing() {
         assertThat(Scopes.roleScope("fi")).isEmpty();
         assertThat(Scopes.roleScope("")).isEmpty();
+    }
+
+    @Test
+    void aRegionCanBeNarrowedToEachOfItsOwnCountriesAndNoOther() {
+        assertThat(Scopes.filtersWithin(Scopes.FI_EE)).containsExactly(Scopes.FI_EE, Scopes.FI, Scopes.EE);
+        assertThat(Scopes.filtersWithin(Scopes.DK_DE)).containsExactly(Scopes.DK_DE, Scopes.DK, Scopes.DE);
+        assertThat(Scopes.filtersWithin(Scopes.ALL))
+                .containsExactly(Scopes.ALL, Scopes.FI, Scopes.EE, Scopes.SE, Scopes.NO, Scopes.DK, Scopes.DE);
     }
 }

@@ -375,6 +375,18 @@ public class InsightWidget extends DashboardWidget {
     }
 
     /**
+     * Runs the widget's query again on the connection its database provider gives now, as after a change of the
+     * dashboard's country filter, through the same restore a saved widget takes; nothing is sent to the model. A
+     * widget that has shown no result stays as it is.
+     */
+    public void rerun() {
+        var shown = state();
+        if (shown != null) {
+            restore(shown.sql(), shown.json());
+        }
+    }
+
+    /**
      * Dates the chat's messages on the dataset's day, at the visitor's time of day when they were written: the
      * components stamp a message with the system clock, and the demo's calendar stands on the dataset's day, where a
      * saved chat is dated too. Run after every question the orchestrator has handled, a refused one included, which

@@ -18,7 +18,10 @@ import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.session.Scope;
 import com.vaadin.demo.nordicsupply.session.Scopes;
 
-/** What each region's connection can read: its own countries, through its own schema of views and nothing else. */
+/**
+ * What each region's connection, and each country's for the country filter, can read: its own countries, through its
+ * own schema of views and nothing else.
+ */
 @SpringBootTest
 class ScopedConnectionsTest {
 
@@ -62,10 +65,10 @@ class ScopedConnectionsTest {
     @Autowired
     private DataSource dataSource;
 
-    /** The aliases a model writes for a chart's columns are names on every region's connection, not keywords. */
+    /** The aliases a model writes for a chart's columns are names on every connection, not keywords. */
     @Test
     void aModelsAliasesThatH2ReadsAsKeywordsAreNames() {
-        for (var scope : Scopes.roleScopes()) {
+        for (var scope : Scopes.all()) {
             assertThat(connections
                             .templateFor(scope)
                             .queryForMap("SELECT 1 AS value, 2026 AS year, 9 AS month, 7 AS day, 10 AS hour,"
@@ -77,8 +80,8 @@ class ScopedConnectionsTest {
 
     /** The countries the lists filter by are the ones the database scopes by: the two lists cannot drift apart. */
     @Test
-    void aRegionSeesTheCountriesItsScopeNames() {
-        for (var scope : Scopes.roleScopes()) {
+    void aRegionOrACountrySeesTheCountriesItsScopeNames() {
+        for (var scope : Scopes.all()) {
             assertThat(connections.templateFor(scope).queryForList(COUNTRIES, String.class))
                     .as(scope.key())
                     .containsExactlyInAnyOrderElementsOf(scope.countries());
@@ -115,10 +118,40 @@ class ScopedConnectionsTest {
         }
     }
 
-    /** Whatever a region sees hangs off a customer it sees. */
+    /**
+     * A region's countries split its rows between them, so the country filter narrows a region and loses nothing of
+     * it; the catalogue is whole for each country, as for every region.
+     */
     @Test
-    void everyRowARegionSeesHangsOffACustomerItSees() {
-        for (var scope : Scopes.roleScopes()) {
+    void theCountriesOfARegionSplitItsRows() {
+        var views = new JdbcTemplate(dataSource)
+                .queryForList(
+                        "SELECT table_name FROM information_schema.views WHERE table_schema = ?",
+                        String.class,
+                        ScopedConnections.schemaFor(Scopes.FI).toUpperCase());
+        assertThat(views).hasSize(CATALOGUE.size() + 1 + OWNERSHIP.size());
+        for (var region : Scopes.roleScopes()) {
+            var countries = Scopes.filtersWithin(region).stream().skip(1).toList();
+            for (var view : views) {
+                var whole = count(connections.templateFor(region), view);
+                var parts = countries.stream()
+                        .map(country -> count(connections.templateFor(country), view))
+                        .toList();
+                if (CATALOGUE.contains(view)) {
+                    assertThat(parts).as(region.key() + " " + view).containsOnly(whole);
+                } else {
+                    assertThat(parts.stream().mapToLong(Long::longValue).sum())
+                            .as(region.key() + " " + view)
+                            .isEqualTo(whole);
+                }
+            }
+        }
+    }
+
+    /** Whatever a region or a country sees hangs off a customer it sees. */
+    @Test
+    void everyRowARegionOrACountrySeesHangsOffACustomerItSees() {
+        for (var scope : Scopes.all()) {
             assertThat(orphans(scope)).as(scope.key()).isEmpty();
         }
     }
@@ -162,7 +195,7 @@ class ScopedConnectionsTest {
                 .queryForList(
                         "SELECT table_name FROM information_schema.tables WHERE table_schema = 'PUBLIC'", String.class);
         assertThat(tables).contains("CUSTOMERS", "SCOPE_ASSIGNMENT", "ACTIVITY_LOG");
-        for (var scope : Scopes.roleScopes()) {
+        for (var scope : Scopes.all()) {
             for (var table : tables) {
                 assertThatThrownBy(() -> connections
                                 .templateFor(scope)
@@ -198,10 +231,10 @@ class ScopedConnectionsTest {
     }
 
     @Test
-    void onlyARegionHasAConnection() {
-        assertThatThrownBy(() -> connections.templateFor(Scope.of("fi", "Finland", "FI")))
+    void onlyTheDemosRegionsAndCountriesHaveAConnection() {
+        assertThatThrownBy(() -> connections.templateFor(Scope.of("fi_se", "Finland and Sweden", "FI", "SE")))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("not a region: fi");
+                .hasMessage("not a region or a country of the demo: fi_se");
     }
 
     private static long count(JdbcTemplate template, String view) {

@@ -25,12 +25,13 @@ import com.vaadin.demo.nordicsupply.util.Errors;
 
 /**
  * The model's way into the data: the dataset's schema text to read, and queries on the read-only connection of the
- * signed-in user's region. The model receives the schema text, the tool's confirmation and, when the database refuses a
- * query, why; the rows a query returns go to the component that asked for them.
+ * signed-in user's region, or of the one country the Insights country filter narrows it to. The model receives the
+ * schema text, the tool's confirmation and, when the database refuses a query, why; the rows a query returns go to
+ * the component that asked for them.
  * <p>
  * Which rows a query returns is decided by the database: the account may read only views that filter by the
- * countries of its region. The connection is read on every query, so switching the user takes effect on the next
- * question.
+ * countries of its scope. The connection is read on every query, so switching the user or the country takes effect
+ * on the next question.
  */
 public class JdbcDatabaseProvider implements DatabaseProvider {
 

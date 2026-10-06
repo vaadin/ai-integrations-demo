@@ -21,6 +21,7 @@ import com.vaadin.flow.component.popover.PopoverPosition;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.signals.Signal;
 
 import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
@@ -30,6 +31,8 @@ import com.vaadin.demo.nordicsupply.config.ScopedConnections;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.SavedDashboards;
+import com.vaadin.demo.nordicsupply.session.Scope;
+import com.vaadin.demo.nordicsupply.ui.components.CountryFilter;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 import com.vaadin.demo.nordicsupply.ui.components.InsightWidget;
 import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
@@ -44,6 +47,10 @@ import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
  * its own widget is not elsewhere, so the table or chart can be used while the chat is open. Widgets can be moved,
  * resized and removed; Save Dashboard, in the page's heading, keeps the dashboard as it is on screen for the rest of
  * the visit, and until then a reload goes back to the saved one.
+ * <p>
+ * The country filter in the page's heading narrows the dashboard to one of the user's countries, or widens it back to
+ * their region. It is the session's, so every tab follows it, and a change runs every widget's query again on that
+ * scope's connection; the model is not asked, and the dashboard stays as saved, since a saved query names no country.
  * <p>
  * The dashboard's own selection (the state its move, resize and remove controls need) follows keyboard focus and is
  * cleared as soon as focus leaves the widget, which it does when the user types into the chat. The view therefore
@@ -101,6 +108,13 @@ public class InsightsView extends PageView implements HasReadme {
             Only the database schema and today's date. The rows you see never leave your network: the model writes a
             query, the application runs it on a read-only account, and the result goes straight to the widget. A
             question sees the rows of your own region only.
+
+            ### Countries
+
+            The filter at the top of the page narrows the dashboard to one of your countries, or widens it back to
+            your whole region. Every widget runs its query again, and new questions see only what the filter shows.
+            The database applies it, so it can only narrow what your region shows. It stays for your visit, in every
+            tab, and goes back to your region when you switch user.
 
             ### Your dashboard
 
@@ -160,6 +174,11 @@ public class InsightsView extends PageView implements HasReadme {
 
     private final Button save = new Button("Save Dashboard", e -> save());
 
+    private final CountryFilter filter;
+
+    /** The country filter the widgets on screen last ran their queries under. */
+    private Scope shown;
+
     /** Whether the dashboard on screen differs from the saved one. */
     private boolean dirty;
 
@@ -176,7 +195,11 @@ public class InsightsView extends PageView implements HasReadme {
         this.user = user;
         this.dashboards = dashboards;
         this.ownerId = user.get().id();
-        heading().addActions(save);
+        filter = new CountryFilter(user.get().scope());
+        // the filter shows the session's choice, as every tab does, and a choice made here becomes the session's
+        filter.bindValue(user.filterSignal(), user::setFilter);
+        shown = user.filter();
+        heading().addActions(filter, save);
 
         query = new QueryPanel(Map.of(WidgetType.GRID, TABLE_CHIPS, WidgetType.CHART, CHART_CHIPS), this::ask);
 
@@ -253,6 +276,15 @@ public class InsightsView extends PageView implements HasReadme {
         add(empty, scroller, popover);
         loadSaved();
         layout();
+        // a change of the filter, made here or in another tab, runs every widget's query again on the new scope's
+        // connection. A switch of user resets the filter as well, but every tab then reloads as the new user.
+        Signal.effect(this, () -> {
+            var chosen = user.filterSignal().get();
+            if (user.get().id() == ownerId && !chosen.equals(shown)) {
+                shown = chosen;
+                widgets().forEach(InsightWidget::rerun);
+            }
+        });
     }
 
     @Override
@@ -383,10 +415,12 @@ public class InsightsView extends PageView implements HasReadme {
         widget.ask(question);
     }
 
-    /** A widget on the signed-in user's connection; every answered turn makes the dashboard differ from the saved one. */
+    /**
+     * A widget on the connection of the country filter, read for every query: the signed-in user's region, or the
+     * country it is narrowed to. Every answered turn makes the dashboard differ from the saved one.
+     */
     private InsightWidget newWidget(WidgetType type, String title, List<ChatMessage> history) {
-        var db = new JdbcDatabaseProvider(
-                () -> connections.templateFor(user.get().scope()), pack);
+        var db = new JdbcDatabaseProvider(() -> connections.templateFor(user.filter()), pack);
         var widget =
                 new InsightWidget(type, title, db, conversations, user.get().name(), history);
         widget.onAsk(this::activate);

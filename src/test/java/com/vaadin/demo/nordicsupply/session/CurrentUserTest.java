@@ -16,7 +16,10 @@ import com.vaadin.demo.nordicsupply.data.ScopeAssignmentRepository;
 import com.vaadin.demo.nordicsupply.data.StaffRepository;
 import com.vaadin.demo.nordicsupply.session.CurrentUser.SignedInUser;
 
-/** A session offers the four demo users from the database, starts as the head-office one, and can switch. */
+/**
+ * A session offers the four demo users from the database, starts as the head-office one, and can switch; its country
+ * filter narrows the signed-in user's region to one of its countries, never beyond, and a switch resets it.
+ */
 @SpringBootTest
 class CurrentUserTest {
 
@@ -80,6 +83,47 @@ class CurrentUserTest {
 
         assertThatThrownBy(() -> session.set(stranger)).isInstanceOf(IllegalArgumentException.class);
         assertThat(session.get().name()).isEqualTo("Test User");
+    }
+
+    @Test
+    void theFilterStartsAtTheSignedInUsersRegion() {
+        var session = session();
+
+        assertThat(session.filter()).isEqualTo(Scopes.ALL);
+        assertThat(session.filterSignal().peek()).isEqualTo(Scopes.ALL);
+    }
+
+    /** The filter is the session's, so every tab, following its signal, shows the same country. */
+    @Test
+    void theFilterNarrowsTheRegionToOneOfItsCountriesForEveryTab() {
+        var session = session();
+
+        session.setFilter(Scopes.FI);
+
+        assertThat(session.filter()).isEqualTo(Scopes.FI);
+        assertThat(session.filterSignal().peek()).isEqualTo(Scopes.FI);
+    }
+
+    @Test
+    void theFilterNeverReachesBeyondTheRegion() {
+        var session = session();
+        session.set(session.all().get(1));
+
+        assertThatThrownBy(() -> session.setFilter(Scopes.SE)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> session.setFilter(Scopes.ALL)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(session.filter()).isEqualTo(Scopes.FI_EE);
+    }
+
+    @Test
+    void aSwitchOfUserResetsTheFilterToTheirRegion() {
+        var session = session();
+        session.setFilter(Scopes.FI);
+
+        session.set(session.all().get(1));
+        assertThat(session.filter()).isEqualTo(Scopes.FI_EE);
+
+        session.set(session.all().getFirst());
+        assertThat(session.filter()).isEqualTo(Scopes.ALL);
     }
 
     /** Without the session scope the bean is one for everyone, and one visitor's switch signs in everyone else. */

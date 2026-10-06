@@ -11,6 +11,7 @@ import com.vaadin.flow.server.AppShellSettings;
 import com.vaadin.flow.theme.aura.Aura;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.Bean;
 
 /**
@@ -19,6 +20,7 @@ import org.springframework.context.annotation.Bean;
  * a view of its own.
  */
 @SpringBootApplication
+@ConfigurationPropertiesScan
 @StyleSheet(Aura.STYLESHEET)
 @StyleSheet("styles.css")
 @ColorScheme(ColorScheme.Value.DARK)

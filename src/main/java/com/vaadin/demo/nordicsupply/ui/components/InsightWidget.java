@@ -27,7 +27,6 @@ import com.vaadin.flow.component.charts.model.Configuration;
 import com.vaadin.flow.component.charts.util.ChartSerialization;
 import com.vaadin.flow.component.dashboard.DashboardWidget;
 import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.SvgIcon;
 import com.vaadin.flow.component.messages.MessageInputI18n;
 import com.vaadin.flow.component.notification.Notification;
@@ -132,7 +131,6 @@ public class InsightWidget extends DashboardWidget {
 
     private final Button ask = new Button("Edit", new SvgIcon("icons/sparkle.svg"));
     private final ProgressBar progress = new ProgressBar();
-    private final Span thinking = new Span("Thinking…");
     private final AIOrchestrator orchestrator;
 
     /** The legend setting the widget last gave the chart; any other setting on the chart is the model's. */
@@ -203,8 +201,8 @@ public class InsightWidget extends DashboardWidget {
         var provider = conversations.restore(conversationId, history);
         if (provider instanceof SpringAILLMProvider spring) {
             // the reply is two lines and a note, and the chat would otherwise show them and the model's narration
-            // word by word until the turn ends; the widget shows the wait itself, and the turn still runs off the
-            // request thread
+            // word by word until the turn ends; the chat shows the assistant typing meanwhile, and the turn still runs
+            // off the request thread
             spring.setStreaming(false);
             spring.setBackgroundExecution(true);
         }
@@ -246,9 +244,6 @@ public class InsightWidget extends DashboardWidget {
         progress.setIndeterminate(true);
         progress.setVisible(false);
         progress.addClassName("widget-progress");
-        thinking.addClassName("thinking");
-        thinking.getElement().setAttribute("role", "status");
-        thinking.setVisible(false);
         var content = new VerticalLayout(progress, visual);
         content.setSizeFull();
         content.setPadding(false);
@@ -273,11 +268,6 @@ public class InsightWidget extends DashboardWidget {
             event.reject(
                     "A question can have at most " + MAX_QUESTION_LENGTH + " characters; this one has " + length + ".");
         }
-    }
-
-    /** "Thinking…", shown under the chat while a turn runs; owned by the widget so it follows its chat. */
-    public Span thinkingIndicator() {
-        return thinking;
     }
 
     /** The widget's chat; the view shows it in a popover while the widget is selected. */
@@ -419,7 +409,6 @@ public class InsightWidget extends DashboardWidget {
      */
     private void setBusy(boolean busy) {
         progress.setVisible(busy);
-        thinking.setVisible(busy);
         chat.messageInput().setEnabled(!busy);
         if (!busy && refocusWhenDone && chat.isAttached()) {
             chat.messageInput().focus();

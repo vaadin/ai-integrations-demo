@@ -122,13 +122,10 @@ class ClaimsViewTest {
                     .extracting(AIAttachment::name)
                     .containsExactly(
                             ((ExampleDocument) DragSource.configure(example).getDragData()).name());
-            // the orchestrator hands the session context to the model as a tool whose description carries it
-            assertThat(request.explicitTools())
-                    .filteredOn(tool -> tool.getName().equals("get_session_context"))
-                    .singleElement()
-                    .satisfies(tool -> assertThat(tool.getDescription())
-                            .contains("Current date and time: 2026-09-07T")
-                            .contains("(Monday, Europe/Helsinki)"));
+            // the session context, which the providers add to the user message for the model
+            assertThat(request.sessionContext())
+                    .contains("Current date and time: 2026-09-07T")
+                    .contains("(Monday, Europe/Helsinki)");
         });
     }
 

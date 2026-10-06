@@ -31,6 +31,7 @@ import com.vaadin.flow.component.grid.GridNoneSelectionModel;
 import com.vaadin.flow.component.internal.PendingJavaScriptInvocation;
 import com.vaadin.flow.component.messages.MessageInput;
 import com.vaadin.flow.component.messages.MessageListItem;
+import com.vaadin.flow.component.messages.MessageListUser;
 import com.vaadin.flow.internal.StateNode;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -326,13 +327,10 @@ class InsightWidgetTest {
                     .contains("TITLE:")
                     .contains("Never state a number")
                     .contains("This widget is a table and stays one");
-            // the orchestrator hands the session context to the model as a tool whose description carries it
-            assertThat(request.explicitTools())
-                    .filteredOn(tool -> tool.getName().equals("get_session_context"))
-                    .singleElement()
-                    .satisfies(tool -> assertThat(tool.getDescription())
-                            .contains("Current date and time: 2026-09-07T")
-                            .contains("(Monday, Europe/Helsinki)"));
+            // the session context, which the providers add to the user message for the model
+            assertThat(request.sessionContext())
+                    .contains("Current date and time: 2026-09-07T")
+                    .contains("(Monday, Europe/Helsinki)");
         });
         assertThat(widget.chat().messageList().getItems())
                 .extracting(MessageListItem::getUserName, MessageListItem::getText)
@@ -359,7 +357,7 @@ class InsightWidgetTest {
                 .containsExactly(tuple("Lars", 501), tuple(InsightWidget.ASSISTANT_NAME, 61));
         assertThat(widget.chat().messageList().getItems().getLast().getText())
                 .isEqualTo("A question can have at most 500 characters; this one has 501.");
-        assertThat(widget.thinkingIndicator().isVisible()).isFalse();
+        assertThat(typing(widget)).isEmpty();
         assertThat(widget.chat().messageInput().isEnabled()).isTrue();
 
         widget.ask("x".repeat(500));
@@ -525,7 +523,7 @@ class InsightWidgetTest {
         assertThat(remembered())
                 .containsExactly(
                         "Late shipments last month", "TITLE: Late shipments\nSUMMARY: Shipments after the date.");
-        assertThat(widget.thinkingIndicator().isVisible()).isFalse();
+        assertThat(typing(widget)).isEmpty();
         assertThat(widget.chat().messageInput().isEnabled()).isTrue();
         assertThat(widget.getTitle()).isEqualTo("Late shipments");
     }
@@ -560,13 +558,20 @@ class InsightWidgetTest {
 
         widget.ask("Late shipments last month");
 
-        assertThat(widget.thinkingIndicator().isVisible()).isTrue();
+        assertThat(typing(widget)).containsExactly(InsightWidget.ASSISTANT_NAME);
         assertThat(widget.chat().messageInput().isEnabled()).isFalse();
 
         waiting.answer("TITLE: Late shipments\nSUMMARY: Shipments after the promised date.");
 
-        assertThat(widget.thinkingIndicator().isVisible()).isFalse();
+        assertThat(typing(widget)).isEmpty();
         assertThat(widget.chat().messageInput().isEnabled()).isTrue();
+    }
+
+    /** Who the widget's chat shows typing. */
+    private static List<String> typing(InsightWidget widget) {
+        return widget.chat().messageList().getTypingUsers().stream()
+                .map(MessageListUser::getName)
+                .toList();
     }
 
     /**

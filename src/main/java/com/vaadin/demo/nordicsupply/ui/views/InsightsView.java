@@ -323,7 +323,7 @@ public class InsightsView extends PageView implements HasReadme {
         footnote.addClassName("footnote");
         var content = new Div();
         intro.setText(widget.description());
-        content.add(intro, widget.chat(), widget.thinkingIndicator(), footnote);
+        content.add(intro, widget.chat(), footnote);
         content.addClassName("popover-chat");
         var close = new Button(new SvgIcon("icons/x.svg"), e -> popover.close());
         close.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);

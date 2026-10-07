@@ -1,3 +1,8 @@
+html:has(.data-table) :is(#outlet, vaadin-app-layout, .page) {
+  height: 100%;
+  overflow: hidden;
+}
+
 .page > .data-table {
   flex: 1;
   align-self: stretch;
@@ -11,6 +16,7 @@
 
   > vaadin-text-field:first-child {
     margin: var(--vaadin-padding-l);
+    width: min(360px, calc(100% - var(--vaadin-padding-l) * 2));
   }
 
   > vaadin-grid {
@@ -30,26 +36,24 @@
   }
 }
 
-:where(vaadin-app-layout[overlay] .page > .data-table) {
+:where(vaadin-app-layout[overlay]) .page > .data-table {
   margin: calc(var(--view-padding) * -1);
   margin-top: 0;
-}
-
-/* Register the property so that it works in Chromium as expected when combined with a ::part() selector.
-Without it, all rows compute to the same index (even though the inspector shows a different number for each row) */
-@property --row-index {
-  syntax: "<number>";
-  inherits: true;
-  initial-value: 1;
+  border-inline-width: 0;
+  border-bottom-width: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .page.first-visit > .data-table {
-    animation: --slide-up-fade-in 0.5s 1.2s backwards;
+    animation: --slide-up 0.5s 1.2s backwards;
+    animation-name: --slide-up, --fade-in;
 
     vaadin-grid::part(body-row) {
-      --row-index: sibling-index();
-      animation: --slide-up-fade-in 0.4s calc(1.5s + var(--row-index) * 0.03s) backwards;
+      --sibling-index: sibling-index();
+      animation: --slide-up 0.4s calc(1.5s + var(--sibling-index) * 0.03s) backwards;
+      animation-name: --slide-up, --fade-in;
     }
   }
 }

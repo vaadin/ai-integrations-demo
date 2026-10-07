@@ -40,6 +40,8 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     private final Help help;
 
     public MainLayout(ShownReadmes shownReadmes, CurrentUser currentUser) {
+        getElement().setAttribute("no-scroll", "");
+
         var mark = new Div(new SvgIcon("icons/compass.svg"));
         mark.addClassName("mark");
         var name = new Span(COMPANY);

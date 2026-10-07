@@ -4,7 +4,45 @@ customElements.define('hero-title', class extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          display: grid;
+          display: contents;
+        }
+
+        .container {
+          /* Create a stacking context for the pseudo element. Without a top offset it won't do anything else */
+          position: sticky;
+          z-index: 1;
+          display: flex;
+          gap: var(--vaadin-gap-s);
+          padding-top: calc(var(--vaadin-padding-xl) + var(--vaadin-padding-xs));
+          margin-top: var(--hero-title-spacing, 3rem);
+          margin-bottom: var(--hero-title-spacing, 2.5rem);
+          transition: margin-top, margin-bottom;
+          transition-duration: 400ms;
+          transition-timing-function: cubic-bezier(0.66, 0, 0.34, 1);
+
+          &::before {
+            content: "";
+            position: absolute;
+            inset-inline: calc(var(--view-padding) * -1);
+            top: -100px;
+            height: 200px;
+            --_translucent: color-mix(in srgb, var(--aura-background-color) 70%, transparent);
+            background: linear-gradient(var(--aura-background-color) 100px, var(--_translucent) 110px, var(--_translucent) 140px, transparent);
+            backdrop-filter: blur(8px);
+            mask-image: linear-gradient(#000 160px, transparent);
+            opacity: 0;
+            pointer-events: none;
+          }
+        }
+
+        /* Enable sticky positioning on browsers that support scroll animation-timeline */
+        @supports (animation-timeline: scroll()) {
+          .container {
+            top: 0;
+          }
+        }
+
+        .deco, .titles {
           font-weight: 900;
           font-style: italic;
           font-stretch: 90%;
@@ -12,19 +50,6 @@ customElements.define('hero-title', class extends HTMLElement {
           letter-spacing: -1%;
           line-height: 1;
           text-transform: uppercase;
-          position: relative;
-          max-width: 100%;
-          width: 100%;
-        }
-
-        .deco, .front {
-          grid-row: 1;
-          grid-column: 1;
-          scale: var(--hero-title-scale, 0.71);
-          transform-origin: 0% 0%;
-          transition-property: scale, transform;
-          transition-duration: 400ms;
-          transition-timing-function: cubic-bezier(0.66, 0, 0.34, 1);
         }
 
         .deco, .subtitle {
@@ -32,26 +57,26 @@ customElements.define('hero-title', class extends HTMLElement {
         }
 
         .deco {
-          transition-delay: 100ms;
-          transition-duration: 320ms;
+          position: sticky;
+          top: 0;
+          z-index: -1;
           pointer-events: none;
-          position: absolute;
           font-size: 14rem;
+          line-height: 0.9;
           opacity: 0.2;
-          top: -2.2rem;
           inset-inline-start: 0.5rem;
           letter-spacing: -3%;
           white-space: nowrap;
           box-sizing: border-box;
           padding-inline-end: 0.2em;
-          max-width: 100%;
+          max-width: fit-content;
           overflow: hidden;
           background: radial-gradient(68% 70% at 46% 50%, var(--aura-accent-color) 0%, transparent 100%);
           background-clip: text;
           color: transparent;
           background-repeat: no-repeat;
-          animation: var(--hero-title-animation, sweep 3s 0.7s cubic-bezier(0.66, 0, 0.34, 1) backwards, fade 1s 0.7s linear backwards, slide2 2s 0.7s cubic-bezier(0.33, 1, 0.68, 1) backwards);
-          transform: translate(0, var(--hero-title-deco-translate, 0));
+          animation: var(--hero-title-animation, sweep 3s cubic-bezier(0.66, 0, 0.34, 1) backwards, fade 1s linear backwards, slide2 3.6s 0.2s cubic-bezier(0.33, 1, 0.68, 1) backwards);
+          margin-bottom: -1lh;
         }
 
         @-moz-document url-prefix() {
@@ -74,7 +99,7 @@ customElements.define('hero-title', class extends HTMLElement {
 
         @keyframes slide2 {
           0% {
-            translate: -15px 0;
+            translate: -24px 0;
           }
         }
 
@@ -84,10 +109,16 @@ customElements.define('hero-title', class extends HTMLElement {
           }
         }
 
-        .front {
-          z-index: 1;
+        .titles {
+          flex: 1;
           filter: drop-shadow(1px 1px 0.5px light-dark(transparent, rgba(0, 0, 0, 0.3)));
-          transform: translate(0, var(--hero-title-translate, 0));
+          scale: var(--hero-title-scale, 1);
+          transform-origin: 0 0;
+          translate: 0% var(--hero-title-translate, 0%);
+          transition: scale, translate;
+          transition-duration: 400ms;
+          transition-timing-function: cubic-bezier(0.66, 0, 0.34, 1);
+          text-wrap: balance;
         }
 
         .title {
@@ -98,7 +129,7 @@ customElements.define('hero-title', class extends HTMLElement {
           background: radial-gradient(67% 200% at 35% 50%, #fff 0%, transparent 100%) #333;
           background-repeat: no-repeat;
           background-clip: text;
-          animation: var(--hero-title-animation, fade 1s backwards, sweep 3s -2s cubic-bezier(0.66, 0, 0.34, 1), fill-color 1s 1s backwards);
+          animation: var(--hero-title-animation, fade 1s backwards, sweep 3s -2s cubic-bezier(0.66, 0, 0.34, 1), fill-color 1s 0.7s backwards);
           padding-inline-end: 0.2em;
         }
 
@@ -109,8 +140,13 @@ customElements.define('hero-title', class extends HTMLElement {
           background: radial-gradient(67% 200% at 35% 50%, var(--aura-accent-color) 0%, transparent 100%) color-mix(in srgb, var(--aura-accent-color) 30%, #000);
           background-repeat: no-repeat;
           background-clip: text;
-          animation: var(--hero-title-animation, fade 1.2s 0.2s backwards, sweep 3s -1.3s cubic-bezier(0.66, 0, 0.34, 1), fill-color 1s 1.3s backwards);
+          animation: var(--hero-title-animation, fade 1.2s 0.2s backwards, sweep 3s -1.3s cubic-bezier(0.66, 0, 0.34, 1), fill-color 1s 1s backwards);
           padding-inline-end: 0.2em;
+          transform-origin: inherit;
+          scale: min(1, var(--hero-title-scale) * 1.2);
+          transition: scale;
+          transition-duration: 400ms;
+          transition-timing-function: cubic-bezier(0.66, 0, 0.34, 1);
         }
 
         @keyframes fill-color {
@@ -118,11 +154,65 @@ customElements.define('hero-title', class extends HTMLElement {
             color: transparent;
           }
         }
+
+        @media (width < 500px), (height < 500px) {
+          .container {
+            padding-top: var(--view-padding);
+          }
+
+          .deco {
+            font-size: 10rem;
+          }
+
+          .title {
+            font-size: 1.75rem;
+          }
+
+          .subtitle {
+            font-size: 1.125rem;
+          }
+        }
+
+        @supports (animation-timeline: scroll()) {
+          .titles {
+            animation: var(--hero-title-scroll-animation, --hero-title-shrink linear both);
+            animation-timeline: scroll(nearest block);
+            animation-range: 30px 90px;
+          }
+
+          .container::before {
+            animation: --hero-title-mask-fade linear both;
+            animation-timeline: scroll(nearest block);
+            animation-range: 1px 40px;
+          }
+        }
+
+        @keyframes --hero-title-shrink {
+          0% {
+            scale: 1;
+          }
+          100% {
+            scale: 0.7;
+          }
+        }
+
+        @keyframes --hero-title-mask-fade {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
       </style>
       <div class="deco" aria-hidden="true"></div>
-      <div class="front">
-        <slot name="title" class="title"></slot>
-        <slot name="subtitle" class="subtitle"></slot>
+      <div class="container">
+        <slot name="prefix"></slot>
+        <div class="titles">
+          <slot name="title" class="title"></slot>
+          <slot name="subtitle" class="subtitle"></slot>
+        </div>
+        <slot name="suffix"></slot>
       </div>
     `;
 

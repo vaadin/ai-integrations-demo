@@ -8,7 +8,6 @@ import com.vaadin.flow.component.page.ColorScheme;
 import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.router.PageTitleGenerator;
 import com.vaadin.flow.server.AppShellSettings;
-import com.vaadin.flow.theme.aura.Aura;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +18,6 @@ import org.springframework.context.annotation.Bean;
  * a view of its own.
  */
 @SpringBootApplication
-@StyleSheet(Aura.STYLESHEET)
 @StyleSheet("styles.css")
 @ColorScheme(ColorScheme.Value.DARK)
 @Push

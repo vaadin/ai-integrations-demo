@@ -48,7 +48,6 @@ public class DataTable<T> extends VerticalLayout {
         setSpacing(false);
         setWidth(null);
         search.setPlaceholder(searchPlaceholder);
-        search.setWidth("360px");
         search.setPrefixComponent(VaadinIcon.SEARCH.create());
         search.setClearButtonVisible(true);
         search.setValueChangeMode(ValueChangeMode.LAZY);

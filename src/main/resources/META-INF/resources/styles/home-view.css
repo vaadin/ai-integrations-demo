@@ -1,7 +1,4 @@
 .home.page {
-  height: auto;
-  overflow: visible;
-
   hero-title {
     margin-bottom: 100px;
   }
@@ -84,8 +81,9 @@
       .about,
       .section-title,
       .start-card {
-        animation: --slide-up-fade-in 0.5s 1.2s backwards;
+        animation: --slide-up 0.5s 1.2s backwards;
         animation-delay: calc(1s + sibling-index() * 0.03s);
+        animation-name: --slide-up, --fade-in;
       }
 
       .start-card {

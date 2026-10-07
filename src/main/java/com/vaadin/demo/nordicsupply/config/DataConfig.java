@@ -27,8 +27,8 @@ import com.vaadin.demo.nordicsupply.session.Scopes;
 /**
  * The application's connection to the in-memory H2 database, and the load that fills it at start-up: the dataset's
  * schema script, its CSV files through H2's {@code CSVREAD} from the classpath, then the application's own
- * set-up scripts under {@code db/setup}, in file-name order, and last the scoped views, one schema per region from
- * one script with the region's countries filled in. The database lives only as long as the JVM, so every
+ * set-up scripts under {@code db/setup}, in file-name order, and last the scoped views, one schema per region and per
+ * country from one script with the scope's countries filled in. The database lives only as long as the JVM, so every
  * start rebuilds it and nothing is ever migrated: a change to what the application adds is a change to those
  * scripts. The load happens inside the data source's factory method so that every bean that depends on the data
  * source finds the data already there.
@@ -55,7 +55,7 @@ public class DataConfig {
     /** The application's own scripts, run after the dataset in file-name order. */
     private static final String SETUP_SCRIPTS = "classpath:db/setup/*.sql";
 
-    /** The scoped views and their account, run once per region with the placeholders filled in. */
+    /** The scoped views and their account, run once per region and per country with the placeholders filled in. */
     private static final String SCOPED_VIEWS = "db/scoped-views.sql";
 
     @Bean
@@ -74,7 +74,7 @@ public class DataConfig {
         return ds;
     }
 
-    /** The views script for one region: its schema, its account and its countries as SQL literals. */
+    /** The views script for one scope: its schema, its account and its countries as SQL literals. */
     private static String scopedViews(String template, Scope scope) {
         var countries = scope.countries().stream().map(c -> "'" + c + "'").collect(Collectors.joining(", "));
         return template.replace("${schema}", ScopedConnections.schemaFor(scope))
@@ -103,7 +103,7 @@ public class DataConfig {
                 ScriptUtils.executeSqlScript(con, new EncodedResource(script, StandardCharsets.UTF_8));
             }
             var views = new ClassPathResource(SCOPED_VIEWS).getContentAsString(StandardCharsets.UTF_8);
-            for (var scope : Scopes.roleScopes()) {
+            for (var scope : Scopes.all()) {
                 ScriptUtils.executeSqlScript(con, text(scopedViews(views, scope)));
             }
         }

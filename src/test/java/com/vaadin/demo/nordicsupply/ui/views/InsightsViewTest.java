@@ -7,7 +7,10 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,6 +39,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.messages.MessageListItem;
 import com.vaadin.flow.component.popover.Popover;
 import com.vaadin.flow.component.textfield.TextArea;
+import com.vaadin.flow.signals.shared.SharedValueSignal;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -57,8 +61,10 @@ import com.vaadin.demo.nordicsupply.domain.WidgetType;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.CurrentUser.SignedInUser;
 import com.vaadin.demo.nordicsupply.session.SavedDashboards;
+import com.vaadin.demo.nordicsupply.session.Scope;
 import com.vaadin.demo.nordicsupply.session.Scopes;
 import com.vaadin.demo.nordicsupply.ui.TestUi;
+import com.vaadin.demo.nordicsupply.ui.components.CountryFilter;
 import com.vaadin.demo.nordicsupply.ui.components.InsightWidget;
 import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
 
@@ -72,6 +78,9 @@ class InsightsViewTest {
     private final CurrentUser user = mock(CurrentUser.class);
     private final ScopedConnections connections = mock(ScopedConnections.class);
     private final SavedDashboards dashboards = mock(SavedDashboards.class);
+
+    /** The session's country filter, as the session bean holds it for every tab. */
+    private final SharedValueSignal<Scope> countries = new SharedValueSignal<>(Scopes.FI_EE);
 
     /** Every model the widgets were given, to tell whether any was asked something. */
     private final List<ScriptedProvider> models = new ArrayList<>();
@@ -100,6 +109,14 @@ class InsightsViewTest {
     InsightsViewTest() {
         modelAnswers(() -> new ScriptedProvider("TITLE: Late shipments\nSUMMARY: Shipments after the date."));
         when(user.get()).thenReturn(new SignedInUser(8, "Lars Nygaard", Scopes.FI_EE));
+        when(user.filterSignal()).thenReturn(countries.asReadonly());
+        when(user.filter()).thenAnswer(call -> countries.peek());
+        doAnswer(call -> {
+                    countries.set(call.getArgument(0));
+                    return null;
+                })
+                .when(user)
+                .setFilter(any());
         when(connections.templateFor(any())).thenReturn(new JdbcTemplate(region));
         view = open();
     }
@@ -491,6 +508,73 @@ class InsightsViewTest {
         assertThat(save().isEnabled()).isTrue();
     }
 
+    /** The filter is the session's: a page opens on the country another page of the visit narrowed it to. */
+    @Test
+    void thePageOpensOnTheSessionsCountryFilter() {
+        countries.set(Scopes.FI);
+        when(dashboards.forUser(eq(8), any())).thenReturn(List.of(savedTable(), savedChart()));
+
+        view = open();
+
+        assertThat(filter().getValue()).isEqualTo(Scopes.FI);
+        verify(connections, atLeastOnce()).templateFor(Scopes.FI);
+        verify(connections, never()).templateFor(argThat(scope -> !scope.equals(Scopes.FI)));
+    }
+
+    /** Choosing a country runs every widget's query again, on that country's connection, and asks the model nothing. */
+    @Test
+    void choosingACountryRunsEveryWidgetAgainOnItsConnection() {
+        when(dashboards.forUser(eq(8), any())).thenReturn(List.of(savedTable(), savedChart()));
+        view = open();
+        clearInvocations(connections);
+
+        filter().setValue(Scopes.FI);
+
+        verify(user).setFilter(Scopes.FI);
+        verify(connections, atLeast(2)).templateFor(Scopes.FI);
+        verify(connections, never()).templateFor(argThat(scope -> !scope.equals(Scopes.FI)));
+        assertThat(models).allSatisfy(model -> assertThat(model.requests()).isEmpty());
+    }
+
+    /** A saved query names no country, so choosing one leaves the dashboard as saved. */
+    @Test
+    void choosingACountryLeavesTheDashboardAsSaved() {
+        when(dashboards.forUser(eq(8), any())).thenReturn(List.of(savedTable()));
+        view = open();
+
+        filter().setValue(Scopes.EE);
+
+        assertThat(save().isEnabled()).isFalse();
+    }
+
+    @Test
+    void aCountryChosenInAnotherTabIsShownHere() {
+        when(dashboards.forUser(eq(8), any())).thenReturn(List.of(savedTable()));
+        view = open();
+        clearInvocations(connections);
+
+        countries.set(Scopes.EE);
+
+        assertThat(filter().getValue()).isEqualTo(Scopes.EE);
+        verify(connections, atLeastOnce()).templateFor(Scopes.EE);
+    }
+
+    @Test
+    void aQuestionIsAnsweredOnTheChosenCountrysConnection() {
+        modelAnswers(() -> new ScriptedProvider(
+                "TITLE: Orders\nSUMMARY: The orders.",
+                new ToolCall(
+                        "update_chart_data_source",
+                        "{\"queries\":[\"SELECT order_number AS category, 1 AS amount FROM orders\"]}")));
+        filter().setValue(Scopes.FI);
+        clearInvocations(connections);
+
+        ask("Our orders");
+
+        verify(connections, atLeastOnce()).templateFor(Scopes.FI);
+        verify(connections, never()).templateFor(argThat(scope -> !scope.equals(Scopes.FI)));
+    }
+
     @Test
     void theReadmeSaysWhatTheModelSeesAndPointsAtTheControllersDocumentation() {
         assertThat(view.readme()).contains("Only the database schema and today's date");
@@ -506,6 +590,14 @@ class InsightsViewTest {
                 .findFirst()
                 .orElseThrow()
                 .click();
+    }
+
+    private CountryFilter filter() {
+        return descendants(view)
+                .filter(CountryFilter.class::isInstance)
+                .map(CountryFilter.class::cast)
+                .findFirst()
+                .orElseThrow();
     }
 
     private Button save() {

@@ -35,8 +35,16 @@
   min-height: 3lh;
 }
 
-/* ---- Insights: the prompt, the New Query tile that holds it, the popover beside the selected widget, and the
-   widgets themselves ---- */
+/* ---- Insights: the country filter, the prompt, the New Query tile that holds it, the popover beside the selected
+   widget, and the widgets themselves ---- */
+/* the country filter in the heading: an outlined pill as tall as Save Dashboard beside it, with Aura's button
+   padding, so it reads as part of the heading rather than as a form field; wide enough for a region's two countries */
+.country-filter {
+  width: 12rem;
+  --vaadin-input-field-background: transparent;
+  --vaadin-input-field-padding: round(var(--vaadin-padding-s) / 1.4, 1px) var(--vaadin-padding-m);
+}
+
 /* the empty state and the dashboard's scroller take the page's width and the rest of its height */
 .insights-empty,
 .page-scroll {

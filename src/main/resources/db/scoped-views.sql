@@ -1,11 +1,17 @@
 -- The data scope the model's queries run under, enforced by the database. The loader runs this script once per
--- region, with the schema, the account and the region's countries filled in: one schema of views per read-only
--- account, each view filtering by the region's countries written into it, and the account may read that schema
--- and nothing else. A table without customers in it is visible in full. The views keep the base tables' names, so
--- the schema text the model reads needs no change.
+-- region, and once per country for the Insights country filter, with the schema, the account and the scope's
+-- countries filled in: one schema of views per read-only account, each view filtering by the countries written into
+-- it, and the account may read that schema and nothing else. A table without customers in it is visible in full.
+-- The views keep the base tables' names, so the schema text the model reads needs no change.
 -- The countries are literals on purpose: a view that reads CURRENT_USER() or a session variable cannot be cached
 -- by H2, so a subquery over it is re-run for every outer row and a natural question times out.
 -- In PostgreSQL the same design is a row-level security policy per role on the base tables.
+-- A schema per scope is not a general filtering pattern: it suits the country filter only because its values are
+-- few and fixed and each lies inside a region. A filter without a fixed set of values, such as a date range, or a
+-- second filter beside it, needs views that read a value set before each query (in PostgreSQL a policy reading
+-- current_setting()), at the cost above on H2. A query can reset such a value (H2's SET(), PostgreSQL's
+-- set_config()), so it may narrow what a user chose to see but never decide what they may see: that stays with the
+-- account or role.
 
 CREATE SCHEMA ${schema};
 

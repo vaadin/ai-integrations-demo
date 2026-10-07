@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import com.vaadin.flow.component.ComponentUtil;
@@ -420,6 +421,42 @@ class InsightWidgetTest {
                 .isEqualTo("The model wrote no reply. If the widget did not change as you asked, ask again.");
         assertThat(widget.getTitle()).isEqualTo("Open claims");
         assertThat(widget.description()).isEqualTo("Claims not yet resolved.");
+    }
+
+    /**
+     * A widget runs its query again on the connection its provider gives at that moment, as after a change of the
+     * country filter, and asks the model nothing.
+     */
+    @Test
+    void aRerunRunsTheQueryAgainOnTheConnectionOfTheMoment() {
+        var finland = new EmbeddedDatabaseBuilder()
+                .setType(EmbeddedDatabaseType.H2)
+                .setName("insightwidgettest-finland")
+                .build();
+        try {
+            var finnish = new JdbcTemplate(finland);
+            finnish.execute("CREATE TABLE weekly (country VARCHAR(20), wk VARCHAR(3), n INT)");
+            finnish.update("INSERT INTO weekly VALUES ('Finland', 'W36', 6)");
+            var connection = new AtomicReference<>(new JdbcTemplate(weekly));
+            var widget = new InsightWidget(
+                    WidgetType.CHART,
+                    "Orders per week",
+                    new JdbcDatabaseProvider(connection::get, new PackData()),
+                    conversations,
+                    "Lars",
+                    List.of());
+            ui.add(widget);
+            widget.restore("SELECT wk AS category, SUM(n) AS amount FROM weekly GROUP BY wk", null);
+            assertThat(chartOf(widget).getxAxis().getCategories()).containsExactly("W35", "W36");
+
+            connection.set(finnish);
+            widget.rerun();
+
+            assertThat(chartOf(widget).getxAxis().getCategories()).containsExactly("W36");
+            assertThat(model.requests()).isEmpty();
+        } finally {
+            finland.shutdown();
+        }
     }
 
     /** The model is asked not to select raw ids; the widget hides any that come anyway, and shows the rest. */

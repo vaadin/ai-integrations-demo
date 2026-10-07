@@ -57,7 +57,6 @@ import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider.ToolCall;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Address;
-import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Session;
 import com.vaadin.demo.nordicsupply.ai.budget.Budgets;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.config.PackData;
@@ -360,7 +359,7 @@ class InsightWidgetTest {
      */
     @Test
     void aQuestionOverTheBudgetIsAnsweredByTheChatAndNeverReachesTheModel() {
-        var widget = widget(WidgetType.GRID, model, Budgets.withSession(new Session(10, 1)));
+        var widget = widget(WidgetType.GRID, model, Budgets.withAddress(new Address(1, 3)));
 
         widget.ask("Late shipments last month");
         widget.ask("And the month before");
@@ -377,7 +376,7 @@ class InsightWidgetTest {
     /** A turn holds one of its caller's slots while it runs, and gives it back when it ends, answered or failed. */
     @Test
     void aTurnGivesItsSlotBackWhenItEndsAnsweredOrFailed() {
-        var oneAtATime = Budgets.withAddress(new Address(15, 120, 1));
+        var oneAtATime = Budgets.withAddress(new Address(120, 1));
         var answered = widget(WidgetType.GRID, model, oneAtATime);
         answered.ask("Late shipments last month");
         answered.ask("And the month before");

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import com.vaadin.demo.nordicsupply.ui.TestUi;
 
-/** A caller is the current session and the current request's address, each counted under a key of its own. */
+/** A caller is the current session, as the log names it, and the current request's address, counted under its key. */
 class CallerTest {
 
     @AfterEach
@@ -33,7 +33,7 @@ class CallerTest {
         var caller = Caller.current();
 
         assertThat(caller.session()).isNull();
-        assertThat(caller.sessionKey()).isEqualTo(Caller.UNKNOWN);
+        assertThat(caller.logged()).isEqualTo(Caller.UNKNOWN);
     }
 
     @Test

@@ -33,19 +33,17 @@ repository:
    is the one bound that holds whatever happens in the application, including a restart that resets the counters
    below; enforcement may let a little through while it propagates.
 2. **A budget in the application**, `app.ai.*` in `application.properties`, checked before anything is sent to the
-   model. A visitor is known by their session and their address (an IPv4 address, or an IPv6 /64 prefix); a
-   session costs nothing to replace, so the address and the instance carry the caps that hold. Each cap is a
-   property, set from the environment as Spring Boot maps it (`app.ai.instance.tokens-per-day` is
+   model. A visitor is known by their address (an IPv4 address, or an IPv6 /64 prefix): a session costs nothing to
+   replace, so it carries no cap and is only named in the log, and the address and the instance carry the caps. Each
+   cap is a property, set from the environment as Spring Boot maps it (`app.ai.instance.tokens-per-day` is
    `APP_AI_INSTANCE_TOKENS_PER_DAY`):
 
    | Property | Default | What it caps |
    |---|---|---|
    | `app.ai.enabled` | `true` | the kill switch: `false` refuses every turn with a word to the visitor |
-   | `app.ai.session.turns-per-minute` / `turns-per-day` | 10 / 60 | one session |
-   | `app.ai.address.turns-per-minute` / `turns-per-day` | 15 / 120 | one address, all its sessions together |
+   | `app.ai.address.turns-per-day` | 120 | one address, all its sessions together |
    | `app.ai.address.concurrent-turns` | 3 | turns one address has under way at once |
-   | `app.ai.instance.turns-per-day` | 1500 | the instance, everyone together |
-   | `app.ai.instance.tokens-per-day` | 3,000,000 | the instance, as the model reports its tokens |
+   | `app.ai.instance.tokens-per-day` | 3,000,000 | the instance, everyone together, as the model reports its tokens |
    | `app.ai.instance.tokens-per-unreported-turn` | 20,000 | what a turn counts for when the model reported no tokens: one that failed, or whose end never came |
    | `app.ai.turn-deadline` | 20m | how long a turn may stay open before it is let go; keep it above the longest turn the call bounds allow |
    | `app.ai.instance.concurrent-turns` | 6 | turns the instance has under way at once |

@@ -9,16 +9,16 @@ import com.vaadin.flow.server.VaadinRequest;
 import com.vaadin.flow.server.VaadinSession;
 
 /**
- * Who asks for a turn: the session and the address the question came from, both as the budget counts them. The
- * demo has no login, and the employee the session is signed in as can be switched by anyone, so neither names the
- * visitor. Read on the request thread: a turn runs off it, and there is no request to read by then.
+ * Who asks for a turn: the address the question came from, as the budget counts it, and the session, as the log names
+ * it. The demo has no login, and the employee the session is signed in as can be switched by anyone, so neither names
+ * the visitor. Read on the request thread: a turn runs off it, and there is no request to read by then.
  *
  * @param session the session's id, or {@code null} when there is no session
  * @param address the address the request came from, or {@code null} when there is no request
  */
 public record Caller(String session, String address) {
 
-    /** The key of a caller whose session or address is unknown; such callers are counted together. */
+    /** What stands for an unknown session or address; the callers without an address are counted together. */
     static final String UNKNOWN = "-";
 
     /** The characters of an IP literal, IPv4-mapped IPv6 included; anything else is counted as it was written. */
@@ -41,11 +41,6 @@ public record Caller(String session, String address) {
         var request = VaadinRequest.getCurrent();
         return new Caller(
                 session == null ? null : session.getPushId(), request == null ? null : request.getRemoteAddr());
-    }
-
-    /** The key the session is counted under. */
-    String sessionKey() {
-        return session == null ? UNKNOWN : session;
     }
 
     /** The session as the log names it: a short hash of its id, enough to tell sessions apart, and not the id. */

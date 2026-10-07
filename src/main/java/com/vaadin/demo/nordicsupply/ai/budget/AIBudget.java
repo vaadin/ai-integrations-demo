@@ -20,15 +20,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * The budget every turn is admitted against, before anything is sent to the model: what a session, an address and
- * the instance may start within a minute and a day, how many turns each may have under way, and the tokens the
- * instance may use in a day, all from {@link AIBudgetProperties}. A view asks with {@link #admit} and gets a
- * {@link Turn} to close when the turn ends, or a {@link Refusal} with the sentence to show. A turn still open after
- * the deadline in {@link AIBudgetProperties#turnDeadline()}, longer than any turn takes, is let go as one whose end
- * never comes, so that it cannot hold a slot until the next restart: its slots are freed and it is counted for the
- * allowance of a turn without reported tokens. Nothing here can stop its model work, so should its response arrive
- * after all, the tokens it reports take the allowance's place, once. The counts live in memory and start over with the
- * instance; the key's own spending limit is what holds across restarts.
+ * The budget every turn is admitted against, before anything is sent to the model: what an address may start within
+ * a day, how many turns an address and the instance may have under way, and the tokens the instance may use in a
+ * day, all from {@link AIBudgetProperties}. A view asks with {@link #admit} and gets a {@link Turn} to close when the
+ * turn ends, or a {@link Refusal} with the sentence to show. A turn still open after the deadline in
+ * {@link AIBudgetProperties#turnDeadline()}, longer than any turn takes, is let go as one whose end never comes, so
+ * that it cannot hold a slot until the next restart: its slots are freed and it is counted for the allowance of a
+ * turn without reported tokens. Nothing here can stop its model work, so should its response arrive after all, the
+ * tokens it reports take the allowance's place, once. The counts live in memory and start over with the instance;
+ * the key's own spending limit is what holds across restarts.
  * <p>
  * Every turn and every refusal is one line in the log, with the feature, a short hash of the session, the address,
  * and for a turn its outcome, the tokens the model reported and how long it took: what is needed to see who uses the
@@ -70,15 +70,13 @@ public class AIBudget {
         private final Caller caller;
         private final String feature;
         private final Instant started;
-        private final Window session;
         private final Window address;
         private State state = State.OPEN;
 
-        private Turn(Caller caller, String feature, Instant started, Window session, Window address) {
+        private Turn(Caller caller, String feature, Instant started, Window address) {
             this.caller = caller;
             this.feature = feature;
             this.started = started;
-            this.session = session;
             this.address = address;
         }
 
@@ -126,7 +124,6 @@ public class AIBudget {
 
         private void free() {
             running.remove(this);
-            session.inFlight--;
             address.inFlight--;
             instance.inFlight--;
         }
@@ -159,21 +156,14 @@ public class AIBudget {
         }
     }
 
-    /** The counts of one key, a session's, an address's or the instance's, rolled over as the minute and the day pass. */
+    /** The counts of one key, an address's or the instance's, rolled over as the day passes. */
     private static final class Window {
-        private long minute = Long.MIN_VALUE;
-        private int inMinute;
         private LocalDate day;
         private int inDay;
         private long tokensInDay;
         private int inFlight;
 
         void roll(Instant now, ZoneId zone) {
-            var epochMinute = now.getEpochSecond() / 60;
-            if (epochMinute != minute) {
-                minute = epochMinute;
-                inMinute = 0;
-            }
             var today = LocalDate.ofInstant(now, zone);
             if (!today.equals(day)) {
                 day = today;
@@ -183,7 +173,6 @@ public class AIBudget {
         }
 
         void start() {
-            inMinute++;
             inDay++;
             inFlight++;
         }
@@ -204,7 +193,7 @@ public class AIBudget {
 
     private static final String ABANDONED = "abandoned";
 
-    /** How many keys the maps hold before the ones idle since an earlier day are dropped. */
+    /** How many addresses the map holds before the ones idle since an earlier day are dropped. */
     static final int PRUNE_AT = 2000;
 
     /** The counts of a key not seen: nothing; read for the checks, never written to. */
@@ -213,7 +202,6 @@ public class AIBudget {
     private final AIBudgetProperties limits;
     private final Clock clock;
     private final ZoneId zone;
-    private final Map<String, Window> sessions = new HashMap<>();
     private final Map<String, Window> addresses = new HashMap<>();
     private final Window instance = new Window();
 
@@ -261,19 +249,9 @@ public class AIBudget {
         }
         prune(now, today);
         // looked up, not created: a refused request leaves no entry behind
-        var session = rolled(sessions.get(caller.sessionKey()), now);
         var address = rolled(addresses.get(caller.addressKey()), now);
-        if (session.inDay >= limits.session().turnsPerDay()) {
-            return refused(caller, feature, dayCap(limits.session().turnsPerDay()));
-        }
         if (address.inDay >= limits.address().turnsPerDay()) {
             return refused(caller, feature, dayCap(limits.address().turnsPerDay()));
-        }
-        if (session.inMinute >= limits.session().turnsPerMinute()) {
-            return refused(caller, feature, minuteCap(limits.session().turnsPerMinute()));
-        }
-        if (address.inMinute >= limits.address().turnsPerMinute()) {
-            return refused(caller, feature, minuteCap(limits.address().turnsPerMinute()));
         }
         if (address.inFlight >= limits.address().concurrentTurns()) {
             return refused(
@@ -281,12 +259,7 @@ public class AIBudget {
                     feature,
                     "You have " + address.inFlight + " questions in progress; wait for one to finish.");
         }
-        var turn = new Turn(
-                caller,
-                feature,
-                now,
-                started(sessions, caller.sessionKey(), now),
-                started(addresses, caller.addressKey(), now));
+        var turn = new Turn(caller, feature, now, started(caller.addressKey(), now));
         instance.start();
         running.add(turn);
         return turn;
@@ -327,8 +300,7 @@ public class AIBudget {
             return DISABLED;
         }
         instance.roll(now, zone);
-        if (instance.inDay >= limits.instance().turnsPerDay()
-                || instance.tokensInDay >= limits.instance().tokensPerDay()) {
+        if (instance.tokensInDay >= limits.instance().tokensPerDay()) {
             return EXHAUSTED;
         }
         return null;
@@ -343,35 +315,30 @@ public class AIBudget {
         return window;
     }
 
-    /** The key's counts with the turn that starts now, created for a key not seen before. */
-    private Window started(Map<String, Window> windows, String key, Instant now) {
-        var window = windows.computeIfAbsent(key, k -> new Window());
+    /** The address's counts with the turn that starts now, created for an address not seen before. */
+    private Window started(String address, Instant now) {
+        var window = addresses.computeIfAbsent(address, k -> new Window());
         window.roll(now, zone);
         window.start();
         return window;
     }
 
     /**
-     * Drops the keys idle since an earlier day, once there are many and at most once a minute: a key is created only
-     * for an admitted turn, so a day adds at most as many as the instance admits, and the walk is paid for rarely.
+     * Drops the addresses idle since an earlier day, once there are many and at most once a minute: an address is
+     * created only for an admitted turn, so a day adds at most one per turn, and the walk is paid for rarely.
      */
     private void prune(Instant now, LocalDate today) {
         var minute = now.getEpochSecond() / 60;
-        if (minute == lastPruned || sessions.size() + addresses.size() <= PRUNE_AT) {
+        if (minute == lastPruned || addresses.size() <= PRUNE_AT) {
             return;
         }
         lastPruned = minute;
-        sessions.values().removeIf(window -> window.idleSince(today));
         addresses.values().removeIf(window -> window.idleSince(today));
     }
 
-    /** How many sessions and addresses the budget keeps counts for, for the tests. */
+    /** How many addresses the budget keeps counts for, for the tests. */
     synchronized int tracked() {
-        return sessions.size() + addresses.size();
-    }
-
-    private static String minuteCap(int cap) {
-        return "You have sent " + cap + " questions within a minute; wait a little before the next one.";
+        return addresses.size();
     }
 
     private static String dayCap(int cap) {

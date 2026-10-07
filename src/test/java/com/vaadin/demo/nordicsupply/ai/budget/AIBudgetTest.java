@@ -20,11 +20,10 @@ import com.vaadin.demo.nordicsupply.ai.budget.AIBudget.Refusal;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudget.Turn;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Address;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Instance;
-import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Session;
 
 /**
- * A turn is admitted while its session, its address and the instance are within their caps, refused with a word to
- * the visitor otherwise; the minute and the day pass on the budget's clock, and a closed turn frees what it held.
+ * A turn is admitted while its address and the instance are within their caps, refused with a word to the visitor
+ * otherwise; the day passes on the budget's clock, and a closed turn frees what it held.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class AIBudgetTest {
@@ -53,17 +52,16 @@ class AIBudgetTest {
         }
     }
 
-    private static final Session SESSION = new Session(10, 60);
-    private static final Address ADDRESS = new Address(15, 120, 3);
-    private static final Instance INSTANCE = new Instance(1500, 3_000_000, 20_000, 6);
+    private static final Address ADDRESS = new Address(120, 3);
+    private static final Instance INSTANCE = new Instance(3_000_000, 20_000, 6);
     private static final Duration DEADLINE = Duration.ofMinutes(20);
     private static final Caller LARS = new Caller("session-lars", "203.0.113.7");
     private static final Caller MAIJA = new Caller("session-maija", "198.51.100.2");
 
     private final TestClock clock = new TestClock();
 
-    private AIBudget budget(Session session, Address address, Instance instance) {
-        return new AIBudget(new AIBudgetProperties(true, 500, 20_000, DEADLINE, session, address, instance), clock);
+    private AIBudget budget(Address address, Instance instance) {
+        return new AIBudget(new AIBudgetProperties(true, 500, 20_000, DEADLINE, address, instance), clock);
     }
 
     private static Turn admitted(Admission admission) {
@@ -84,7 +82,7 @@ class AIBudgetTest {
 
     @Test
     void withinTheLimitsEveryTurnIsAdmitted() {
-        var budget = budget(SESSION, ADDRESS, INSTANCE);
+        var budget = budget(ADDRESS, INSTANCE);
 
         assertThat(budget.admit(LARS, "insights")).isInstanceOf(Turn.class);
         assertThat(budget.admit(LARS, "claims")).isInstanceOf(Turn.class);
@@ -93,29 +91,15 @@ class AIBudgetTest {
     }
 
     @Test
-    void aSessionOverItsMinuteCapWaitsForTheNextMinute() {
-        var budget = budget(new Session(2, 60), ADDRESS, INSTANCE);
-        admitted(budget.admit(LARS, "insights")).abandon();
-        admitted(budget.admit(LARS, "insights")).abandon();
-
-        assertThat(refused(budget.admit(LARS, "insights")))
-                .isEqualTo("You have sent 2 questions within a minute; wait a little before the next one.");
-        // another session is not held back by Lars's
-        assertThat(budget.admit(MAIJA, "insights")).isInstanceOf(Turn.class);
-
-        clock.advance(Duration.ofMinutes(1));
-
-        assertThat(budget.admit(LARS, "insights")).isInstanceOf(Turn.class);
-    }
-
-    @Test
-    void aSessionOverItsDayCapWaitsForTomorrow() {
-        var budget = budget(new Session(10, 2), ADDRESS, INSTANCE);
+    void anAddressOverItsDayCapWaitsForTomorrow() {
+        var budget = budget(new Address(2, 3), INSTANCE);
         admitted(budget.admit(LARS, "insights")).abandon();
         admitted(budget.admit(LARS, "insights")).abandon();
 
         assertThat(refused(budget.admit(LARS, "insights")))
                 .isEqualTo("You have reached today's limit of 2 questions; the AI is available to you again tomorrow.");
+        // another address is not held back by Lars's
+        assertThat(budget.admit(MAIJA, "insights")).isInstanceOf(Turn.class);
 
         clock.advance(Duration.ofHours(14)); // past midnight in the clock's zone
 
@@ -124,19 +108,19 @@ class AIBudgetTest {
 
     @Test
     void theSessionsOfOneAddressShareItsCaps() {
-        var budget = budget(SESSION, new Address(2, 120, 3), INSTANCE);
+        var budget = budget(new Address(2, 3), INSTANCE);
         var otherTab = new Caller("session-lars-2", LARS.address());
         admitted(budget.admit(LARS, "insights")).abandon();
         admitted(budget.admit(otherTab, "insights")).abandon();
 
         assertThat(refused(budget.admit(new Caller("session-lars-3", LARS.address()), "insights")))
-                .isEqualTo("You have sent 2 questions within a minute; wait a little before the next one.");
+                .isEqualTo("You have reached today's limit of 2 questions; the AI is available to you again tomorrow.");
         assertThat(budget.admit(MAIJA, "insights")).isInstanceOf(Turn.class);
     }
 
     @Test
     void anIPv6AddressIsCountedByItsPrefix() {
-        var budget = budget(SESSION, new Address(1, 120, 3), INSTANCE);
+        var budget = budget(new Address(1, 3), INSTANCE);
         admitted(budget.admit(new Caller("a", "2001:db8:1:2:aaaa::1"), "insights"))
                 .abandon();
 
@@ -147,7 +131,7 @@ class AIBudgetTest {
 
     @Test
     void anAddressHasAFewTurnsUnderWayAtOnce() {
-        var budget = budget(SESSION, new Address(15, 120, 2), INSTANCE);
+        var budget = budget(new Address(120, 2), INSTANCE);
         var first = admitted(budget.admit(LARS, "insights"));
         admitted(budget.admit(LARS, "claims"));
 
@@ -161,7 +145,7 @@ class AIBudgetTest {
 
     @Test
     void theInstanceHasAsManyTurnsUnderWayAsItAffords() {
-        var budget = budget(SESSION, ADDRESS, new Instance(1500, 3_000_000, 20_000, 1));
+        var budget = budget(ADDRESS, new Instance(3_000_000, 20_000, 1));
         var running = admitted(budget.admit(LARS, "insights"));
 
         assertThat(refused(budget.admit(MAIJA, "insights"))).isEqualTo(AIBudget.BUSY);
@@ -174,12 +158,14 @@ class AIBudgetTest {
     }
 
     @Test
-    void theInstanceStopsForTheDayAtItsTurnBudget() {
-        var budget = budget(SESSION, ADDRESS, new Instance(2, 3_000_000, 20_000, 6));
-        admitted(budget.admit(LARS, "insights")).abandon();
-        admitted(budget.admit(MAIJA, "insights")).abandon();
+    void theInstanceStopsForTheDayAtItsTokenBudget() {
+        var budget = budget(ADDRESS, new Instance(100, 20_000, 6));
+        admitted(budget.admit(LARS, "insights")).close(answered(60));
 
-        assertThat(refused(budget.admit(LARS, "claims"))).isEqualTo(AIBudget.EXHAUSTED);
+        // under the budget still: the next turn starts, and may run over it
+        admitted(budget.admit(LARS, "insights")).close(answered(60));
+
+        assertThat(refused(budget.admit(MAIJA, "insights"))).isEqualTo(AIBudget.EXHAUSTED);
         assertThat(budget.paused()).contains(AIBudget.EXHAUSTED);
 
         clock.advance(Duration.ofDays(1));
@@ -188,25 +174,13 @@ class AIBudgetTest {
         assertThat(budget.admit(LARS, "claims")).isInstanceOf(Turn.class);
     }
 
-    @Test
-    void theInstanceStopsForTheDayAtItsTokenBudget() {
-        var budget = budget(SESSION, ADDRESS, new Instance(1500, 100, 20_000, 6));
-        admitted(budget.admit(LARS, "insights")).close(answered(60));
-
-        // under the budget still: the next turn starts, and may run over it
-        admitted(budget.admit(LARS, "insights")).close(answered(60));
-
-        assertThat(refused(budget.admit(MAIJA, "insights"))).isEqualTo(AIBudget.EXHAUSTED);
-        assertThat(budget.paused()).contains(AIBudget.EXHAUSTED);
-    }
-
     /**
      * A turn that ended without reported tokens may still have paid for model calls, a tool round before the call that
      * failed for one: it counts for the allowance. A turn that never ran counts nothing.
      */
     @Test
     void aTurnWithoutReportedTokensCountsTheAllowance() {
-        var budget = budget(SESSION, ADDRESS, new Instance(1500, 100, 60, 6));
+        var budget = budget(ADDRESS, new Instance(100, 60, 6));
         admitted(budget.admit(LARS, "insights")).abandon();
         admitted(budget.admit(LARS, "insights")).close(new ResponseEvent(null, new RuntimeException("down"), null));
 
@@ -221,8 +195,7 @@ class AIBudgetTest {
 
     @Test
     void switchedOffNobodyGetsATurn() {
-        var budget =
-                new AIBudget(new AIBudgetProperties(false, 500, 20_000, DEADLINE, SESSION, ADDRESS, INSTANCE), clock);
+        var budget = new AIBudget(new AIBudgetProperties(false, 500, 20_000, DEADLINE, ADDRESS, INSTANCE), clock);
 
         assertThat(refused(budget.admit(LARS, "insights"))).isEqualTo(AIBudget.DISABLED);
         assertThat(budget.paused()).contains(AIBudget.DISABLED);
@@ -230,7 +203,7 @@ class AIBudgetTest {
 
     @Test
     void aTurnClosedTwiceFreesItsSlotOnce() {
-        var budget = budget(SESSION, new Address(15, 120, 1), INSTANCE);
+        var budget = budget(new Address(120, 1), INSTANCE);
         var first = admitted(budget.admit(LARS, "insights"));
         first.close(answered(100));
         first.abandon();
@@ -240,19 +213,19 @@ class AIBudgetTest {
     }
 
     /**
-     * A refused request leaves no entry behind, however many fresh sessions ask from one address; a key is kept for
-     * an admitted turn alone, and dropped once it is idle since an earlier day and the keys have grown many.
+     * A refused request leaves no entry behind, however many fresh sessions ask from one address; an address is kept
+     * for an admitted turn alone, and dropped once it is idle since an earlier day and the addresses have grown many.
      */
     @Test
     void refusedRequestsLeaveNoEntriesAndIdleOnesAreDropped() {
-        var budget = budget(SESSION, new Address(1, 120, 3), new Instance(10_000, 3_000_000, 20_000, 6));
+        var budget = budget(new Address(1, 3), INSTANCE);
         admitted(budget.admit(LARS, "insights")).abandon();
         for (int i = 0; i < 5000; i++) {
             assertThat(budget.admit(new Caller("fresh-" + i, LARS.address()), "insights"))
                     .isInstanceOf(Refusal.class);
         }
 
-        assertThat(budget.tracked()).isEqualTo(2);
+        assertThat(budget.tracked()).isEqualTo(1);
 
         // many sessions admitted today, each its own address: kept while the day lasts
         for (int i = 0; i < AIBudget.PRUNE_AT; i++) {
@@ -264,7 +237,7 @@ class AIBudgetTest {
         clock.advance(Duration.ofDays(1));
         admitted(budget.admit(MAIJA, "insights")).abandon();
 
-        assertThat(budget.tracked()).isEqualTo(2);
+        assertThat(budget.tracked()).isEqualTo(1);
     }
 
     /**
@@ -274,7 +247,7 @@ class AIBudgetTest {
      */
     @Test
     void aTurnOpenPastTheDeadlineIsLetGoAndALateResponseIsStillCounted(CapturedOutput output) {
-        var budget = budget(SESSION, new Address(15, 120, 1), new Instance(1500, 130_000, 20_000, 6));
+        var budget = budget(new Address(120, 1), new Instance(130_000, 20_000, 6));
         var late = admitted(budget.admit(LARS, "insights"));
         clock.advance(DEADLINE.minusSeconds(1));
 
@@ -300,7 +273,7 @@ class AIBudgetTest {
     /** A turn let go whose response fails after all keeps the allowance it was counted for. */
     @Test
     void aTurnLetGoThatFailsLateKeepsTheAllowance() {
-        var budget = budget(SESSION, ADDRESS, new Instance(1500, 50_000, 20_000, 6));
+        var budget = budget(ADDRESS, new Instance(50_000, 20_000, 6));
         var late = admitted(budget.admit(LARS, "insights"));
         clock.advance(DEADLINE);
         admitted(budget.admit(MAIJA, "insights")).abandon();
@@ -319,7 +292,7 @@ class AIBudgetTest {
     /** Every turn and every refusal is a line in the log: who, which feature, what became of it; never the question. */
     @Test
     void everyTurnAndEveryRefusalIsOneLineInTheLog(CapturedOutput output) {
-        var budget = budget(new Session(1, 60), ADDRESS, INSTANCE);
+        var budget = budget(new Address(1, 3), INSTANCE);
         admitted(budget.admit(LARS, "insights")).close(answered(120));
         budget.admit(LARS, "claims");
 
@@ -329,13 +302,13 @@ class AIBudgetTest {
                         + " address=203.0.113.7 tokens=110+10 duration=0ms")
                 .contains("AI turn refused: feature=claims session="
                         + Integer.toHexString(LARS.session().hashCode())
-                        + " address=203.0.113.7 reason=\"You have sent 1 questions within a minute;")
+                        + " address=203.0.113.7 reason=\"You have reached today's limit of 1 questions;")
                 .doesNotContain(LARS.session());
     }
 
     @Test
     void aCallerWithoutASessionOrAnAddressIsCountedToo() {
-        var budget = budget(new Session(1, 60), ADDRESS, INSTANCE);
+        var budget = budget(new Address(1, 3), INSTANCE);
         var unknown = new Caller(null, null);
         admitted(budget.admit(unknown, "insights")).abandon();
 

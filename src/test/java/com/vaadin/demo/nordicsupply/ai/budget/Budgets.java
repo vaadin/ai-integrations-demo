@@ -4,38 +4,19 @@ import java.time.Duration;
 
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Address;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Instance;
-import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Session;
 
 /** Budgets for the tests: the production defaults, or those with one part of the limits replaced. */
 public final class Budgets {
 
     /** The production defaults, as {@link AIBudgetProperties} declares them. */
     public static final AIBudgetProperties DEFAULTS = new AIBudgetProperties(
-            true,
-            500,
-            20_000,
-            Duration.ofMinutes(20),
-            new Session(10, 60),
-            new Address(15, 120, 3),
-            new Instance(1500, 3_000_000, 20_000, 6));
+            true, 500, 20_000, Duration.ofMinutes(20), new Address(120, 3), new Instance(3_000_000, 20_000, 6));
 
     private Budgets() {}
 
     /** A budget with the production defaults, generous enough for a test. */
     public static AIBudget budget() {
         return new AIBudget(DEFAULTS);
-    }
-
-    /** The defaults with the session's limits replaced. */
-    public static AIBudget withSession(Session session) {
-        return new AIBudget(new AIBudgetProperties(
-                true,
-                DEFAULTS.maxQuestionLength(),
-                DEFAULTS.maxTextLength(),
-                DEFAULTS.turnDeadline(),
-                session,
-                DEFAULTS.address(),
-                DEFAULTS.instance()));
     }
 
     /** The defaults with the address's limits replaced. */
@@ -45,7 +26,6 @@ public final class Budgets {
                 DEFAULTS.maxQuestionLength(),
                 DEFAULTS.maxTextLength(),
                 DEFAULTS.turnDeadline(),
-                DEFAULTS.session(),
                 address,
                 DEFAULTS.instance()));
     }
@@ -57,7 +37,6 @@ public final class Budgets {
                 DEFAULTS.maxQuestionLength(),
                 DEFAULTS.maxTextLength(),
                 DEFAULTS.turnDeadline(),
-                DEFAULTS.session(),
                 DEFAULTS.address(),
                 instance));
     }
@@ -69,7 +48,6 @@ public final class Budgets {
                 DEFAULTS.maxQuestionLength(),
                 DEFAULTS.maxTextLength(),
                 DEFAULTS.turnDeadline(),
-                DEFAULTS.session(),
                 DEFAULTS.address(),
                 DEFAULTS.instance()));
     }

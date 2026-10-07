@@ -197,7 +197,7 @@ class ClaimsViewTest {
         var stayingModel = new ScriptedProvider("The form is filled in.");
         var conversations = mock(Conversations.class);
         when(conversations.standalone()).thenReturn(goneModel, stayingModel);
-        var oneAtATime = Budgets.withAddress(new Address(15, 120, 1));
+        var oneAtATime = Budgets.withAddress(new Address(120, 1));
         var gone = viewFor(HEAD_OFFICE, conversations, oneAtATime);
         var staying = viewFor(HEAD_OFFICE, conversations, oneAtATime);
         withSession.add(gone, staying);

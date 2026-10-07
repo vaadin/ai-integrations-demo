@@ -18,6 +18,12 @@ import com.vaadin.demo.nordicsupply.session.Scopes;
  * rows of the signed-in user's countries, or of the one country they narrowed to, because the database says so, not
  * because the question was phrased that way.
  * <p>
+ * An account per scope suits the country filter only because its values are few and fixed and each lies inside a
+ * region; it is not a pattern for filtering in general. A date range, or a second filter, needs views that read a
+ * value the application sets before each query, or in PostgreSQL a policy reading {@code current_setting()}, and on
+ * H2 such a view cannot be cached (see {@code db/scoped-views.sql}). A query can reset such a value, so it may narrow
+ * what a user chose to see, but what they may see stays with the account or role.
+ * <p>
  * The accounts exist to give the database a user to filter by; the demo's users switch between them freely, and the
  * password is the one the script writes. A deployment on a real database creates the accounts and keeps their
  * credentials with its other secrets, outside the repository.

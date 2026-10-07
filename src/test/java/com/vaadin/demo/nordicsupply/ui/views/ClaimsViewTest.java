@@ -240,6 +240,17 @@ class ClaimsViewTest {
                         .containsExactly(tuple("Pasted text", "text/plain")));
     }
 
+    /** The cap on a file's size holds on the server too, where a request made outside the browser lands. */
+    @Test
+    void aFileOverTheCapIsRefusedOnTheServerToo() {
+        var cap = 10 * 1024 * 1024;
+
+        assertThat(ClaimsView.overTheFileCap(new AIAttachment("photo.jpg", "image/jpeg", new byte[cap + 1])))
+                .contains("The AI reads emails, text files, PDFs and images of up to 10 MB.");
+        assertThat(ClaimsView.overTheFileCap(new AIAttachment("photo.jpg", "image/jpeg", new byte[cap])))
+                .isEmpty();
+    }
+
     /** The cap on a text holds for an uploaded file as for a pasted text; a PDF or an image is bounded otherwise. */
     @Test
     void anUploadedTextIsCappedLikeAPastedOne() {

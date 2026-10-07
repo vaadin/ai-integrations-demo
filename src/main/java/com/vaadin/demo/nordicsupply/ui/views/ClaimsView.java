@@ -173,6 +173,9 @@ public class ClaimsView extends PageView implements HasReadme {
 
     private static final long MAX_FILE_SIZE = 10L * 1024 * 1024;
 
+    /** What the visitor is told of a file the AI does not read: too large, or of a kind it does not take. */
+    private static final String REFUSED_FILE = "The AI reads emails, text files, PDFs and images of up to 10 MB.";
+
     /** How the budget names the form's turns. */
     private static final String FEATURE = "claims";
 
@@ -274,7 +277,7 @@ public class ClaimsView extends PageView implements HasReadme {
             manager.clearFileList();
             read(new AIAttachment(file.fileName(), mimeTypeOf(file.fileName()), data));
         }));
-        manager.addFileRejectedListener(e -> warn("The AI reads emails, text files, PDFs and images of up to 10 MB."));
+        manager.addFileRejectedListener(e -> warn(REFUSED_FILE));
 
         var choose = new UploadButton("Choose", manager);
         choose.addThemeVariants(ButtonVariant.TERTIARY);
@@ -395,9 +398,10 @@ public class ClaimsView extends PageView implements HasReadme {
         if (reading.peek() != null) {
             return;
         }
-        var tooLong = overTheTextCap(attachment, budget.limits().maxTextLength());
-        if (tooLong.isPresent()) {
-            warn(tooLong.get());
+        var refused = overTheFileCap(attachment)
+                .or(() -> overTheTextCap(attachment, budget.limits().maxTextLength()));
+        if (refused.isPresent()) {
+            warn(refused.get());
             return;
         }
         AIAttachment message;
@@ -438,6 +442,15 @@ public class ClaimsView extends PageView implements HasReadme {
                 warn(refused.reason());
             }
         }
+    }
+
+    /**
+     * Why a file is not read, when it is larger than the cap: the sentence for the visitor. The browser checks the
+     * cap before it sends a file, which a request made outside the browser passes by; the file is in memory by the
+     * time it gets here, and this keeps it from the model. Empty for a message within the cap.
+     */
+    static Optional<String> overTheFileCap(AIAttachment attachment) {
+        return attachment.data().length > MAX_FILE_SIZE ? Optional.of(REFUSED_FILE) : Optional.empty();
     }
 
     /**

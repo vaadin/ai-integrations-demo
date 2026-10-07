@@ -9,7 +9,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * How much of the model a visitor gets, the {@code app.ai.*} properties. The demo has no login, so a visitor is
  * known by their address: a session costs nothing to replace, so it carries no cap and is only named in the log. The
  * instance's day budget is the one to size from the key's own spending limit: it is what stops a visitor who comes
- * from many addresses.
+ * from many addresses. The address's caps are sized for an office behind one address, not for one person, and the
+ * day budget for the model's price: two billion tokens is some thirty thousand turns.
  *
  * @param enabled whether the AI features answer at all; off, every turn is refused with a word to the visitor
  * @param maxQuestionLength the longest question a chat takes, in characters
@@ -26,7 +27,7 @@ public record AIBudgetProperties(
         @DefaultValue("true") boolean enabled,
         @DefaultValue("500") int maxQuestionLength,
         @DefaultValue("20000") int maxTextLength,
-        @DefaultValue("20m") Duration turnDeadline,
+        @DefaultValue("45m") Duration turnDeadline,
         @DefaultValue Address address,
         @DefaultValue Instance instance) {
 
@@ -37,8 +38,8 @@ public record AIBudgetProperties(
      * @param concurrentTurns the turns an address may have under way at once
      */
     public record Address(
-            @DefaultValue("120") int turnsPerDay,
-            @DefaultValue("3") int concurrentTurns) {}
+            @DefaultValue("500") int turnsPerDay,
+            @DefaultValue("10") int concurrentTurns) {}
 
     /**
      * What this instance gives out in all.
@@ -50,7 +51,7 @@ public record AIBudgetProperties(
      * @param concurrentTurns the turns the instance has under way at once
      */
     public record Instance(
-            @DefaultValue("3000000") long tokensPerDay,
+            @DefaultValue("2000000000") long tokensPerDay,
             @DefaultValue("20000") long tokensPerUnreportedTurn,
-            @DefaultValue("6") int concurrentTurns) {}
+            @DefaultValue("50") int concurrentTurns) {}
 }

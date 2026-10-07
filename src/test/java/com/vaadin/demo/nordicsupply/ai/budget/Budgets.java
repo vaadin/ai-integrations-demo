@@ -10,7 +10,7 @@ public final class Budgets {
 
     /** The production defaults, as {@link AIBudgetProperties} declares them. */
     public static final AIBudgetProperties DEFAULTS = new AIBudgetProperties(
-            true, 500, 20_000, Duration.ofMinutes(20), new Address(120, 3), new Instance(3_000_000, 20_000, 6));
+            true, 500, 20_000, Duration.ofMinutes(45), new Address(500, 10), new Instance(2_000_000_000L, 20_000, 50));
 
     private Budgets() {}
 

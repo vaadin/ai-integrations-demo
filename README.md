@@ -41,25 +41,26 @@ repository:
    | Property | Default | What it caps |
    |---|---|---|
    | `app.ai.enabled` | `true` | the kill switch: `false` refuses every turn with a word to the visitor |
-   | `app.ai.address.turns-per-day` | 120 | one address, all its sessions together |
-   | `app.ai.address.concurrent-turns` | 3 | turns one address has under way at once |
-   | `app.ai.instance.tokens-per-day` | 3,000,000 | the instance, everyone together, as the model reports its tokens |
+   | `app.ai.address.turns-per-day` | 500 | one address, all its sessions together: an office behind one address, not one person |
+   | `app.ai.address.concurrent-turns` | 10 | turns one address has under way at once |
+   | `app.ai.instance.tokens-per-day` | 2,000,000,000 | the instance, everyone together, as the model reports its tokens |
    | `app.ai.instance.tokens-per-unreported-turn` | 20,000 | what a turn counts for when the model reported no tokens: one that failed, or whose end never came |
-   | `app.ai.turn-deadline` | 20m | how long a turn may stay open before it is let go; keep it above the longest turn the call bounds allow |
-   | `app.ai.instance.concurrent-turns` | 6 | turns the instance has under way at once |
+   | `app.ai.turn-deadline` | 45m | how long a turn may stay open before it is let go; keep it above the longest turn the call bounds allow |
+   | `app.ai.instance.concurrent-turns` | 50 | turns the instance has under way at once |
    | `app.ai.max-question-length` | 500 | characters in a question to a widget |
    | `app.ai.max-text-length` | 20,000 | characters of text in a message to the claim form, pasted or uploaded |
 
    Size `tokens-per-day` from the key's monthly limit and the model's price; it is what stops a visitor who comes
-   from many addresses. The counts live in memory and start over with the instance. A turn is counted when its model
+   from many addresses. A chart turn costs some 35,000 tokens and a claim some 70,000, nearly all of them input, so
+   the default is about thirty thousand turns a day. The counts live in memory and start over with the instance. A turn is counted when its model
    request starts. One whose end never comes is let go at the deadline: its slots are freed and it is counted for the
    allowance, and a response that arrives after all is counted in the allowance's place. Nothing can stop the model
    work of a turn let go, so keep the deadline above the longest turn the call bounds allow: the tool calls of a turn
    plus one, times the timeout, times the attempts per call. While the instance's day budget is spent, or the switch
    is off, the Insights and Claims pages say so under their headings.
 3. **Bounds on one model call**, also in `application.properties`: the longest reply
-   (`AI_MAX_COMPLETION_TOKENS`, 4000), the tool calls a turn may make (`AI_MAX_TOOL_CALLS`, 8, and
-   `AI_MAX_CALLS_PER_TOOL`, 6), the OpenAI client's own retries of a failed call (`AI_MAX_RETRIES`, 1; a quota
+   (`AI_MAX_COMPLETION_TOKENS`, 8000), the tool calls a turn may make (`AI_MAX_TOOL_CALLS`, 20, and
+   `AI_MAX_CALLS_PER_TOOL`, 10), the OpenAI client's own retries of a failed call (`AI_MAX_RETRIES`, 1; a quota
    error is retried like any other), and a timeout. A file for the claim form is at most 10 MB, checked in the
    browser and again on the server, and a PDF reaches the model cut to the ten pages the form shows.
 

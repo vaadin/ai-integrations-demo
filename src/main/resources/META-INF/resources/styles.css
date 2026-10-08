@@ -12,9 +12,26 @@
 @import "./styles/insights-view.css";
 @import "./styles/claims-view.css";
 
-@keyframes --slide-up-fade-in {
+@keyframes --fade-in {
   0% {
-    translate: 0 60px;
     opacity: 0;
   }
+}
+
+@keyframes --slide-up {
+  0% {
+    translate: 0 60px;
+  }
+}
+
+/* Register a custom property so that sibling-index() works in Chromium as expected.
+Without it, all children compute to the same index (even though the inspector shows a different number for each row) */
+@property --sibling-index {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+#outlet {
+  height: auto;
 }

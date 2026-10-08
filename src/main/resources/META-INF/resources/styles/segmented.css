@@ -16,7 +16,7 @@ vaadin-radio-group.segmented.aura-surface {
 
   /* one grid cell for the label: the circle's column and the gap after it go with the circle */
   > vaadin-radio-button {
-    flex: 1;
+    flex: auto;
     min-width: 0;
     grid-template-columns: 1fr;
     column-gap: 0;

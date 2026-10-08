@@ -133,34 +133,98 @@ vaadin-button.rail-button {
 }
 
 vaadin-popover.help {
-  --vaadin-popover-padding: var(--vaadin-padding-xl);
-}
+  --vaadin-popover-padding: var(--vaadin-padding-s);
+  --vaadin-popover-border-radius: var(--vaadin-radius-m);
+  --vaadin-popover-arrow-inset: var(--vaadin-radius-m);
+  --vaadin-popover-arrow-size: 12px;
 
-/* "Read more" is the popover's own, outside vaadin-markdown, so it takes the Markdown's spacing: the space above a
-   section heading, and a list's indent, line height and muted bullets */
-vaadin-popover.help > h3 {
-  margin-top: 1.4em;
-}
+  &[opening] {
+    --vaadin-overlay-animation-duration: 0.5s;
+  }
 
-vaadin-popover.help > ul {
-  margin-block: 1.25em;
-  padding-inline-start: 1.625em;
-  line-height: 1.6;
-}
+  &::part(overlay) {
+    width: 25em;
+    max-height: 50vh;
+    color: var(--vaadin-text-color-secondary);
+  }
 
-vaadin-popover.help > ul > li {
-  margin-block: 0.5em;
-  padding-inline-start: 0.375em;
-}
+  > vaadin-markdown:not(:empty) {
+    padding-inline: var(--vaadin-padding-m);
+  }
 
-vaadin-popover.help > ul > li::marker {
-  color: var(--vaadin-text-color-disabled);
-}
+  vaadin-accordion:only-child {
+    height: 100%;
+  }
 
-/* Delay the opening of the help popover when it's shown for the first time */
-body:has(.first-visit) vaadin-popover.help[opening] {
-  --vaadin-overlay-animation-duration: 1s;
-  --vaadin-overlay-animation-delay: 1s;
+  vaadin-accordion,
+  vaadin-accordion-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  vaadin-accordion-panel {
+    min-height: 0;
+
+    &:not([opened]) {
+      flex: none;
+    }
+
+    &::part(content) {
+      overflow: auto;
+    }
+
+    + vaadin-accordion-panel {
+      border-top: 1px solid var(--vaadin-border-color-secondary);
+    }
+  }
+
+  vaadin-accordion-heading {
+    padding: var(--vaadin-padding-s);
+    font-weight: var(--aura-font-weight-semibold);
+
+    &::part(toggle) {
+      color: var(--aura-accent-color);
+    }
+  }
+
+  p {
+    margin-block: var(--vaadin-padding-s);
+  }
+
+  b,
+  strong {
+    color: var(--vaadin-text-color);
+    font-weight: var(--aura-font-weight-medium);
+  }
+
+  a {
+    font-weight: var(--aura-font-weight-medium);
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: var(--vaadin-text-color);
+  }
+
+  .read-more {
+    ul {
+      margin-block: 0;
+      padding-inline-start: 0;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+    }
+
+    li::marker {
+      color: var(--vaadin-text-color-disabled);
+    }
+
+    a {
+      display: block;
+    }
+  }
+
 }
 
 /* the "start here" marker on the rail's Insights entry */
@@ -172,6 +236,7 @@ body:has(.first-visit) vaadin-popover.help[opening] {
   padding: 4px;
   cursor: help;
   position: relative;
+  animation: --hide-poi 0.00001s linear forwards paused;
 
   &::before {
     content: "";
@@ -188,16 +253,26 @@ body:has(.first-visit) vaadin-popover.help[opening] {
     border-radius: 50%;
     border: 2px solid var(--aura-accent-color);
     opacity: 0;
-    animation: poi-pulse 3s 6s infinite;
+    animation: --poi-pulse 3s 6s infinite;
     scale: 0.25;
   }
 }
 
-@keyframes poi-pulse {
+@keyframes --poi-pulse {
   20% {
     opacity: 0.5;
   }
   100% {
     scale: 1.5;
+  }
+}
+
+vaadin-side-nav-item[current] .poi-indicator {
+  animation-play-state: running;
+}
+
+@keyframes --hide-poi {
+  100% {
+    display: none;
   }
 }

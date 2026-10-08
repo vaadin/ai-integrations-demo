@@ -78,64 +78,37 @@ public class InsightsView extends PageView implements HasReadme {
 
     private static final String POPOVER_HEIGHT = "500px";
 
-    private static final String README = """
-            ### What this page does
+    private static final List<ReadmeSection> README_SECTIONS = List.of(
+            new ReadmeSection("Create and Edit Widgets with AI", """
+                    **Ask questions about orders, shipments, claims or products**. The answer appears as a chart or table on your dashboard.
 
-            You are an analyst on the **Nordic Supply** order desk. Type a question about orders, shipments, claims or
-            products, choose whether to render it as a chart or a table, and press the arrow. The answer appears as a
-            widget on your dashboard, named and described by the assistant in business terms. **Edit** in a widget's
-            header opens its chat beside it, so you can refine it: "group it by week", "only the Göteborg warehouse",
-            "add the customer", "call it Late orders". A table stays a table and a chart stays a chart; the **New
-            Query** tile at the end of the dashboard asks the next question.
+                    Only the database schema is sent to the AI model. No data ever leaves your network. Every widget shows what data it's based on.
 
-            ### Things to try
-
-            * *Which orders shipped after the promised date last month, by customer*
-            * *Late shipments last month, by week* as a chart, then in its chat: *make it a line chart*
-            * *Which carrier delivered late most often last month?*
-            * *Claims open over 7 days*
-            * Open a saved widget's chat: the question that made it is still there, and a follow-up is answered in
-              context.
-
-            ### How you know the answer is right
-
-            Every widget says what it contains and what was counted. Ask its chat which data the answer is based on and
-            how it was worked out. When a question can be read in two ways, the assistant tells you which reading it
-            used.
-
-            ### What the model sees
-
-            Only the database schema and today's date. The rows you see never leave your network: the model writes a
-            query, the application runs it on a read-only account, and the result goes straight to the widget. A
-            question sees the rows of your own region only.
-
-            ### Countries
-
-            The filter at the top of the page narrows the dashboard to one of your countries, or widens it back to
-            your whole region. Every widget runs its query again, and new questions see only what the filter shows.
-            The database applies it, so it can only narrow what your region shows. It stays for your visit, in every
-            tab, and goes back to your region when you switch user.
-
-            ### Your dashboard
-
-            Every demo user starts with a dashboard of their own, two to five widgets. Move, resize and remove widgets
-            as you like, and press **Save Dashboard** to keep the dashboard as it is, chats included, for the rest of
-            your visit: a reload, another tab or a switch of user and back brings it back. Until then, leaving the
-            page or reloading it goes back to the saved one. What you save is yours alone: nobody else sees it, and a
-            new visit starts from the seeded widgets again. A widget without a result is not kept. To rename a widget,
-            tell its chat the name you want.
-            """;
+                    Click **Edit** to refine a widget, for example: "group it by week", "only the Göteborg warehouse", "add the customer", "call it Late orders".
+                    """),
+            new ReadmeSection("Filter by Country", """
+                    **The country filter** at the top of the page narrows the dashboard to one of your countries.
+                    The database applies it, so it can only narrow what your region shows.
+                    """),
+            new ReadmeSection("Save Your Dashboard", """
+                    Move, resize and remove widgets
+                    as you like, and press **Save Dashboard** to keep the dashboard as it is, chats included, for the rest of
+                    your visit.
+                    """));
 
     private static final List<Link> READ_MORE = List.of(
             new Link(
                     "AI-powered Grid",
                     "https://vaadin.com/docs/latest/flow/ai-support/ai-powered-grid",
-                    "the controller behind a table widget"),
+                    "The controller behind a table widget"),
             new Link(
                     "AI-powered Chart",
                     "https://vaadin.com/docs/latest/flow/ai-support/ai-powered-chart",
-                    "the controller behind a chart widget"),
-            new Link("AI support in Vaadin Flow", "https://vaadin.com/docs/latest/flow/ai-support", "the overview"));
+                    "The controller behind a chart widget"),
+            new Link(
+                    "AI support in Vaadin Flow",
+                    "https://vaadin.com/docs/latest/flow/ai-support",
+                    "Overview of the AI support"));
 
     /** Suggested questions: the dataset's for a table, and three that fit a chart's shape. */
     private static final List<String> TABLE_CHIPS =
@@ -289,7 +262,12 @@ public class InsightsView extends PageView implements HasReadme {
 
     @Override
     public String readme() {
-        return README;
+        return null;
+    }
+
+    @Override
+    public List<ReadmeSection> readmeSections() {
+        return README_SECTIONS;
     }
 
     @Override

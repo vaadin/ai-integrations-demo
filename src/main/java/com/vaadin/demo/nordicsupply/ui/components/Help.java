@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.icon.SvgIcon;
 
@@ -20,7 +21,7 @@ import com.vaadin.demo.nordicsupply.session.ShownReadmes;
  */
 public class Help extends Button {
 
-    private static final int FIRST_VISIT_MILLIS = 4_000;
+    private static final int FIRST_VISIT_MILLIS = 3_000;
 
     private final ShownReadmes shownReadmes;
     private final ReadmePopover popover;
@@ -44,21 +45,33 @@ public class Help extends Button {
      */
     public void follow(Component view, String title) {
         var readme = view instanceof HasReadme withReadme ? withReadme.readme() : null;
+        var sections =
+                view instanceof HasReadme withReadme ? withReadme.readmeSections() : List.<HasReadme.ReadmeSection>of();
         var readMore = view instanceof HasReadme withReadme ? withReadme.readMore() : List.<HasReadme.Link>of();
-        var introduction = readme != null ? readme : view.getClass().getName();
+        var showHelp = (readme != null || !sections.isEmpty() || !readMore.isEmpty());
+        var introduction = showHelp ? readme : view.getClass().getName();
         var firstVisit = visited.add(introduction);
         view.getElement().getClassList().set("first-visit", firstVisit);
         if (firstVisit) {
             view.getElement()
                     .executeJs("setTimeout(() => this.classList.remove('first-visit'), $0)", FIRST_VISIT_MILLIS);
         }
-        setVisible(readme != null);
-        if (readme != null && shownReadmes.firstTime(readme)) {
-            popover.show(title, readme, readMore);
+        setVisible(showHelp);
+        if (showHelp && shownReadmes.firstTime(readme)) {
+            popover.setReadme(title, readme, sections, readMore);
+            var ui = UI.getCurrent();
+            Thread.startVirtualThread(() -> {
+                try {
+                    Thread.sleep(FIRST_VISIT_MILLIS);
+                    ui.access(() -> popover.show(title, readme, sections, readMore));
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                }
+            });
         } else {
             popover.close();
-            if (readme != null) {
-                popover.setReadme(title, readme, readMore);
+            if (showHelp) {
+                popover.setReadme(title, readme, sections, readMore);
             }
         }
     }

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.vaadin.demo.nordicsupply.domain.SavedWidget;
 
-/** The seeded Insights dashboards, each widget with its chat. */
+/** The seeded dashboards, each widget with its chat. */
 public interface SavedWidgetRepository extends JpaRepository<SavedWidget, Integer> {
 
     /** One user's seeded widgets in the dashboard's order, each with its chat. */

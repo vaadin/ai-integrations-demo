@@ -37,7 +37,7 @@ class HelpTest {
     private static class DocumentedView extends ReadmeView {
 
         DocumentedView() {
-            super("Insights");
+            super("Dashboard");
         }
 
         @Override
@@ -72,10 +72,10 @@ class HelpTest {
         }
     }
 
-    private static final class InsightsView extends SectionedView {
+    private static final class DashboardView extends SectionedView {
 
-        InsightsView() {
-            super("Insights");
+        DashboardView() {
+            super("Dashboard");
         }
     }
 
@@ -112,7 +112,7 @@ class HelpTest {
     void aViewsDocumentationLinksAreShownWithItsReadme() {
         var help = help(session, popover);
 
-        help.follow(new DocumentedView(), "Insights");
+        help.follow(new DocumentedView(), "Dashboard");
 
         assertThat(descendants(popover)
                         .filter(UnorderedList.class::isInstance)
@@ -126,10 +126,10 @@ class HelpTest {
     @Test
     void aLaterVisitSetsTheReadmeAndItsLinksForHelpToOpen() {
         var help = help(session, new ReadmePopover());
-        help.follow(new DocumentedView(), "Insights");
+        help.follow(new DocumentedView(), "Dashboard");
 
         var reloadedPage = help(session, popover);
-        reloadedPage.follow(new DocumentedView(), "Insights");
+        reloadedPage.follow(new DocumentedView(), "Dashboard");
 
         assertThat(popover.isOpened()).isFalse();
         assertThat(descendants(popover).filter(UnorderedList.class::isInstance).flatMap(Component::getChildren))
@@ -178,10 +178,10 @@ class HelpTest {
         help.follow(new ClaimsView(), "Claims");
         popover.close();
 
-        help.follow(new InsightsView(), "Insights");
+        help.follow(new DashboardView(), "Dashboard");
 
         assertThat(popover.isOpened()).isTrue();
-        assertThat(popover.getAriaLabel()).contains("Insights help");
+        assertThat(popover.getAriaLabel()).contains("Dashboard help");
     }
 
     @Test

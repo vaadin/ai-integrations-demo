@@ -38,7 +38,7 @@ import com.vaadin.demo.nordicsupply.ui.components.InsightWidget;
 import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
 
 /**
- * The self-service dashboard, "Insights". The page opens with the signed-in user's dashboard of this visit, the
+ * The self-service dashboard. The page opens with the signed-in user's dashboard of this visit, the
  * seeded one until the visitor saves their own: its widgets with their chats, their queries run anew. An empty
  * dashboard shows one prompt in the middle of the page. A question adds a grid or chart widget and opens its chat in
  * a popover beside it; the Edit button in a widget's header opens it again, and closes it while it is open. The last
@@ -57,10 +57,10 @@ import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
  * keeps its own notion of the <em>active</em> widget, the one whose chat the popover shows, and never reads the
  * dashboard's selection.
  */
-@Route("insights")
-@PageTitle("Insights")
-@Menu(order = 1, title = "Insights", icon = "icons/file-chart-column.svg")
-public class InsightsView extends PageView implements HasReadme {
+@Route("dashboard")
+@PageTitle("Dashboard")
+@Menu(order = 1, title = "Dashboard", icon = "icons/file-chart-column.svg")
+public class DashboardView extends PageView implements HasReadme {
 
     /** Three tiles across, as designed; the popover beside a widget is about one tile wide. */
     private static final int MAX_COLUMNS = 3;
@@ -155,13 +155,13 @@ public class InsightsView extends PageView implements HasReadme {
     /** Whether the dashboard on screen differs from the saved one. */
     private boolean dirty;
 
-    public InsightsView(
+    public DashboardView(
             PackData pack,
             ScopedConnections connections,
             Conversations conversations,
             CurrentUser user,
             SavedDashboards dashboards) {
-        super("insights", "Insights", "Understand Your Operations", "Insights");
+        super("dashboard", "Dashboard", "Understand Your Operations", "Dashboard");
         this.pack = pack;
         this.connections = connections;
         this.conversations = conversations;
@@ -176,7 +176,6 @@ public class InsightsView extends PageView implements HasReadme {
 
         query = new QueryPanel(Map.of(WidgetType.GRID, TABLE_CHIPS, WidgetType.CHART, CHART_CHIPS), this::ask);
 
-        dashboard.addClassName("insights-dashboard");
         dashboard.setWidthFull();
         dashboard.setEditable(true);
         dashboard.setMaximumColumnCount(MAX_COLUMNS);
@@ -234,7 +233,7 @@ public class InsightsView extends PageView implements HasReadme {
         popover.setWidth(POPOVER_WIDTH);
         popover.setHeight(POPOVER_HEIGHT);
         popover.setAutofocus(true);
-        popover.addClassName("insight-popover");
+        popover.addClassName("dashboard-widget-popover");
         // The client reports every opening and closing, whether the user, the browser or the view caused it, and
         // a report can arrive after the view has moved on: Edit on another widget closes the popover on the client
         // before the click reaches the server, the view then opens it beside that widget, and the report of the
@@ -242,7 +241,7 @@ public class InsightsView extends PageView implements HasReadme {
         // open, none while it is closed.
         popover.addOpenedChangeListener(
                 e -> setActive(e.isOpened() && popover.getTarget() instanceof InsightWidget widget ? widget : null));
-        empty.addClassName("insights-empty");
+        empty.addClassName("dashboard-empty");
         intro.addClassName("chat-intro");
         scroller.addClassName("page-scroll");
 

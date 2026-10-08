@@ -13,7 +13,7 @@ import com.vaadin.demo.nordicsupply.session.Scopes;
 
 /**
  * The database connections the model's queries run on: one read-only account per region, and one per country for the
- * Insights country filter, each of which can read only its own schema of filtered views ({@code db/scoped-views.sql},
+ * Dashboard country filter, each of which can read only its own schema of filtered views ({@code db/scoped-views.sql},
  * run once per scope by the loader with the scope's countries written into the views). A query therefore returns the
  * rows of the signed-in user's countries, or of the one country they narrowed to, because the database says so, not
  * because the question was phrased that way.

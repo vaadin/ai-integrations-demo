@@ -83,7 +83,7 @@ class ReadmePopoverTest {
     @Test
     void theLinksAreListedUnderReadMoreAsBlankTargetAnchorsWithTheirNotes() {
         popover.show(
-                "Insights",
+                "Dashboard",
                 "The dashboard.",
                 List.of(),
                 List.of(

@@ -14,7 +14,7 @@ import com.vaadin.demo.nordicsupply.domain.SavedWidget;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 
 /**
- * The Insights dashboards of one visit: for every demo user, the seeded dashboard from the database until the visitor
+ * The dashboards of one visit: for every demo user, the seeded dashboard from the database until the visitor
  * saves their own, which then stays with the visitor's session. Everyone signs in as one of the same four employees,
  * so a dashboard saved per employee would be every visitor's: shown to the next visitor, and given to their model as
  * the memory of its chats. Kept per session, what a visitor saves is theirs alone, it lasts across reloads, tabs and

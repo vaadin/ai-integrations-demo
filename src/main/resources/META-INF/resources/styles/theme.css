@@ -4,7 +4,7 @@ html {
   --aura-accent-color-light: #5656ff;
   --aura-accent-color-dark: #FFD13B;
   --aura-base-radius: 8;
-  --aura-app-background: radial-gradient(70% 70% at 50% 100%, light-dark(rgba(255, 255, 255), rgba(59, 59, 59, 0.5)), transparent) var(--aura-background-color);
+  --aura-app-background: radial-gradient(70% 70%  at 50% 100%, light-dark(rgba(255, 255, 255), rgba(59, 59, 59, 0.5)), transparent) var(--aura-background-color);
   --vaadin-popover-arrow-inset: var(--vaadin-radius-l);
   --vaadin-input-field-padding: var(--vaadin-padding-s) var(--vaadin-padding-m);
   --vaadin-field-baseline-input-height: calc(1lh + var(--vaadin-padding-s) * 2 + var(--vaadin-input-field-border-width, 1px) * 2);
@@ -16,4 +16,11 @@ html {
 
 :not([focused]) > :focus-visible {
   outline: var(--vaadin-focus-ring-width, 2px) solid var(--vaadin-focus-ring-color);
+}
+
+/* iOS treats the background radial gradient oddly at the bottom of the viewport together with the browser nav bar. Use a solid color on iOS. */
+@supports (-webkit-touch-callout: none) {
+  html {
+    --aura-app-background: var(--aura-background-color);
+  }
 }

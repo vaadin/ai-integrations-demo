@@ -1,14 +1,12 @@
 /* the page grows with the message and the form, and the layout's content scrolls, as on the home page */
 .claims.page {
-  height: auto;
-  overflow: visible;
-
   @media (prefers-reduced-motion: no-preference) {
     &.first-visit {
       .claim-source,
       .claim-entry {
-        animation: --slide-up-fade-in 0.5s 1.2s backwards;
+        animation: --slide-up 0.5s 1.2s backwards;
         animation-delay: calc(1s + sibling-index() * 0.1s);
+        animation-name: --slide-up, --fade-in;
       }
     }
   }

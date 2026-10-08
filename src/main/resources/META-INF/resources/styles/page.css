@@ -1,66 +1,36 @@
 .page {
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--vaadin-gap-s);
   box-sizing: border-box;
-  width: 100%;
-  height: 100%;
   --view-padding: var(--vaadin-padding-l);
   padding: var(--view-padding);
+  padding-top: 0;
 }
 
 :where(vaadin-app-layout:not([overlay])) .page {
   padding-inline-start: 0;
 }
 
-.page-heading {
-  display: grid;
-  justify-items: start;
-  width: 100%;
-
-  > * {
-    grid-row: 1;
-    grid-column: 1;
-  }
-
-  vaadin-drawer-toggle {
-    z-index: 1;
-    border: 0;
-    background: transparent;
-    margin-top: -10px;
-  }
-
-  /* a page's own actions, such as Save Dashboard, at the heading's end and above the watermark */
-  .page-actions {
-    justify-self: end;
-    align-self: center;
-    z-index: 1;
-    display: flex;
-    gap: var(--vaadin-gap-s);
-  }
+vaadin-drawer-toggle {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--vaadin-text-color-secondary);
 }
 
-/* Home, Claims and an empty Insights dashboard keep the large title; another page shows it large on a first visit */
 @media (prefers-reduced-motion: no-preference) {
-  .page:is(.first-visit, .home, .claims, .insights.empty) {
-    --hero-title-scale: 1;
-    --hero-title-deco-translate: 2%;
-    --hero-title-translate: 85%;
+  .page.first-visit vaadin-drawer-toggle {
+    animation: --drawer-entry 0.4s 1s backwards;
   }
 
-  .page.first-visit:not(.home, .claims, .insights.empty) {
-    animation: --scale-down-hero-title 0s 1s linear forwards;
+  .page.first-visit hero-title > [slot="suffix"] {
+    animation: --fade-in 0.4s 1s backwards;
   }
 }
 
-@keyframes --scale-down-hero-title {
-  100% {
-    --hero-title-scale: 0.71;
-    --hero-title-deco-translate: 0%;
-    --hero-title-translate: 0%;
-  }
+.page-actions {
+  display: flex;
+  gap: var(--vaadin-gap-s);
 }
 
 .page:not(.first-visit) {
@@ -73,8 +43,51 @@
   }
 }
 
-hero-title {
-  padding-top: var(--vaadin-padding-l);
+@keyframes --scale-down-hero-title {
+  100% {
+    --hero-title-scale: 0.7;
+    --hero-title-translate: 0%;
+  }
+}
+
+@property --hero-title-scale {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+@property --hero-title-translate {
+  syntax: "<length-percentage>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.page.insights.empty {
+  --hero-title-scroll-animation: none;
+}
+
+.page:not(.home, .insights.empty) {
+  --hero-title-scroll-animation: none;
+  --hero-title-spacing: 0;
+  --hero-title-translate: 3rem;
+
+  @media (prefers-reduced-motion: no-preference) {
+    &.first-visit {
+      animation: --scale-down-hero-title 0.4s 0.6s cubic-bezier(0.66, 0, 0.34, 1) forwards;
+    }
+  }
+
+  &:not(.first-visit) {
+    --hero-title-scale: 0.7;
+    --hero-title-translate: 0%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    & {
+      --hero-title-scale: 0.7;
+      --hero-title-translate: 0%;
+    }
+  }
 }
 
 /* the AI's sparkle: a gold star in a tinted circle */

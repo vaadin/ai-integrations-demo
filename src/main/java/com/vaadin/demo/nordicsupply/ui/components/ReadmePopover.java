@@ -3,12 +3,10 @@ package com.vaadin.demo.nordicsupply.ui.components;
 import java.util.List;
 
 import com.vaadin.flow.component.Text;
-import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.accordion.Accordion;
+import com.vaadin.flow.component.accordion.AccordionPanel;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.AnchorTarget;
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.UnorderedList;
 import com.vaadin.flow.component.markdown.Markdown;
@@ -24,40 +22,50 @@ import com.vaadin.flow.component.popover.PopoverVariant;
  */
 public class ReadmePopover extends Popover {
 
-    private final H2 title = new H2();
     private final Markdown body = new Markdown();
-    private final H3 readMoreTitle = new H3("Read more");
-    private final UnorderedList readMore = new UnorderedList();
+    private Accordion sections;
+    private final UnorderedList readMoreLinks = new UnorderedList();
+    private final AccordionPanel readMoreSection = new AccordionPanel("Read More", readMoreLinks);
 
     public ReadmePopover() {
-        var close = new Button("Close", event -> close());
-        close.addThemeVariants(ButtonVariant.PRIMARY);
-        add(title, body, readMoreTitle, readMore, close);
-        setWidth("30rem");
-        setPosition(PopoverPosition.END_TOP);
+        setPosition(PopoverPosition.END_BOTTOM);
         setModal(false);
         addThemeVariants(PopoverVariant.ARROW);
         addClassNames("help");
     }
 
     /** Sets the readme, the title of the view it belongs to, and the documentation the view links to. */
-    public void setReadme(String title, String readme, List<HasReadme.Link> links) {
-        this.title.setText(title);
+    public void setReadme(
+            String title, String readme, List<HasReadme.ReadmeSection> readmeSections, List<HasReadme.Link> links) {
         setAriaLabel(title + " help");
+        removeAll();
+
         body.setContent(readme);
-        readMoreTitle.setVisible(!links.isEmpty());
-        readMore.setVisible(!links.isEmpty());
-        readMore.removeAll();
+        if (readme != null) {
+            add(body);
+        }
+
+        sections = new Accordion();
+        add(sections);
+
+        for (var section : readmeSections) {
+            sections.add(section.summary(), new Markdown(section.content()));
+        }
+
+        sections.add(readMoreSection);
+        readMoreSection.setVisible(!links.isEmpty());
+        readMoreSection.addClassName("read-more");
+        readMoreLinks.removeAll();
         for (var link : links) {
             var anchor = new Anchor(link.href(), link.text());
             anchor.setTarget(AnchorTarget.BLANK);
-            readMore.add(new ListItem(anchor, new Text(": " + link.note())));
+            readMoreLinks.add(new ListItem(anchor, new Text(link.note())));
         }
     }
 
     /** Sets and opens the readme. */
-    public void show(String title, String readme, List<HasReadme.Link> links) {
-        setReadme(title, readme, links);
+    public void show(String title, String readme, List<HasReadme.ReadmeSection> sections, List<HasReadme.Link> links) {
+        setReadme(title, readme, sections, links);
         open();
     }
 }

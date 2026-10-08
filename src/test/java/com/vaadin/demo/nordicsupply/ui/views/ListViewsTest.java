@@ -98,9 +98,11 @@ class ListViewsTest {
 
         assertThat(readmes)
                 .satisfiesExactly(
-                        orders -> assertThat(orders).contains("one row per sales order", "Search by"),
-                        customers -> assertThat(customers).contains("One row per retail customer", "Search by"),
-                        products -> assertThat(products).contains("one row per product", "Search by"));
+                        orders -> assertThat(orders).contains("all the orders", "search for a particular order"),
+                        customers ->
+                                assertThat(customers).contains("all the customers", "search for a particular customer"),
+                        products ->
+                                assertThat(products).contains("all the products", "search for a particular product"));
     }
 
     /** Fetches the first page the way the browser does when the view opens. */

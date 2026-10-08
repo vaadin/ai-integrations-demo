@@ -8,10 +8,8 @@ import java.util.Optional;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.accordion.AccordionPanel;
 import com.vaadin.flow.component.html.Anchor;
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.UnorderedList;
 import com.vaadin.flow.component.markdown.Markdown;
@@ -20,8 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * The popover shows the readme it is given under the view's title, with the documentation the view links to, and
- * closes from its button.
+ * The popover shows the readme it is given, its additional sections, and the documentation the view links to.
  */
 class ReadmePopoverTest {
 
@@ -44,31 +41,42 @@ class ReadmePopoverTest {
     }
 
     @Test
-    void showOpensThePopoverOnTheReadmesTitleAndText() {
-        popover.show("Orders", ORDERS, List.of());
+    void showOpensThePopoverWithTheReadmesAccessibleTitleAndText() {
+        popover.show("Orders", ORDERS, List.of(), List.of());
 
         assertThat(popover.isOpened()).isTrue();
-        assertThat(title().getText()).isEqualTo("Orders");
+        assertThat(popover.getAriaLabel()).contains("Orders help");
         assertThat(markdown().getContent()).isEqualTo(ORDERS);
     }
 
     @Test
     void showingAnotherReadmeReplacesTheTitleAndText() {
-        popover.show("Orders", ORDERS, List.of());
+        popover.show("Orders", ORDERS, List.of(), List.of());
 
-        popover.show("Products", PRODUCTS, List.of());
+        popover.show("Products", PRODUCTS, List.of(), List.of());
 
-        assertThat(title().getText()).isEqualTo("Products");
+        assertThat(popover.getAriaLabel()).contains("Products help");
         assertThat(markdown().getContent()).isEqualTo(PRODUCTS);
     }
 
     @Test
-    void theCloseButtonClosesThePopover() {
-        popover.show("Orders", ORDERS, List.of());
+    void additionalReadmeSectionsAreAccordionPanels() {
+        popover.show(
+                "Claims",
+                "Process claims.",
+                List.of(
+                        new HasReadme.ReadmeSection("Let AI Fill the Form", "Upload a document."),
+                        new HasReadme.ReadmeSection("Confidence in the Results", "Review every field.")),
+                List.of());
 
-        closeButton().click();
-
-        assertThat(popover.isOpened()).isFalse();
+        assertThat(sectionPanels())
+                .extracting(AccordionPanel::getSummaryText)
+                .containsExactly("Let AI Fill the Form", "Confidence in the Results", "Read More");
+        assertThat(sectionPanels().subList(0, 2))
+                .flatExtracting(panel -> panel.getContent().toList())
+                .extracting(Markdown.class::cast)
+                .extracting(Markdown::getContent)
+                .containsExactly("Upload a document.", "Review every field.");
     }
 
     /** The links open in a new tab, so the demo stays where it is; each one says what the page has for the view. */
@@ -77,14 +85,15 @@ class ReadmePopoverTest {
         popover.show(
                 "Insights",
                 "The dashboard.",
+                List.of(),
                 List.of(
                         new HasReadme.Link("AI-powered Grid", "https://vaadin.com/docs/grid", "the table widget"),
                         new HasReadme.Link("AI-powered Chart", "https://vaadin.com/docs/chart", "the chart widget")));
 
-        assertThat(readMoreTitle().isVisible()).isTrue();
+        assertThat(readMoreSection().isVisible()).isTrue();
         assertThat(readMoreItems())
                 .extracting(item -> item.getElement().getTextRecursively())
-                .containsExactly("AI-powered Grid: the table widget", "AI-powered Chart: the chart widget");
+                .containsExactly("AI-powered Gridthe table widget", "AI-powered Chartthe chart widget");
         assertThat(readMoreItems())
                 .extracting(item -> (Anchor) item.getChildren().findFirst().orElseThrow())
                 .extracting(Anchor::getHref, Anchor::getTarget)
@@ -95,30 +104,36 @@ class ReadmePopoverTest {
 
     @Test
     void aReadmeWithoutLinksHasNoReadMoreAndAReadmeWithThemReplacesTheLast() {
-        popover.show("Insights", "The dashboard.", List.of(new HasReadme.Link("A", "https://a", "a")));
+        popover.show("Insights", "The dashboard.", List.of(), List.of(new HasReadme.Link("A", "https://a", "a")));
 
-        popover.show("Orders", ORDERS, List.of());
+        popover.show("Orders", ORDERS, List.of(), List.of());
 
-        assertThat(readMoreTitle().isVisible()).isFalse();
+        assertThat(readMoreSection().isVisible()).isFalse();
         assertThat(readMoreItems()).isEmpty();
     }
 
-    private H3 readMoreTitle() {
-        return (H3)
-                popover.getChildren().filter(H3.class::isInstance).findFirst().orElseThrow();
+    private AccordionPanel readMoreSection() {
+        return descendants(popover)
+                .filter(AccordionPanel.class::isInstance)
+                .map(AccordionPanel.class::cast)
+                .filter(panel -> panel.hasClassName("read-more"))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private List<AccordionPanel> sectionPanels() {
+        return descendants(popover)
+                .filter(AccordionPanel.class::isInstance)
+                .map(AccordionPanel.class::cast)
+                .toList();
     }
 
     private List<ListItem> readMoreItems() {
-        return popover.getChildren()
+        return descendants(popover)
                 .filter(UnorderedList.class::isInstance)
                 .flatMap(Component::getChildren)
                 .map(ListItem.class::cast)
                 .toList();
-    }
-
-    private H2 title() {
-        return (H2)
-                popover.getChildren().filter(H2.class::isInstance).findFirst().orElseThrow();
     }
 
     private Markdown markdown() {
@@ -128,10 +143,8 @@ class ReadmePopoverTest {
                 .orElseThrow();
     }
 
-    private Button closeButton() {
-        return (Button) popover.getChildren()
-                .filter(Button.class::isInstance)
-                .findFirst()
-                .orElseThrow();
+    private java.util.stream.Stream<Component> descendants(Component root) {
+        return java.util.stream.Stream.concat(
+                java.util.stream.Stream.of(root), root.getChildren().flatMap(this::descendants));
     }
 }

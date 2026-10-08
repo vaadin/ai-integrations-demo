@@ -18,10 +18,11 @@ import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 public class OrdersView extends PageView implements HasReadme {
 
     private static final String README = """
-            The order list every order desk has: one row per sales order of a customer in your region, with the
-            customer, when it was placed, its status, the promised delivery date, the channel it came in through and
-            the net value, newest first. Search by order number, customer name or status; the search matches anywhere
-            in the text.
+            **This view shows where the data for the Dashboard and Claims views come from**.
+
+            It lists all the orders this demo has in the database.
+
+            The only thing you can do here is search for a particular order.
             """;
 
     public OrdersView(SalesOrderRepository orders, CurrentUser currentUser) {

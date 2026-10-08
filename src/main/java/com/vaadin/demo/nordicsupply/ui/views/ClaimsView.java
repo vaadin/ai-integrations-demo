@@ -72,36 +72,36 @@ public class ClaimsView extends PageView implements HasReadme {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClaimsView.class);
 
-    private static final String README = """
-            A customer's complaint becomes a claim without retyping it. Drop the customer's message on the area on the
-            left as a PDF, a screenshot or a photo, or paste its text there, for example an email copied from your
-            mail app, and the AI fills in the claim form: it finds the customer by the sender, then the contact, the
-            order and the shipment the message is about, and writes the description in English whatever the language
-            of the message. It fills in every field, also those the message only hints at, and tells how sure it is of
-            each. Every field it filled carries an AI badge, which says why the AI chose the value and also undoes the
-            change. The message stays in view while you check the form: focus a field, and the words the AI took its
-            value from are outlined in the message, green where it was sure of them, orange or red where less so.
-            Create Claim is enabled once the form holds a customer and a claim type.
+    private static final List<ReadmeSection> README_SECTIONS = List.of(
+            new ReadmeSection("Let AI Fill the Form", """
+                    **Upload or drop a customer message** on the upload area and allow an AI model fill in the form.
 
-            The example files are complaints from the demo data's own customers, in the shapes they arrive in: an
-            exported email with the scanned delivery note, a letter, an invoice written on by hand, a photographed
-            form, and screenshots of a portal message and a chat. The customers, orders and shipments they name exist.
-            The PDFs carry their text the way a scan that went through OCR does, so a value's source is outlined on the
-            words themselves; on an image the outline goes where the AI saw them. You are offered the examples of your
-            region's customers. Drag one to the area, or click it. Check the form, correct what the AI got wrong and
-            create the claim. The demo does not save claims, so the form then starts over.
-            """;
+                    You can upload a PDF, a screenshot or a photo, or paste text directly, for example an email copied from your mail app.
+                    """),
+            new ReadmeSection("Confidence in the Results", """
+                    Every field the model fills gets an **AI badge** and a **confidence indicator**.
+
+                    When you click the badge, you see where the entered value came from, highlighted in the original message.
+
+                    The confidence indicator shows whether the AI model found the exact match for the field value or if it had to deduct the result from multiple pieces of information in the customer message.
+                    """),
+            new ReadmeSection("Any Language Works", """
+                    **The claim is always reported in English**, regardless of the customer's language . The translation happens automatically by the AI model.
+                    """));
 
     private static final List<Link> READ_MORE = List.of(
             new Link(
                     "AI Form Filler",
                     "https://vaadin.com/docs/latest/flow/ai-support/ai-powered-form",
-                    "the controller that fills in the claim form and tracks where each value came from"),
+                    "The controller that fills in the claim form and tracks where each value came from"),
             new Link(
                     "File attachments",
                     "https://vaadin.com/docs/latest/flow/ai-support/file-attachments",
-                    "how a message goes to the model with the prompt"),
-            new Link("AI support in Vaadin Flow", "https://vaadin.com/docs/latest/flow/ai-support", "the overview"));
+                    "How a message goes to the model with the prompt"),
+            new Link(
+                    "AI support in Vaadin Flow",
+                    "https://vaadin.com/docs/latest/flow/ai-support",
+                    "Overview of the AI support"));
 
     private static final String SYSTEM_PROMPT = """
             You work at the order desk of Nordic Supply, a wholesaler of outdoor equipment to retailers in Finland,
@@ -238,7 +238,12 @@ public class ClaimsView extends PageView implements HasReadme {
 
     @Override
     public String readme() {
-        return README;
+        return null;
+    }
+
+    @Override
+    public List<ReadmeSection> readmeSections() {
+        return README_SECTIONS;
     }
 
     @Override

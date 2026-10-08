@@ -21,7 +21,7 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 
 /**
- * The "ask a question" panel of Insights: a prompt bar with an arrow, a "Render as" toggle between chart and table
+ * The "ask a question" panel of Dashboard: a prompt bar with an arrow, a "Render as" toggle between chart and table
  * under it, suggested questions, and the privacy footnote. It sits in the middle of an empty dashboard and, once
  * widgets exist, inside the "New Query" tile at the end of the dashboard, where it stacks its parts to fit one cell.
  */

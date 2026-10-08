@@ -1,4 +1,4 @@
--- The seeded dashboards: every visit opens Insights with two to five widgets for each demo user, to look at and to
+-- The seeded dashboards: every visit opens Dashboard with two to five widgets for each demo user, to look at and to
 -- refine. What a visitor saves stays with their session, so these rows are only read. The dataset creates
 -- saved_widgets and seeds Test User's first two (ids 1 and 2); this script adds the widgets' chats and the rest.
 -- The queries name no country: the scoped views apply the signed-in user's region when they run.

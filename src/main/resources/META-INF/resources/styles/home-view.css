@@ -61,7 +61,7 @@
     color: var(--vaadin-text-color-secondary);
   }
 
-  /* "Start here" beside the Insights card's title */
+  /* "Start here" beside the Dashboard card's title */
   .start-card .badge {
     display: inline-block;
     margin-inline-start: var(--vaadin-gap-s);

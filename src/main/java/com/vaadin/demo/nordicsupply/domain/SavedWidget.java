@@ -16,7 +16,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.Immutable;
 
 /**
- * A widget of a seeded Insights dashboard, the one every visit starts from: its title and description, its kind, the
+ * A widget of a seeded dashboard, the one every visit starts from: its title and description, its kind, the
  * query it runs, the state it is restored from (its size and, for a chart, its queries and its look; none for the
  * default), its place on the dashboard, and the chat that made it. The dataset seeds Test User's two widgets and a
  * set-up script two for each account manager. The application only reads them: what a visitor saves stays with the

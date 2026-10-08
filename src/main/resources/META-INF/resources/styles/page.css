@@ -62,11 +62,11 @@ vaadin-drawer-toggle {
   initial-value: 0;
 }
 
-.page.insights.empty {
+.page.dashboard.empty {
   --hero-title-scroll-animation: none;
 }
 
-.page:not(.home, .insights.empty) {
+.page:not(.home, .dashboard.empty) {
   --hero-title-scroll-animation: none;
   --hero-title-spacing: 0;
   --hero-title-translate: 3rem;

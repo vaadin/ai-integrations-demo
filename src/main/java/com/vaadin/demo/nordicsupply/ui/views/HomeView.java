@@ -26,7 +26,7 @@ import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.ui.MainLayout;
 
 /**
- * The entry page: what the demo is, cards for the views to try, Insights marked as the place to start, and cards that
+ * The entry page: what the demo is, cards for the views to try, Dashboard marked as the place to start, and cards that
  * lead to the documentation, the source and Vaadin Start. It is the readme of the application. Its greeting is dated
  * on the dataset's day, the demo's today, at the visitor's own time of day.
  */
@@ -64,9 +64,9 @@ public class HomeView extends PageView {
         badge.addClassName("badge");
         var cards = new Div(
                 tryCard(
-                        new Span(new Span("Insights"), badge),
+                        new Span(new Span("Dashboard"), badge),
                         "Ask a question about orders, shipments or claims and get a chart or a table.",
-                        InsightsView.class),
+                        DashboardView.class),
                 tryCard(
                         new Span("Claims"),
                         "Drop a customer's complaint and let the AI fill in the claim form.",

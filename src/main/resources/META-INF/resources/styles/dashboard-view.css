@@ -1,4 +1,4 @@
-/* Insights: the chat panel of a widget, the prompt with its "Render as" control, the New Query tile that holds it,
+/* Dashboard: the chat panel of a widget, the prompt with its "Render as" control, the New Query tile that holds it,
    the popover beside the selected widget, and the widgets themselves */
 
 /* ---- chat panel: a message list over an input ---- */
@@ -35,7 +35,7 @@
   min-height: 3lh;
 }
 
-/* ---- Insights: the country filter, the prompt, the New Query tile that holds it, the popover beside the selected
+/* ---- Dashboard: the country filter, the prompt, the New Query tile that holds it, the popover beside the selected
    widget, and the widgets themselves ---- */
 /* the country filter in the heading: an outlined pill as tall as Save Dashboard beside it, with Aura's button
    padding, so it reads as part of the heading rather than as a form field; wide enough for a region's two countries */
@@ -46,14 +46,14 @@
 }
 
 /* the empty state and the dashboard's scroller take the page's width and the rest of its height */
-.insights-empty,
+.dashboard-empty,
 .page-scroll {
   align-self: stretch;
   flex: 1;
   min-height: 0;
 }
 
-.insights-empty {
+.dashboard-empty {
   display: grid;
   place-content: center;
   padding-bottom: 8vh;
@@ -66,8 +66,8 @@
 /* on a first visit the dashboard, or the prompt while it is empty, comes in under the title as each page's content
    does */
 @media (prefers-reduced-motion: no-preference) {
-  .insights.page.first-visit {
-    .insights-empty,
+  .dashboard.page.first-visit {
+    .dashboard-empty,
     vaadin-dashboard-widget {
       animation: --slide-up 0.5s var(--_anim-delay, 1.2s) backwards;
       animation-name: --slide-up, --fade-in;
@@ -127,7 +127,7 @@
   --aura-surface-opacity: 0.3;
 }
 
-.insights-empty .prompt-bar {
+.dashboard-empty .prompt-bar {
   border-color: var(--aura-accent-color);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--aura-accent-color) 18%, transparent);
 }
@@ -212,7 +212,7 @@
 }
 
 /* the popover beside the selected widget: its chat */
-.insight-popover::part(overlay) {
+.dashboard-widget-popover::part(overlay) {
   border: 1px solid var(--vaadin-border-color);
   border-radius: 16px;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
@@ -220,14 +220,14 @@
   outline: none;   /* the overlay takes focus when it opens; the gold ring belongs to the active tile, not to it */
 }
 
-.insight-popover::part(content) {
+.dashboard-widget-popover::part(content) {
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 /* placed against the overlay part: the content part scrolls, and a button past its edge would make it scroll */
-.insight-popover .popover-close {
+.dashboard-widget-popover .popover-close {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
@@ -258,7 +258,7 @@
 }
 
 /* the widgets */
-.insights-dashboard {
+.dashboard.page {
   --vaadin-dashboard-padding: 0;
 }
 

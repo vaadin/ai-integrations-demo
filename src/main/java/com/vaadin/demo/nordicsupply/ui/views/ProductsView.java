@@ -17,10 +17,11 @@ import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 public class ProductsView extends PageView implements HasReadme {
 
     private static final String README = """
-            The catalogue: one row per product with its category, supplier, variant, whether it is still sold, and the
-            list price as of 7 September 2026, the day the demo's data ends. Prices are kept as dated rows, so a price
-            change is a new row from a date, never an edit. Search by SKU, name, supplier or category; the search
-            matches anywhere in the text.
+            **This view shows where the data for the Dashboard and Claims views come from**.
+
+            It lists all the products this demo has in the database.
+
+            The only thing you can do here is search for a particular product.
             """;
 
     public ProductsView(ProductRepository products) {

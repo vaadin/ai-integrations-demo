@@ -1,5 +1,5 @@
 -- The data scope the model's queries run under, enforced by the database. The loader runs this script once per
--- region, and once per country for the Insights country filter, with the schema, the account and the scope's
+-- region, and once per country for the Dashboard country filter, with the schema, the account and the scope's
 -- countries filled in: one schema of views per read-only account, each view filtering by the countries written into
 -- it, and the account may read that schema and nothing else. A table without customers in it is visible in full.
 -- The views keep the base tables' names, so the schema text the model reads needs no change.

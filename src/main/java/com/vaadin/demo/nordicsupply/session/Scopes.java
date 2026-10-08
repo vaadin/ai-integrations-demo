@@ -6,7 +6,7 @@ import java.util.stream.Stream;
 
 /**
  * The regions a demo user can be responsible for: every country, the head office's, or one of three pairs; and the
- * six countries alone, which the Insights country filter narrows a region to. They are fixed in code and named by key
+ * six countries alone, which the Dashboard country filter narrows a region to. They are fixed in code and named by key
  * in the database; nothing a user types ever becomes one.
  */
 public final class Scopes {

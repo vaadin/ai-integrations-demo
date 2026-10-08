@@ -19,7 +19,7 @@ import com.vaadin.demo.nordicsupply.data.StaffRepository;
  * data the database holds; an application with real accounts reads the authenticated user instead and changes
  * nothing else.
  * <p>
- * The session also holds the Insights country filter, the part of the region the dashboard shows: the whole region,
+ * The session also holds the Dashboard country filter, the part of the region the dashboard shows: the whole region,
  * or one of its countries. Like the employee it is shared by every tab, it is not saved with a dashboard, and a switch
  * of employee resets it to the new region. A shared signal cannot be serialized, so neither can this bean, which only
  * matters to session replication.
@@ -86,7 +86,7 @@ public class CurrentUser {
     }
 
     /**
-     * What the Insights dashboard shows right now: the signed-in employee's region, or the one country the filter
+     * What the Dashboard shows right now: the signed-in employee's region, or the one country the filter
      * narrows it to. Never wider than the region, also in the moment between a switch of employee and the reset of
      * the filter that comes with it.
      */
@@ -97,7 +97,7 @@ public class CurrentUser {
     }
 
     /**
-     * Narrows the Insights dashboard to one of the signed-in employee's countries, or widens it back to their region;
+     * Narrows the Dashboard to one of the signed-in employee's countries, or widens it back to their region;
      * every tab of the session follows.
      *
      * @throws IllegalArgumentException when the scope is neither the region nor one of its countries

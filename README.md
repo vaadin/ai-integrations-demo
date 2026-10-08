@@ -58,7 +58,7 @@ repository:
    allowance, and a response that arrives after all is counted in the allowance's place. Nothing can stop the model
    work of a turn let go, so keep the deadline above the longest turn the call bounds allow: the tool calls of a turn
    plus one, times the 60 seconds Spring AI gives one call, times the attempts per call. While the instance's day
-   budget is spent, or the switch is off, the Insights and Claims pages say so under their headings.
+   budget is spent, or the switch is off, the Dashboard and Claims pages say so under their headings.
 3. **Bounds on one model call**, also in `application.properties`: the longest reply
    (`AI_MAX_COMPLETION_TOKENS`, 8000), the tool calls a turn may make (`AI_MAX_TOOL_CALLS`, 20, and
    `AI_MAX_CALLS_PER_TOOL`, 10), the OpenAI client's own retries of a failed call (`AI_MAX_RETRIES`, 1; a quota

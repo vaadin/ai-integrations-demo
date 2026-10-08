@@ -18,9 +18,11 @@ import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 public class CustomersView extends PageView implements HasReadme {
 
     private static final String README = """
-            One row per retail customer in your region: shops, chains, department stores, online stores, rental
-            outfitters, clubs and schools, in alphabetical order, with whether the account is active. Search by name,
-            customer number or city; the search matches anywhere in the text.
+            **This view shows where the data for the Dashboard and Claims views come from**.
+
+            It lists all the customers this demo has in the database.
+
+            The only thing you can do here is search for a particular customer.
             """;
 
     public CustomersView(CustomerRepository customers, CurrentUser currentUser) {

@@ -3,8 +3,10 @@ package com.vaadin.demo.nordicsupply.ui.components;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.icon.SvgIcon;
 
@@ -20,10 +22,11 @@ import com.vaadin.demo.nordicsupply.session.ShownReadmes;
  */
 public class Help extends Button {
 
-    private static final int FIRST_VISIT_MILLIS = 4_000;
+    private static final int FIRST_VISIT_MILLIS = 3_000;
 
     private final ShownReadmes shownReadmes;
     private final ReadmePopover popover;
+    private final BiConsumer<UI, Runnable> firstVisitScheduler;
     private final Set<String> visited = new HashSet<>();
 
     /**
@@ -31,9 +34,14 @@ public class Help extends Button {
      * @param popover the popover the readmes open in
      */
     public Help(ShownReadmes shownReadmes, ReadmePopover popover) {
+        this(shownReadmes, popover, Help::openAfterFirstVisit);
+    }
+
+    Help(ShownReadmes shownReadmes, ReadmePopover popover, BiConsumer<UI, Runnable> firstVisitScheduler) {
         super("Help", new SvgIcon("icons/life-buoy.svg"));
         this.shownReadmes = shownReadmes;
         this.popover = popover;
+        this.firstVisitScheduler = firstVisitScheduler;
         addClassName("rail-button");
         popover.setTarget(this);
     }
@@ -44,7 +52,10 @@ public class Help extends Button {
      */
     public void follow(Component view, String title) {
         var readme = view instanceof HasReadme withReadme ? withReadme.readme() : null;
+        var sections =
+                view instanceof HasReadme withReadme ? withReadme.readmeSections() : List.<HasReadme.ReadmeSection>of();
         var readMore = view instanceof HasReadme withReadme ? withReadme.readMore() : List.<HasReadme.Link>of();
+        var showHelp = (readme != null || !sections.isEmpty() || !readMore.isEmpty());
         var introduction = readme != null ? readme : view.getClass().getName();
         var firstVisit = visited.add(introduction);
         view.getElement().getClassList().set("first-visit", firstVisit);
@@ -52,14 +63,26 @@ public class Help extends Button {
             view.getElement()
                     .executeJs("setTimeout(() => this.classList.remove('first-visit'), $0)", FIRST_VISIT_MILLIS);
         }
-        setVisible(readme != null);
-        if (readme != null && shownReadmes.firstTime(readme)) {
-            popover.show(title, readme, readMore);
+        setVisible(showHelp);
+        if (showHelp && shownReadmes.firstTime(introduction)) {
+            popover.setReadme(title, readme, sections, readMore);
+            firstVisitScheduler.accept(UI.getCurrent(), () -> popover.show(title, readme, sections, readMore));
         } else {
             popover.close();
-            if (readme != null) {
-                popover.setReadme(title, readme, readMore);
+            if (showHelp) {
+                popover.setReadme(title, readme, sections, readMore);
             }
         }
+    }
+
+    private static void openAfterFirstVisit(UI ui, Runnable command) {
+        Thread.startVirtualThread(() -> {
+            try {
+                Thread.sleep(FIRST_VISIT_MILLIS);
+                ui.access(command::run);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+        });
     }
 }

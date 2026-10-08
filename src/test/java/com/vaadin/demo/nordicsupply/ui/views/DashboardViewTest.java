@@ -75,7 +75,7 @@ import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
  * The page opens with the saved dashboard, or with one prompt when there is none; every question becomes a widget in
  * front of the New Query tile, and Save Dashboard keeps what is on screen.
  */
-class InsightsViewTest {
+class DashboardViewTest {
 
     private final Conversations conversations = mock(Conversations.class);
     private final CurrentUser user = mock(CurrentUser.class);
@@ -95,7 +95,7 @@ class InsightsViewTest {
     static void aRegionsDatabase() {
         region = new EmbeddedDatabaseBuilder()
                 .setType(EmbeddedDatabaseType.H2)
-                .setName("insightsviewtest")
+                .setName("dashboardviewtest")
                 .build();
         new JdbcTemplate(region).execute("CREATE TABLE orders AS SELECT 'SO-1' AS order_number");
     }
@@ -105,11 +105,11 @@ class InsightsViewTest {
         region.shutdown();
     }
 
-    private InsightsView view;
+    private DashboardView view;
 
     private final UI ui = TestUi.withSession();
 
-    InsightsViewTest() {
+    DashboardViewTest() {
         modelAnswers(() -> new ScriptedProvider("TITLE: Late shipments\nSUMMARY: Shipments after the date."));
         when(user.get()).thenReturn(new SignedInUser(8, "Lars Nygaard", Scopes.FI_EE));
         when(user.filterSignal()).thenReturn(countries.asReadonly());
@@ -125,12 +125,12 @@ class InsightsViewTest {
     }
 
     /** The page as the signed-in user opens it, with what their saved dashboard holds at that moment. */
-    private InsightsView open() {
+    private DashboardView open() {
         return open(Budgets.budget());
     }
 
-    private InsightsView open(AIBudget budget) {
-        var opened = new InsightsView(new PackData(), connections, conversations, budget, user, dashboards);
+    private DashboardView open(AIBudget budget) {
+        var opened = new DashboardView(new PackData(), connections, conversations, budget, user, dashboards);
         ui.add(opened);
         return opened;
     }
@@ -597,7 +597,11 @@ class InsightsViewTest {
 
     @Test
     void theReadmeSaysWhatTheModelSeesAndPointsAtTheControllersDocumentation() {
-        assertThat(view.readme()).contains("Only the database schema and today's date");
+        assertThat(view.readmeSections())
+                .first()
+                .extracting(section -> section.content())
+                .asString()
+                .contains("Only the database schema", "No data ever leaves your network");
         assertThat(view.readMore()).extracting(link -> link.text()).contains("AI-powered Grid", "AI-powered Chart");
     }
 
@@ -678,7 +682,7 @@ class InsightsViewTest {
 
     private Component empty() {
         return view.getChildren()
-                .filter(c -> c.hasClassName("insights-empty"))
+                .filter(c -> c.hasClassName("dashboard-empty"))
                 .findFirst()
                 .orElseThrow();
     }

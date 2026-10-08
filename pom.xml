@@ -57,7 +57,7 @@
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-ai-extensions-flow</artifactId>
         </dependency>
-        <!-- The Insights widgets' charts and dashboard; commercial too -->
+        <!-- The Dashboard widgets' charts and layout; commercial too -->
         <dependency>
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-charts-flow</artifactId>

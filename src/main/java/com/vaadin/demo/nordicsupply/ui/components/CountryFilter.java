@@ -6,7 +6,7 @@ import com.vaadin.demo.nordicsupply.session.Scope;
 import com.vaadin.demo.nordicsupply.session.Scopes;
 
 /**
- * The Insights country filter, in the page's heading: the signed-in employee's region first, then each of its
+ * The Dashboard country filter, in the page's heading: the signed-in employee's region first, then each of its
  * countries alone, and nothing wider. The view binds its value to the session's filter.
  */
 public class CountryFilter extends Select<Scope> {

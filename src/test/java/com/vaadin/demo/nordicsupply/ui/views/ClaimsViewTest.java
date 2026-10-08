@@ -16,7 +16,6 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.dnd.DragSource;
 import com.vaadin.flow.component.html.NativeButton;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.internal.PendingJavaScriptInvocation;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.upload.UploadDropZone;
@@ -170,13 +169,8 @@ class ClaimsViewTest {
         // and the page said so before the click
         assertThat(pausedNoticeOf(view))
                 .satisfies(notice -> assertThat(notice.isVisible()).isTrue())
-                .extracting(notice -> ComponentTree.descendants(notice)
-                        .filter(Span.class::isInstance)
-                        .map(Component::getElement)
-                        .map(Element::getText)
-                        .toList())
-                .isEqualTo(List.of(
-                        "", "The AI features are switched off right now; the rest of the application works as usual."));
+                .extracting(AIPausedNotice::getText)
+                .isEqualTo("The AI features are switched off right now; the rest of the application works as usual.");
     }
 
     @Test

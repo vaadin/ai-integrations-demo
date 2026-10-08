@@ -89,30 +89,3 @@ vaadin-drawer-toggle {
     }
   }
 }
-
-/* the AI's sparkle: a gold star in a tinted circle */
-.sparkle {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--aura-accent-color) 20%, transparent);
-  color: var(--aura-accent-color);
-  --vaadin-icon-size: 0.75rem;
-}
-
-/* a word from the AI, tinted in its gold: over a form it filled in, or under a heading while it answers nobody */
-.ai-notice {
-  display: flex;
-  align-items: center;
-  gap: var(--vaadin-gap-s);
-  padding: var(--vaadin-padding-s) var(--vaadin-padding-m);
-  border: 1px solid color-mix(in srgb, var(--aura-accent-color) 35%, transparent);
-  border-radius: var(--vaadin-radius-m);
-  background: color-mix(in srgb, var(--aura-accent-color) 8%, transparent);
-  font-size: var(--aura-font-size-s);
-  line-height: 1.45;
-}

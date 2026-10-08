@@ -131,8 +131,13 @@ class ClaimsViewTest {
 
     @Test
     void theReadmeSaysHowAMessageBecomesAClaim() {
-        assertThat(viewFor(HEAD_OFFICE).readme())
-                .contains("Drop the customer's message", "AI badge", "outlined", "does not save claims");
+        assertThat(viewFor(HEAD_OFFICE).readmeSections())
+                .extracting(section -> section.content())
+                .satisfiesExactly(
+                        introduction -> assertThat(introduction).contains("customer message", "AI model"),
+                        confidence ->
+                                assertThat(confidence).contains("AI badge", "confidence indicator", "exact match"),
+                        languages -> assertThat(languages).contains("always reported in English", "translation"));
     }
 
     @Test

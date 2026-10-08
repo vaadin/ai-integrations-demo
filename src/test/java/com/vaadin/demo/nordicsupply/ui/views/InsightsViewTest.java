@@ -577,7 +577,11 @@ class InsightsViewTest {
 
     @Test
     void theReadmeSaysWhatTheModelSeesAndPointsAtTheControllersDocumentation() {
-        assertThat(view.readme()).contains("Only the database schema and today's date");
+        assertThat(view.readmeSections())
+                .first()
+                .extracting(section -> section.content())
+                .asString()
+                .contains("Only the database schema", "No data ever leaves your network");
         assertThat(view.readMore()).extracting(link -> link.text()).contains("AI-powered Grid", "AI-powered Chart");
     }
 

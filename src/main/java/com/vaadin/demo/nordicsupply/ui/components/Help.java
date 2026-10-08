@@ -3,6 +3,7 @@ package com.vaadin.demo.nordicsupply.ui.components;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
@@ -25,6 +26,7 @@ public class Help extends Button {
 
     private final ShownReadmes shownReadmes;
     private final ReadmePopover popover;
+    private final BiConsumer<UI, Runnable> firstVisitScheduler;
     private final Set<String> visited = new HashSet<>();
 
     /**
@@ -32,9 +34,14 @@ public class Help extends Button {
      * @param popover the popover the readmes open in
      */
     public Help(ShownReadmes shownReadmes, ReadmePopover popover) {
+        this(shownReadmes, popover, Help::openAfterFirstVisit);
+    }
+
+    Help(ShownReadmes shownReadmes, ReadmePopover popover, BiConsumer<UI, Runnable> firstVisitScheduler) {
         super("Help", new SvgIcon("icons/life-buoy.svg"));
         this.shownReadmes = shownReadmes;
         this.popover = popover;
+        this.firstVisitScheduler = firstVisitScheduler;
         addClassName("rail-button");
         popover.setTarget(this);
     }
@@ -49,7 +56,7 @@ public class Help extends Button {
                 view instanceof HasReadme withReadme ? withReadme.readmeSections() : List.<HasReadme.ReadmeSection>of();
         var readMore = view instanceof HasReadme withReadme ? withReadme.readMore() : List.<HasReadme.Link>of();
         var showHelp = (readme != null || !sections.isEmpty() || !readMore.isEmpty());
-        var introduction = showHelp ? readme : view.getClass().getName();
+        var introduction = readme != null ? readme : view.getClass().getName();
         var firstVisit = visited.add(introduction);
         view.getElement().getClassList().set("first-visit", firstVisit);
         if (firstVisit) {
@@ -57,22 +64,25 @@ public class Help extends Button {
                     .executeJs("setTimeout(() => this.classList.remove('first-visit'), $0)", FIRST_VISIT_MILLIS);
         }
         setVisible(showHelp);
-        if (showHelp && shownReadmes.firstTime(readme)) {
+        if (showHelp && shownReadmes.firstTime(introduction)) {
             popover.setReadme(title, readme, sections, readMore);
-            var ui = UI.getCurrent();
-            Thread.startVirtualThread(() -> {
-                try {
-                    Thread.sleep(FIRST_VISIT_MILLIS);
-                    ui.access(() -> popover.show(title, readme, sections, readMore));
-                } catch (InterruptedException ignored) {
-                    Thread.currentThread().interrupt();
-                }
-            });
+            firstVisitScheduler.accept(UI.getCurrent(), () -> popover.show(title, readme, sections, readMore));
         } else {
             popover.close();
             if (showHelp) {
                 popover.setReadme(title, readme, sections, readMore);
             }
         }
+    }
+
+    private static void openAfterFirstVisit(UI ui, Runnable command) {
+        Thread.startVirtualThread(() -> {
+            try {
+                Thread.sleep(FIRST_VISIT_MILLIS);
+                ui.access(command::run);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+        });
     }
 }

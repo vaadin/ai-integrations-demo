@@ -46,6 +46,39 @@ class HelpTest {
         }
     }
 
+    private static class SectionedView extends Div implements HasReadme {
+
+        private final String section;
+
+        SectionedView(String section) {
+            this.section = section;
+        }
+
+        @Override
+        public String readme() {
+            return null;
+        }
+
+        @Override
+        public List<ReadmeSection> readmeSections() {
+            return List.of(new ReadmeSection(section, "The details."));
+        }
+    }
+
+    private static final class ClaimsView extends SectionedView {
+
+        ClaimsView() {
+            super("Claims");
+        }
+    }
+
+    private static final class InsightsView extends SectionedView {
+
+        InsightsView() {
+            super("Insights");
+        }
+    }
+
     private final ShownReadmes session = new ShownReadmes();
     private final ReadmePopover popover = new ReadmePopover();
 
@@ -64,7 +97,7 @@ class HelpTest {
 
     @Test
     void aViewsReadmeOpensByItselfOnItsFirstVisitUnderTheViewsTitle() {
-        var help = new Help(session, popover);
+        var help = help(session, popover);
         var view = new ReadmeView("Orders");
 
         help.follow(view, "Orders");
@@ -77,11 +110,11 @@ class HelpTest {
 
     @Test
     void aViewsDocumentationLinksAreShownWithItsReadme() {
-        var help = new Help(session, popover);
+        var help = help(session, popover);
 
         help.follow(new DocumentedView(), "Insights");
 
-        assertThat(popover.getChildren()
+        assertThat(descendants(popover)
                         .filter(UnorderedList.class::isInstance)
                         .flatMap(Component::getChildren)
                         .map(item -> (Anchor) item.getChildren().findFirst().orElseThrow())
@@ -92,20 +125,20 @@ class HelpTest {
     /** On a later visit the readme is not opened but set, links included, for Help to open. */
     @Test
     void aLaterVisitSetsTheReadmeAndItsLinksForHelpToOpen() {
-        var help = new Help(session, new ReadmePopover());
+        var help = help(session, new ReadmePopover());
         help.follow(new DocumentedView(), "Insights");
 
-        var reloadedPage = new Help(session, popover);
+        var reloadedPage = help(session, popover);
         reloadedPage.follow(new DocumentedView(), "Insights");
 
         assertThat(popover.isOpened()).isFalse();
-        assertThat(popover.getChildren().filter(UnorderedList.class::isInstance).flatMap(Component::getChildren))
+        assertThat(descendants(popover).filter(UnorderedList.class::isInstance).flatMap(Component::getChildren))
                 .hasSize(1);
     }
 
     @Test
     void thePopoverIsAnchoredToTheHelpButtonButLivesOnThePage() {
-        var help = new Help(session, popover);
+        var help = help(session, popover);
 
         ui.add(help);
 
@@ -116,10 +149,10 @@ class HelpTest {
 
     @Test
     void reloadingThePageRestoresTheClassButDoesNotReopenTheReadmeInTheSameSession() {
-        var firstTab = new Help(session, new ReadmePopover());
+        var firstTab = help(session, new ReadmePopover());
         firstTab.follow(new ReadmeView("Orders"), "Orders");
 
-        var reloadedPage = new Help(session, popover);
+        var reloadedPage = help(session, popover);
         var firstVisitAfterReload = new ReadmeView("Orders");
         reloadedPage.follow(firstVisitAfterReload, "Orders");
 
@@ -130,7 +163,7 @@ class HelpTest {
 
     @Test
     void eachViewsReadmeOpensOnItsOwnFirstVisit() {
-        var help = new Help(session, popover);
+        var help = help(session, popover);
         help.follow(new ReadmeView("Orders"), "Orders");
         popover.close();
 
@@ -140,8 +173,20 @@ class HelpTest {
     }
 
     @Test
+    void eachSectionOnlyReadmeOpensOnItsOwnFirstVisit() {
+        var help = help(session, popover);
+        help.follow(new ClaimsView(), "Claims");
+        popover.close();
+
+        help.follow(new InsightsView(), "Insights");
+
+        assertThat(popover.isOpened()).isTrue();
+        assertThat(popover.getAriaLabel()).contains("Insights help");
+    }
+
+    @Test
     void theButtonTargetsTheCurrentViewsReadmeAfterItsFirstVisit() {
-        var help = new Help(session, popover);
+        var help = help(session, popover);
         help.follow(new ReadmeView("Orders"), "Orders");
         popover.close();
         var laterVisit = new ReadmeView("Orders");
@@ -155,7 +200,7 @@ class HelpTest {
 
     @Test
     void aViewWithoutAReadmeOpensNothingAndHidesHelp() {
-        var help = new Help(session, popover);
+        var help = help(session, popover);
         var view = new Div();
 
         help.follow(view, "Home");
@@ -167,7 +212,7 @@ class HelpTest {
 
     @Test
     void aViewWithoutAReadmeOnlyHasTheClassOnItsFirstVisit() {
-        var help = new Help(session, popover);
+        var help = help(session, popover);
         help.follow(new Div(), "Home");
         var laterVisit = new Div();
 
@@ -178,7 +223,7 @@ class HelpTest {
 
     @Test
     void helpReturnsWithTheNextViewThatHasAReadme() {
-        var help = new Help(session, popover);
+        var help = help(session, popover);
         help.follow(new Div(), "Home");
 
         help.follow(new ReadmeView("Orders"), "Orders");
@@ -188,11 +233,20 @@ class HelpTest {
 
     @Test
     void aReadmeStillOpenClosesWhenTheViewChanges() {
-        var help = new Help(session, popover);
+        var help = help(session, popover);
         help.follow(new ReadmeView("Orders"), "Orders");
 
         help.follow(new Div(), "Home");
 
         assertThat(popover.isOpened()).isFalse();
+    }
+
+    private Help help(ShownReadmes shownReadmes, ReadmePopover readmePopover) {
+        return new Help(shownReadmes, readmePopover, (currentUi, command) -> command.run());
+    }
+
+    private java.util.stream.Stream<Component> descendants(Component root) {
+        return java.util.stream.Stream.concat(
+                java.util.stream.Stream.of(root), root.getChildren().flatMap(this::descendants));
     }
 }

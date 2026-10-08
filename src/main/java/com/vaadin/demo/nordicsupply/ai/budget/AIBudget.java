@@ -229,6 +229,16 @@ public class AIBudget {
     }
 
     /**
+     * The guard a feature puts before its turns: it admits each against this budget and closes it when it ends.
+     *
+     * @param feature the feature, as the log names it
+     * @return a guard for one orchestrator
+     */
+    public TurnGuard guard(String feature) {
+        return new TurnGuard(this, feature);
+    }
+
+    /**
      * Asks for a turn for the caller. Admitted, the turn counts at once and has to be closed when it ends; refused,
      * nothing is counted and the refusal says why.
      *

@@ -4,6 +4,7 @@ import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.util.unit.DataSize;
 
 /**
  * How much of the model a visitor gets, the {@code app.ai.*} properties. The demo has no login, so a visitor is
@@ -15,6 +16,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param enabled whether the AI features answer at all; off, every turn is refused with a word to the visitor
  * @param maxQuestionLength the longest question a chat takes, in characters
  * @param maxTextLength the longest text the claim form reads as a message, pasted or uploaded, in characters
+ * @param maxFileSize the largest file the claim form reads, checked in the browser and again on the server
  * @param turnDeadline how long a turn may stay open before it is let go, as one whose end never comes: its slots are
  *     freed and it is counted for {@link Instance#tokensPerUnreportedTurn()}, until its response arrives after all.
  *     Longer than the longest turn the bounds on a model call allow, which is the tool calls of a turn, plus one, times
@@ -27,6 +29,7 @@ public record AIBudgetProperties(
         @DefaultValue("true") boolean enabled,
         @DefaultValue("500") int maxQuestionLength,
         @DefaultValue("20000") int maxTextLength,
+        @DefaultValue("10MB") DataSize maxFileSize,
         @DefaultValue("45m") Duration turnDeadline,
         @DefaultValue Address address,
         @DefaultValue Instance instance) {

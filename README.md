@@ -49,6 +49,7 @@ repository:
    | `app.ai.instance.concurrent-turns` | 50 | turns the instance has under way at once |
    | `app.ai.max-question-length` | 500 | characters in a question to a widget |
    | `app.ai.max-text-length` | 20,000 | characters of text in a message to the claim form, pasted or uploaded |
+   | `app.ai.max-file-size` | 10MB | a file for the claim form, checked in the browser and again on the server |
 
    Size `tokens-per-day` from the key's monthly limit and the model's price; it is what stops a visitor who comes
    from many addresses. A chart turn costs some 35,000 tokens and a claim some 70,000, nearly all of them input, so
@@ -61,8 +62,8 @@ repository:
 3. **Bounds on one model call**, also in `application.properties`: the longest reply
    (`AI_MAX_COMPLETION_TOKENS`, 8000), the tool calls a turn may make (`AI_MAX_TOOL_CALLS`, 20, and
    `AI_MAX_CALLS_PER_TOOL`, 10), the OpenAI client's own retries of a failed call (`AI_MAX_RETRIES`, 1; a quota
-   error is retried like any other), and a timeout. A file for the claim form is at most 10 MB, checked in the
-   browser and again on the server, and a PDF reaches the model cut to the ten pages the form shows.
+   error is retried like any other), and a timeout. A PDF reaches the model cut to the ten pages the claim form
+   shows.
 
 Behind a reverse proxy, the visitor's address comes in `X-Forwarded-For`; `server.forward-headers-strategy=native`
 reads it, from a proxy on a private address out of the box. A proxy on a public address has to be named in

@@ -2,6 +2,8 @@ package com.vaadin.demo.nordicsupply.ai.budget;
 
 import java.time.Duration;
 
+import org.springframework.util.unit.DataSize;
+
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Address;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Instance;
 
@@ -10,7 +12,13 @@ public final class Budgets {
 
     /** The production defaults, as {@link AIBudgetProperties} declares them. */
     public static final AIBudgetProperties DEFAULTS = new AIBudgetProperties(
-            true, 500, 20_000, Duration.ofMinutes(45), new Address(500, 10), new Instance(2_000_000_000L, 20_000, 50));
+            true,
+            500,
+            20_000,
+            DataSize.ofMegabytes(10),
+            Duration.ofMinutes(45),
+            new Address(500, 10),
+            new Instance(2_000_000_000L, 20_000, 50));
 
     private Budgets() {}
 
@@ -25,6 +33,7 @@ public final class Budgets {
                 true,
                 DEFAULTS.maxQuestionLength(),
                 DEFAULTS.maxTextLength(),
+                DEFAULTS.maxFileSize(),
                 DEFAULTS.turnDeadline(),
                 address,
                 DEFAULTS.instance()));
@@ -36,6 +45,7 @@ public final class Budgets {
                 true,
                 DEFAULTS.maxQuestionLength(),
                 DEFAULTS.maxTextLength(),
+                DEFAULTS.maxFileSize(),
                 DEFAULTS.turnDeadline(),
                 DEFAULTS.address(),
                 instance));
@@ -47,6 +57,7 @@ public final class Budgets {
                 false,
                 DEFAULTS.maxQuestionLength(),
                 DEFAULTS.maxTextLength(),
+                DEFAULTS.maxFileSize(),
                 DEFAULTS.turnDeadline(),
                 DEFAULTS.address(),
                 DEFAULTS.instance()));

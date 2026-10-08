@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.util.unit.DataSize;
 
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudget.Admission;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudget.Refusal;
@@ -61,7 +62,9 @@ class AIBudgetTest {
     private final TestClock clock = new TestClock();
 
     private AIBudget budget(Address address, Instance instance) {
-        return new AIBudget(new AIBudgetProperties(true, 500, 20_000, DEADLINE, address, instance), clock);
+        return new AIBudget(
+                new AIBudgetProperties(true, 500, 20_000, DataSize.ofMegabytes(10), DEADLINE, address, instance),
+                clock);
     }
 
     private static Turn admitted(Admission admission) {
@@ -195,7 +198,9 @@ class AIBudgetTest {
 
     @Test
     void switchedOffNobodyGetsATurn() {
-        var budget = new AIBudget(new AIBudgetProperties(false, 500, 20_000, DEADLINE, ADDRESS, INSTANCE), clock);
+        var budget = new AIBudget(
+                new AIBudgetProperties(false, 500, 20_000, DataSize.ofMegabytes(10), DEADLINE, ADDRESS, INSTANCE),
+                clock);
 
         assertThat(refused(budget.admit(LARS, "insights"))).isEqualTo(AIBudget.DISABLED);
         assertThat(budget.paused()).contains(AIBudget.DISABLED);

@@ -43,7 +43,7 @@ public record AIBudgetProperties(
      */
     public record Address(
             @DefaultValue("500") int turnsPerDay,
-            @DefaultValue("10") int concurrentTurns) {}
+            @DefaultValue("50") int concurrentTurns) {}
 
     /**
      * What this instance gives out in all.
@@ -57,5 +57,5 @@ public record AIBudgetProperties(
     public record Instance(
             @DefaultValue("400000000") long tokensPerDay,
             @DefaultValue("20000") long tokensPerUnreportedTurn,
-            @DefaultValue("50") int concurrentTurns) {}
+            @DefaultValue("200") int concurrentTurns) {}
 }

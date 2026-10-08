@@ -17,8 +17,8 @@ public final class Budgets {
             20_000,
             DataSize.ofMegabytes(10),
             Duration.ofMinutes(45),
-            new Address(500, 10),
-            new Instance(400_000_000, 20_000, 50));
+            new Address(500, 50),
+            new Instance(400_000_000, 20_000, 200));
 
     private Budgets() {}
 

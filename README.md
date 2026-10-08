@@ -42,11 +42,11 @@ repository:
    |---|---|---|
    | `app.ai.enabled` | `true` | the kill switch: `false` refuses every turn with a word to the visitor |
    | `app.ai.address.turns-per-day` | 500 | one address, all its sessions together: an office behind one address, not one person |
-   | `app.ai.address.concurrent-turns` | 10 | turns one address has under way at once |
+   | `app.ai.address.concurrent-turns` | 50 | turns one address has under way at once, all its sessions together |
    | `app.ai.instance.tokens-per-day` | 400,000,000 | the instance, everyone together, as the model reports its tokens |
    | `app.ai.instance.tokens-per-unreported-turn` | 20,000 | what a turn counts for when the model reported no tokens: one that failed, or whose end never came |
    | `app.ai.turn-deadline` | 45m | how long a turn may stay open before it is let go; keep it above the longest turn the call bounds allow |
-   | `app.ai.instance.concurrent-turns` | 50 | turns the instance has under way at once |
+   | `app.ai.instance.concurrent-turns` | 200 | turns the instance has under way at once; the key's own rate limit is the bound below this |
    | `app.ai.max-question-length` | 500 | characters in a question to a widget |
    | `app.ai.max-text-length` | 20,000 | characters of text in a message to the claim form, pasted or uploaded |
    | `app.ai.max-file-size` | 10MB | a file for the claim form, checked in the browser and again on the server |

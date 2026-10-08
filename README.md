@@ -43,7 +43,7 @@ repository:
    | `app.ai.enabled` | `true` | the kill switch: `false` refuses every turn with a word to the visitor |
    | `app.ai.address.turns-per-day` | 500 | one address, all its sessions together: an office behind one address, not one person |
    | `app.ai.address.concurrent-turns` | 10 | turns one address has under way at once |
-   | `app.ai.instance.tokens-per-day` | 2,000,000,000 | the instance, everyone together, as the model reports its tokens |
+   | `app.ai.instance.tokens-per-day` | 400,000,000 | the instance, everyone together, as the model reports its tokens |
    | `app.ai.instance.tokens-per-unreported-turn` | 20,000 | what a turn counts for when the model reported no tokens: one that failed, or whose end never came |
    | `app.ai.turn-deadline` | 45m | how long a turn may stay open before it is let go; keep it above the longest turn the call bounds allow |
    | `app.ai.instance.concurrent-turns` | 50 | turns the instance has under way at once |
@@ -53,7 +53,7 @@ repository:
 
    Size `tokens-per-day` from the key's monthly limit and the model's price; it is what stops a visitor who comes
    from many addresses. A chart turn costs some 35,000 tokens and a claim some 70,000, nearly all of them input, so
-   the default is about thirty thousand turns a day. The counts live in memory and start over with the instance. A turn is counted when its model
+   the default is about six thousand turns a day. The counts live in memory and start over with the instance. A turn is counted when its model
    request starts. One whose end never comes is let go at the deadline: its slots are freed and it is counted for the
    allowance, and a response that arrives after all is counted in the allowance's place. Nothing can stop the model
    work of a turn let go, so keep the deadline above the longest turn the call bounds allow: the tool calls of a turn

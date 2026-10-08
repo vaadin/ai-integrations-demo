@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vaadin.flow.component.ai.common.AIAttachment;
 import org.junit.jupiter.api.Test;
+import org.springframework.util.unit.DataSize;
 
 /** The guard refuses what the AI may not read, with the sentence for the visitor, and lets the rest through. */
 class TurnGuardTest {
@@ -20,6 +21,20 @@ class TurnGuardTest {
                 .contains("A file can have at most 10 MB.");
         assertThat(guard.refusal(new AIAttachment("photo.jpg", "image/jpeg", new byte[cap])))
                 .isEmpty();
+    }
+
+    /** A cap that is not a whole number of megabytes is named as it was set, not rounded down to one. */
+    @Test
+    void aFileCapIsNamedAsItWasSet() {
+        var kilobytes = Budgets.withMaxFileSize(DataSize.ofKilobytes(300)).guard("claims");
+
+        assertThat(kilobytes.refusal(new AIAttachment("scan.pdf", "application/pdf", new byte[300 * 1024 + 1])))
+                .contains("A file can have at most 300 KB.");
+        assertThat(guard.fileCap()).isEqualTo("10 MB");
+        assertThat(Budgets.withMaxFileSize(DataSize.ofBytes(1500))
+                        .guard("claims")
+                        .fileCap())
+                .isEqualTo("1500 bytes");
     }
 
     /** The cap on a text holds for an uploaded file as for a pasted text; a PDF or an image is bounded otherwise. */

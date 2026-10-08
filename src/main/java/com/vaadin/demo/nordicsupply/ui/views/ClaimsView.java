@@ -169,9 +169,6 @@ public class ClaimsView extends PageView implements HasReadme {
             .map(extension -> "." + extension)
             .toList();
 
-    /** What the browser tells of a file it does not send: too large, or of a kind the form does not take. */
-    private static final String REFUSED_FILE = "The AI reads emails, text files, PDFs and images of up to 10 MB.";
-
     /** The name a pasted text is read under. */
     private static final String PASTED_TEXT = "Pasted text";
 
@@ -268,7 +265,9 @@ public class ClaimsView extends PageView implements HasReadme {
             manager.clearFileList();
             read(new AIAttachment(file.fileName(), mimeTypeOf(file.fileName()), data));
         }));
-        manager.addFileRejectedListener(e -> warn(REFUSED_FILE));
+        // what the browser tells of a file it does not send: too large, or of a kind the form does not take
+        manager.addFileRejectedListener(
+                e -> warn("The AI reads emails, text files, PDFs and images of up to " + guard.fileCap() + "."));
 
         var choose = new UploadButton("Choose", manager);
         choose.addThemeVariants(ButtonVariant.TERTIARY);

@@ -20,7 +20,8 @@ import org.springframework.util.unit.DataSize;
  * @param turnDeadline how long a turn may stay open before it is let go, as one whose end never comes: its slots are
  *     freed and it is counted for {@link Instance#tokensPerUnreportedTurn()}, until its response arrives after all.
  *     Longer than the longest turn the bounds on a model call allow, which is the tool calls of a turn, plus one, times
- *     the call timeout, times the attempts per call; a turn let go too early runs on uncounted beside the next
+ *     the 60 seconds Spring AI gives one call, times the attempts per call; a turn let go too early runs on uncounted
+ *     beside the next
  * @param address what one address gets, an IPv4 address or an IPv6 /64 prefix, all its sessions together
  * @param instance what this instance gives out in all
  */

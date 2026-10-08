@@ -57,22 +57,24 @@ repository:
    request starts. One whose end never comes is let go at the deadline: its slots are freed and it is counted for the
    allowance, and a response that arrives after all is counted in the allowance's place. Nothing can stop the model
    work of a turn let go, so keep the deadline above the longest turn the call bounds allow: the tool calls of a turn
-   plus one, times the timeout, times the attempts per call. While the instance's day budget is spent, or the switch
-   is off, the Insights and Claims pages say so under their headings.
+   plus one, times the 60 seconds Spring AI gives one call, times the attempts per call. While the instance's day
+   budget is spent, or the switch is off, the Insights and Claims pages say so under their headings.
 3. **Bounds on one model call**, also in `application.properties`: the longest reply
    (`AI_MAX_COMPLETION_TOKENS`, 8000), the tool calls a turn may make (`AI_MAX_TOOL_CALLS`, 20, and
    `AI_MAX_CALLS_PER_TOOL`, 10), the OpenAI client's own retries of a failed call (`AI_MAX_RETRIES`, 1; a quota
-   error is retried like any other), and a timeout. A PDF reaches the model cut to the ten pages the claim form
-   shows.
+   error is retried like any other). Spring AI ends a call after 60 seconds; its timeout properties do not change
+   that. A PDF reaches the model cut to the ten pages the claim form shows.
 
 Behind a reverse proxy, the visitor's address comes in `X-Forwarded-For`; `server.forward-headers-strategy=native`
 reads it, from a proxy on a private address out of the box. A proxy on a public address has to be named in
 `server.tomcat.remoteip.trusted-proxies`, or every visitor behind it counts as one. Without a proxy nothing is read
 from the header.
 
-Every turn and every refusal is one line in the log at `INFO`, with the feature, a short hash of the session, the
-address, and for a turn its outcome, the tokens the model reported and its duration; never the question. The SQL the
-model ran is logged at `DEBUG` by `com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider`.
+Every turn is one line in the log at `INFO`, and every turn the budget refuses one at `WARN`, with the feature, a
+short hash of the session, the address, and for a turn its outcome, the tokens the model reported and its duration,
+for a refusal its reason; never the question. A question, text or file over its cap is refused in the page before it
+reaches the budget, and is not logged. The SQL the model ran is logged at `DEBUG` by
+`com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider`.
 
 ## Tests
 

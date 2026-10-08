@@ -51,6 +51,18 @@ public final class Budgets {
                 instance));
     }
 
+    /** The defaults with the file cap replaced. */
+    public static AIBudget withMaxFileSize(DataSize maxFileSize) {
+        return new AIBudget(new AIBudgetProperties(
+                true,
+                DEFAULTS.maxQuestionLength(),
+                DEFAULTS.maxTextLength(),
+                maxFileSize,
+                DEFAULTS.turnDeadline(),
+                DEFAULTS.address(),
+                DEFAULTS.instance()));
+    }
+
     /** The defaults, switched off. */
     public static AIBudget disabled() {
         return new AIBudget(new AIBudgetProperties(

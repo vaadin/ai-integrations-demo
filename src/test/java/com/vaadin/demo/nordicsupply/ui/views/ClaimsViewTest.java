@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.StreamSupport;
 
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.Component;
@@ -21,7 +22,9 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.upload.UploadDropZone;
 import com.vaadin.flow.dom.DomEvent;
 import com.vaadin.flow.dom.Element;
+import com.vaadin.flow.internal.StateNode;
 import com.vaadin.flow.internal.nodefeature.ElementListenerMap;
+import com.vaadin.flow.internal.nodefeature.VirtualChildrenList;
 import com.vaadin.flow.signals.shared.SharedValueSignal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.util.unit.DataSize;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.NullNode;
 
@@ -61,6 +65,9 @@ class ClaimsViewTest {
     private static final SignedInUser NORTH = new SignedInUser(2, "Test User", Scopes.SE_NO);
 
     private static final ExampleDocuments EXAMPLES = PaintedExamples.ALL;
+
+    /** The event the upload's connector sends for a file the browser did not send. */
+    private static final String FILE_REJECT = "file-reject";
 
     /** Held here, since the current UI is kept only weakly and a garbage collection would clear it mid-test. */
     private final UI ui = new UI();
@@ -239,6 +246,22 @@ class ClaimsViewTest {
                         .containsExactly(tuple("Pasted text", "text/plain")));
     }
 
+    /** A file the browser does not send, too large or of a kind the form does not take, is answered with the cap set. */
+    @Test
+    void aFileTheBrowserRejectsIsAnsweredWithTheCapAsSet() {
+        var withSession = TestUi.withSession();
+        var conversations = mock(Conversations.class);
+        when(conversations.standalone()).thenReturn(new ScriptedProvider("The form is filled in."));
+        var view = viewFor(HEAD_OFFICE, conversations, Budgets.withMaxFileSize(DataSize.ofKilobytes(300)));
+        withSession.add(view);
+
+        browserRejects(view, "scan.pdf", "fileIsTooBig");
+        browserAnswers(withSession);
+
+        assertThat(notices(withSession))
+                .containsExactly("The AI reads emails, text files, PDFs and images of up to 300 KB.");
+    }
+
     @Test
     void theReadmeSaysHowAMessageBecomesAClaim() {
         assertThat(viewFor(HEAD_OFFICE).readme())
@@ -299,6 +322,24 @@ class ClaimsViewTest {
         // the listener's filter, which the browser evaluates and sends along: no files in the paste
         data.put("event.clipboardData.files.length === 0", true);
         zone.getNode().getFeature(ElementListenerMap.class).fireEvent(new DomEvent(zone, "paste", data));
+    }
+
+    /** The browser reports a file it did not send, as the upload manager's connector on the view hears it. */
+    private static void browserRejects(ClaimsView view, String fileName, String reason) {
+        Iterable<StateNode> virtualChildren =
+                view.getElement().getNode().getFeature(VirtualChildrenList.class)::iterator;
+        var connector = StreamSupport.stream(virtualChildren.spliterator(), false)
+                .map(Element::get)
+                .filter(element -> !element.getNode()
+                        .getFeature(ElementListenerMap.class)
+                        .getExpressions(FILE_REJECT)
+                        .isEmpty())
+                .findFirst()
+                .orElseThrow();
+        var data = JsonMapper.builder().build().createObjectNode();
+        data.put("event.detail.fileName", fileName);
+        data.put("event.detail.errorMessage", reason);
+        connector.getNode().getFeature(ElementListenerMap.class).fireEvent(new DomEvent(connector, FILE_REJECT, data));
     }
 
     /** Each example tile's button, which reads the example when clicked and carries it when dragged. */

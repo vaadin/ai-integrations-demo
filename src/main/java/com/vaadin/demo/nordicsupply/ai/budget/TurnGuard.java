@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.ai.orchestrator.RequestInterceptor;
 import com.vaadin.flow.component.ai.orchestrator.ResponseListener;
+import org.springframework.util.unit.DataSize;
 
 /**
  * What a feature puts before its turns, so that its view need not: each question or message is admitted against the
@@ -18,6 +19,9 @@ import com.vaadin.flow.component.ai.orchestrator.ResponseListener;
 public final class TurnGuard {
 
     private static final String TEXT = "text/plain";
+
+    private static final long KILOBYTE = DataSize.ofKilobytes(1).toBytes();
+    private static final long MEGABYTE = DataSize.ofMegabytes(1).toBytes();
 
     private final AIBudget budget;
     private final String feature;
@@ -33,6 +37,23 @@ public final class TurnGuard {
     /** The caps a view applies itself, such as the length its fields take. */
     public AIBudgetProperties limits() {
         return budget.limits();
+    }
+
+    /**
+     * The file cap as a visitor reads it, never rounded: in megabytes when it is a whole number of them, otherwise in
+     * kilobytes or bytes.
+     *
+     * @return the cap with its unit, such as "10 MB" or "300 KB"
+     */
+    public String fileCap() {
+        var bytes = limits().maxFileSize().toBytes();
+        if (bytes % MEGABYTE == 0) {
+            return bytes / MEGABYTE + " MB";
+        }
+        if (bytes % KILOBYTE == 0) {
+            return bytes / KILOBYTE + " KB";
+        }
+        return bytes + " bytes";
     }
 
     /**
@@ -95,9 +116,8 @@ public final class TurnGuard {
      * @return the sentence for the visitor, or empty
      */
     public Optional<String> refusal(AIAttachment message) {
-        var fileCap = limits().maxFileSize();
-        if (message.data().length > fileCap.toBytes()) {
-            return Optional.of("A file can have at most " + fileCap.toMegabytes() + " MB.");
+        if (message.data().length > limits().maxFileSize().toBytes()) {
+            return Optional.of("A file can have at most " + fileCap() + ".");
         }
         if (!TEXT.equals(message.mimeType())) {
             return Optional.empty();

@@ -38,16 +38,15 @@ import tools.jackson.databind.json.JsonMapper;
 
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.TurnLog;
-import com.vaadin.demo.nordicsupply.ai.WidgetReply;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 
 /**
  * One Dashboard widget: a grid or a chart with its own chat and orchestrator. The chat is shown in a popover beside
- * the widget while it is selected. After every turn the model names the widget, a short title and a one-sentence
- * description in business terms. The model sees the schema text, today's date, the widget's query and, for a chart,
- * its configuration, and never a row. A saved widget
- * comes back with its chat, which the model is given as its memory, and with its query run anew.
+ * the widget while it is selected. After every turn the model names the widget through a tool of its own,
+ * {@link WidgetNaming}: a short title and a one-sentence description in business terms. The model sees the schema text,
+ * today's date, the widget's query and, for a chart, its configuration, and never a row. A saved widget comes back
+ * with its chat, which the model is given as its memory, and with its query run anew.
  */
 public class InsightWidget extends DashboardWidget {
 
@@ -66,10 +65,6 @@ public class InsightWidget extends DashboardWidget {
      */
     private static final String FAILED = "The model could not answer. Try again; the details are in the server log.";
 
-    /** What the chat says when a turn ends with no word from the model, which the tools may have answered alone. */
-    private static final String NO_REPLY =
-            "The model wrote no reply. If the widget did not change as you asked, ask again.";
-
     /** What the chat input suggests: the kinds of change a widget takes. */
     private static final String CHAT_PLACEHOLDER =
             "Change the chart type, add or remove a column, narrow the period, or ask which data this is based on";
@@ -78,12 +73,9 @@ public class InsightWidget extends DashboardWidget {
             You help an analyst answer questions about live operations by querying the database described by the schema
             tool. Always call the tools; never invent data. Read the schema first if you have not. When a question can be
             read in more than one way, say which reading you used in one sentence.
-            Write nothing before or between your tool calls. When the tools are done, begin your reply with exactly two
-            lines, then a blank line:
-            TITLE: <at most six words naming what the widget shows, e.g. Late shipments, August 2026>
-            SUMMARY: <one sentence in business terms saying what the widget contains and what was counted>
-            After those lines, add at most two short sentences (the reading you used, what to check). Nothing else.
-            The TITLE line is the widget's name: when the user asks to rename the widget, write the new name there.
+            Once the widget shows the data, call name_widget with the widget's title and description; call it again when
+            the user asks to rename the widget. Then reply with at most two short sentences: the reading you used, and
+            what to check. Nothing else.
             Never state a number, a count or an average in your reply: the rows never reach you, only the widget shows
             them. Say what the widget shows, not what it contains.
             For tables: at most seven columns. Put the main entity's business key first (order_number, claim_number,
@@ -131,6 +123,9 @@ public class InsightWidget extends DashboardWidget {
     private final Button ask = new Button("Edit", new SvgIcon("icons/sparkle.svg"));
     private final ProgressBar progress = new ProgressBar();
     private final AIOrchestrator orchestrator;
+
+    /** The tool the model names the widget with. */
+    private final WidgetNaming naming = new WidgetNaming();
 
     /** The legend setting the widget last gave the chart; any other setting on the chart is the model's. */
     private Boolean legendOfTheWidget;
@@ -197,6 +192,7 @@ public class InsightWidget extends DashboardWidget {
                 .withMessageList(chat.messageList())
                 .withInput(chat.messageInput())
                 .withController(controller)
+                .withTools(naming)
                 .withMetadata(DemoClock::sessionContext)
                 .withRequestInterceptor(turns.refusing(InsightWidget::refuseALongQuestion))
                 // the wait shows where the answer will appear, also while the chat is closed
@@ -212,14 +208,6 @@ public class InsightWidget extends DashboardWidget {
         // the orchestrator adds a question and the place of its answer, or a refused question and the reason, while it
         // handles the input; this listener comes after its own, so the new messages are there to be dated
         chat.messageInput().addSubmitListener(event -> keepTheDemosDate());
-        // the history keeps the model's replies whole, the title and summary lines included, since that is what its
-        // memory holds; the chat shows a restored reply the way it showed the live one
-        for (var item : chat.messageList().getItems()) {
-            if (ASSISTANT_NAME.equals(item.getUserName())) {
-                item.setText(shownText(WidgetReply.parse(item.getText())));
-            }
-        }
-
         chat.messageInput()
                 .setI18n(new MessageInputI18n().setMessage(CHAT_PLACEHOLDER).setSend("Send"));
         ask.addThemeVariants(ButtonVariant.PRIMARY, ButtonVariant.SMALL);
@@ -422,37 +410,18 @@ public class InsightWidget extends DashboardWidget {
             }));
             return;
         }
-        var reply = WidgetReply.parse(event.getResponse() == null ? "" : event.getResponse());
-        getUI().ifPresent(ui -> ui.access(() -> apply(reply)));
+        // the reply is in the chat already; the name the model gave meanwhile is the widget's to take
+        var name = naming.take();
+        getUI().ifPresent(ui -> ui.access(() -> {
+            name.ifPresent(this::rename);
+            changeListener.accept(this);
+        }));
     }
 
-    /** Takes the model's reply: the title and the description for the widget, the rest for the chat. */
-    private void apply(WidgetReply reply) {
-        if (!reply.title().isBlank()) {
-            setTitle(reply.title());
-        }
-        if (!reply.summary().isBlank()) {
-            description = reply.summary();
-        }
-        var items = chat.messageList().getItems();
-        if (!items.isEmpty() && ASSISTANT_NAME.equals(items.getLast().getUserName())) {
-            items.getLast().setText(shownText(reply));
-        }
-        changeListener.accept(this);
-    }
-
-    /**
-     * What the chat shows of a reply: the model's note, or the summary or title when it wrote nothing else, or that it
-     * wrote nothing at all, so that the bubble the orchestrator opened for the answer is not left empty.
-     */
-    private static String shownText(WidgetReply reply) {
-        if (!reply.rest().isEmpty()) {
-            return reply.rest();
-        }
-        if (!reply.summary().isEmpty()) {
-            return reply.summary();
-        }
-        return reply.title().isEmpty() ? NO_REPLY : reply.title();
+    /** The name the model gave the widget: the title for its header, the description for its chat. */
+    private void rename(WidgetNaming.Name name) {
+        setTitle(name.title());
+        description = name.description();
     }
 
     /**

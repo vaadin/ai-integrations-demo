@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -23,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 
 import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.UI;
@@ -72,7 +70,7 @@ class InsightWidgetTest {
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final ScriptedProvider model = new ScriptedProvider(
-            "TITLE: Late shipments\nSUMMARY: Shipments after the promised date.\n\nCounted from late_shipments.");
+            "Counted from late_shipments.", named("Late shipments", "Shipments after the promised date."));
 
     /** Where the widgets' turns are recorded, as the Dashboard view hands it to them. */
     private final ActivityLog log = mock(ActivityLog.class);
@@ -80,13 +78,13 @@ class InsightWidgetTest {
     private final TurnLog turns =
             new TurnLog(log, new ActivityLog.Author(UUID.randomUUID(), 8), ActivityView.DASHBOARD);
 
-    /** A model that gives the next of the test's answers on every turn, each a reply or a failure. */
-    private final Deque<Supplier<Flux<String>>> answers = new ArrayDeque<>();
+    /** A model that answers each turn as the next of the test's models would: with a scripted reply, or a failure. */
+    private final Deque<LLMProvider> answers = new ArrayDeque<>();
 
     private final LLMProvider answering = new LLMProvider() {
         @Override
         public Flux<String> stream(LLMRequest request) {
-            return answers.remove().get();
+            return answers.remove().stream(request);
         }
 
         @Override
@@ -145,6 +143,11 @@ class InsightWidgetTest {
         return new JdbcDatabaseProvider(() -> new JdbcTemplate(weekly), new PackData());
     }
 
+    /** The model's call of the naming tool, as it names the widget during a turn. */
+    private static ToolCall named(String title, String description) {
+        return new ToolCall("name_widget", "{\"title\":\"" + title + "\",\"description\":\"" + description + "\"}");
+    }
+
     private static Grid<?> gridOf(InsightWidget widget) {
         return (Grid<?>) widget.getContent()
                 .getChildren()
@@ -175,14 +178,14 @@ class InsightWidgetTest {
         var perCountry = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: One series per country.",
+                        "One series per country.",
                         new ToolCall(
                                 "update_chart_data_source",
                                 "{\"queries\":[\"SELECT country AS _series, wk AS category, n AS amount FROM weekly\"]}")));
         var finland = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: Finland alone.",
+                        "Finland alone.",
                         new ToolCall(
                                 "update_chart_data_source",
                                 "{\"queries\":[\"SELECT wk AS category, n AS amount FROM weekly WHERE country = 'Finland'\"]}")));
@@ -204,14 +207,14 @@ class InsightWidgetTest {
         var hidden = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: One series per country.",
+                        "One series per country.",
                         new ToolCall("update_chart_data_source", perCountry),
                         new ToolCall(
                                 "update_chart_configuration", "{\"configuration\":{\"legend\":{\"enabled\":false}}}")));
         var shown = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: Finland alone.",
+                        "Finland alone.",
                         new ToolCall("update_chart_data_source", finland),
                         new ToolCall(
                                 "update_chart_configuration", "{\"configuration\":{\"legend\":{\"enabled\":true}}}")));
@@ -243,13 +246,11 @@ class InsightWidgetTest {
     void aChartsYAxisIsUntitledUnlessTheModelTitledIt() {
         var query = "{\"queries\":[\"SELECT wk AS category, SUM(n) AS amount FROM weekly GROUP BY wk\"]}";
         var untitled = widget(
-                WidgetType.CHART,
-                new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: Orders.", new ToolCall("update_chart_data_source", query)));
+                WidgetType.CHART, new ScriptedProvider("Orders.", new ToolCall("update_chart_data_source", query)));
         var titled = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: Orders.",
+                        "Orders.",
                         new ToolCall("update_chart_data_source", query),
                         new ToolCall(
                                 "update_chart_configuration",
@@ -268,7 +269,7 @@ class InsightWidgetTest {
         var titling = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: Orders per week.",
+                        "Orders per week.",
                         new ToolCall(
                                 "update_chart_data_source",
                                 "{\"queries\":[\"SELECT wk AS category, SUM(n) AS amount FROM weekly GROUP BY wk\"]}"),
@@ -292,7 +293,7 @@ class InsightWidgetTest {
         assertThat(model.requests()).singleElement().satisfies(request -> {
             assertThat(request.userMessage()).isEqualTo("Late shipments last month");
             assertThat(request.systemPrompt())
-                    .contains("TITLE:")
+                    .contains("name_widget")
                     .contains("Never state a number")
                     .contains("This widget is a table and stays one");
             // the session context, which the providers add to the user message for the model
@@ -341,46 +342,20 @@ class InsightWidgetTest {
         assertThat(model.requests().getFirst().systemPrompt()).contains("This widget is a chart and stays one");
     }
 
-    /** A model that gives the next of its replies on every turn. */
-    private static LLMProvider replying(String... replies) {
-        var next = new ArrayDeque<>(List.of(replies));
-        return request -> Flux.just(next.poll());
-    }
-
-    /** With no note, the chat shows the summary; a reply without the two lines leaves the widget's name as it was. */
+    /** The reply shows as written, and a turn in which the model does not name the widget leaves its name as it was. */
     @Test
-    void aReplyWithoutANoteShowsTheSummaryAndOneWithoutLinesChangesNothing() {
-        var widget = widget(
-                WidgetType.GRID, replying("TITLE: Open claims\nSUMMARY: Claims not yet resolved.", "Here it is."));
+    void aTurnWithoutANewNameLeavesTheNameAsItWas() {
+        answers.add(new ScriptedProvider("Here they are.", named("Open claims", "Claims not yet resolved.")));
+        answers.add(new ScriptedProvider("Sorted."));
+        var widget = widget(WidgetType.GRID, answering);
 
         widget.ask("Open claims");
-        assertThat(widget.chat().messageList().getItems().getLast().getText()).isEqualTo("Claims not yet resolved.");
-
-        widget.ask("Show it again");
-        assertThat(widget.getTitle()).isEqualTo("Open claims");
-        assertThat(widget.description()).isEqualTo("Claims not yet resolved.");
-        assertThat(widget.chat().messageList().getItems().getLast().getText()).isEqualTo("Here it is.");
-    }
-
-    /**
-     * A turn can end with no word from the model, after its tools have changed the widget. The chat says so, instead
-     * of leaving the empty bubble the orchestrator opened for the answer; the widget keeps its name.
-     */
-    @Test
-    void aTurnThatEndsWithoutAReplyIsSaidSoInTheChat() {
-        var widget =
-                widget(WidgetType.GRID, replying("TITLE: Open claims\nSUMMARY: Claims not yet resolved.", "", " \n"));
-        widget.ask("Open claims");
+        assertThat(widget.chat().messageList().getItems().getLast().getText()).isEqualTo("Here they are.");
 
         widget.ask("Sort by days open");
-        assertThat(widget.chat().messageList().getItems().getLast().getText())
-                .isEqualTo("The model wrote no reply. If the widget did not change as you asked, ask again.");
-
-        widget.ask("Sort it the other way");
-        assertThat(widget.chat().messageList().getItems().getLast().getText())
-                .isEqualTo("The model wrote no reply. If the widget did not change as you asked, ask again.");
         assertThat(widget.getTitle()).isEqualTo("Open claims");
         assertThat(widget.description()).isEqualTo("Claims not yet resolved.");
+        assertThat(widget.chat().messageList().getItems().getLast().getText()).isEqualTo("Sorted.");
     }
 
     /**
@@ -426,7 +401,7 @@ class InsightWidgetTest {
         var widget = widget(
                 WidgetType.GRID,
                 new ScriptedProvider(
-                        "TITLE: Orders\nSUMMARY: The orders.",
+                        "The orders.",
                         new ToolCall(
                                 "update_grid_data",
                                 "{\"query\":\"SELECT id, order_number AS \\\"Order\\\", customer_id,"
@@ -454,8 +429,9 @@ class InsightWidgetTest {
      */
     @Test
     void aFailedTurnEndsTheWaitAndLeavesTheWidgetAsItWas() {
-        answers.add(() -> Flux.just("TITLE: Late shipments\nSUMMARY: Shipments after the date."));
-        answers.add(() -> Flux.error(new IllegalStateException("401: Incorrect API key provided")));
+        answers.add(new ScriptedProvider(
+                "Shipments after the date.", named("Late shipments", "Shipments after the date.")));
+        answers.add(request -> Flux.error(new IllegalStateException("401: Incorrect API key provided")));
         var widget = widget(WidgetType.GRID, answering);
 
         widget.ask("Late shipments last month");
@@ -499,7 +475,7 @@ class InsightWidgetTest {
         assertThat(progressOf(widget).isVisible()).isTrue();
         assertThat(widget.chat().messageInput().isEnabled()).isTrue();
 
-        waiting.answer("TITLE: Late shipments\nSUMMARY: Shipments after the promised date.");
+        waiting.answer("Shipments after the promised date.");
 
         assertThat(progressOf(widget).isVisible()).isFalse();
     }
@@ -521,24 +497,20 @@ class InsightWidgetTest {
         widget.ask("Late shipments last month");
 
         ui.remove(widget);
-        waiting.answer("TITLE: Late shipments\nSUMMARY: Shipments after the date.");
+        waiting.answer("Shipments after the date.");
 
         assertThat(widget.getTitle()).isEqualTo("Late shipments last month");
         assertThat(widget.description()).isEmpty();
     }
 
-    /** A saved chat as the orchestrator keeps it: the question, and the model's reply with its two lines. */
+    /** A saved chat as the orchestrator keeps it: the question and the model's reply. */
     private static List<ChatMessage> savedChat() {
         var asked = LocalDateTime.of(2026, 9, 7, 9, 11, 20)
                 .atZone(DemoClock.CLOCK.getZone())
                 .toInstant();
         return List.of(
                 new ChatMessage(ChatMessage.Role.USER, "Late shipments last month", null, asked),
-                new ChatMessage(
-                        ChatMessage.Role.ASSISTANT,
-                        "TITLE: Late shipments\nSUMMARY: Shipments after the promised date.\n\nCounted per week.",
-                        null,
-                        asked.plusSeconds(40)));
+                new ChatMessage(ChatMessage.Role.ASSISTANT, "Counted per week.", null, asked.plusSeconds(40)));
     }
 
     /**
@@ -547,7 +519,7 @@ class InsightWidgetTest {
      */
     @Test
     void aSavedWidgetsChatIsShownAndContinued() {
-        answers.add(() -> Flux.just("TITLE: Late shipments by carrier\nSUMMARY: Per carrier.\n\nGrouped by carrier."));
+        answers.add(new ScriptedProvider("Grouped by carrier.", named("Late shipments by carrier", "Per carrier.")));
         var widget =
                 new InsightWidget(WidgetType.GRID, "Late shipments", weeklyDb(), answering, "Lars", savedChat(), turns);
         ui.add(widget);
@@ -563,17 +535,14 @@ class InsightWidgetTest {
         assertThat(widget.history())
                 .extracting(ChatMessage::content)
                 .containsExactly(
-                        "Late shipments last month",
-                        "TITLE: Late shipments\nSUMMARY: Shipments after the promised date.\n\nCounted per week.",
-                        "And by carrier",
-                        "TITLE: Late shipments by carrier\nSUMMARY: Per carrier.\n\nGrouped by carrier.");
+                        "Late shipments last month", "Counted per week.", "And by carrier", "Grouped by carrier.");
     }
 
     /** A question whose turn failed is not saved with the chat. */
     @Test
     void aQuestionThatGotNoReplyIsNotSaved() {
-        answers.add(() -> Flux.just("TITLE: Late shipments\nSUMMARY: Shipments after the date."));
-        answers.add(() -> Flux.error(new IllegalStateException("429: Rate limit reached")));
+        answers.add(new ScriptedProvider("Shipments after the date."));
+        answers.add(request -> Flux.error(new IllegalStateException("429: Rate limit reached")));
         var widget = widget(WidgetType.GRID, answering);
 
         widget.ask("Late shipments last month");
@@ -583,7 +552,7 @@ class InsightWidgetTest {
                 .extracting(ChatMessage::role, ChatMessage::content)
                 .containsExactly(
                         tuple(ChatMessage.Role.USER, "Late shipments last month"),
-                        tuple(ChatMessage.Role.ASSISTANT, "TITLE: Late shipments\nSUMMARY: Shipments after the date."));
+                        tuple(ChatMessage.Role.ASSISTANT, "Shipments after the date."));
     }
 
     /**
@@ -617,7 +586,7 @@ class InsightWidgetTest {
         var widget = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: Finland alone.",
+                        "Finland alone.",
                         new ToolCall(
                                 "update_chart_data_source",
                                 "{\"queries\":[\"SELECT wk AS category, n AS amount FROM weekly WHERE country = 'Finland'\"]}")));
@@ -630,7 +599,7 @@ class InsightWidgetTest {
                         eq(ActivityView.DASHBOARD),
                         eq("Orders per week in Finland"),
                         contains("chart configuration; never a row"));
-        verify(log).ended(eq(7L), startsWith("TITLE: Orders per week"), any(), any(), any());
+        verify(log).ended(eq(7L), eq("Finland alone."), any(), any(), any());
         verify(log).proposed(7L, "SELECT wk AS category, n AS amount FROM weekly WHERE country = 'Finland'");
     }
 
@@ -645,7 +614,7 @@ class InsightWidgetTest {
         var widget = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: Orders.",
+                        "Orders.",
                         new ToolCall("update_chart_data_source", "{\"queries\":[\"" + query + "\"]}"),
                         new ToolCall(
                                 "update_chart_configuration",
@@ -671,7 +640,7 @@ class InsightWidgetTest {
         var widget = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: As a line.",
+                        "As a line.",
                         new ToolCall(
                                 "update_chart_configuration", "{\"configuration\":{\"chart\":{\"type\":\"line\"}}}")));
         widget.restore(
@@ -693,13 +662,12 @@ class InsightWidgetTest {
         var widget = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: As it was.",
-                        new ToolCall("update_chart_data_source", "{\"queries\":[\"" + query + "\"]}")));
+                        "As it was.", new ToolCall("update_chart_data_source", "{\"queries\":[\"" + query + "\"]}")));
         widget.restore(query, null);
 
         widget.ask("Show it again");
 
-        verify(log).ended(eq(10L), startsWith("TITLE: Orders per week"), any(), any(), any());
+        verify(log).ended(eq(10L), eq("As it was."), any(), any(), any());
         verify(log, never()).proposed(anyLong(), anyString());
     }
 
@@ -709,7 +677,7 @@ class InsightWidgetTest {
         var widget = widget(
                 WidgetType.GRID,
                 new ScriptedProvider(
-                        "TITLE: Orders\nSUMMARY: The orders.",
+                        "The orders.",
                         new ToolCall("update_grid_data", "{\"query\":\"SELECT order_number FROM orders\"}")));
 
         widget.ask("Our orders");
@@ -762,9 +730,7 @@ class InsightWidgetTest {
     void theChatIsDatedOnTheDatasetsDayInTheVisitorsTimeZone() {
         for (var zone : List.of(ZoneId.of("Pacific/Pago_Pago"), ZoneId.of("Pacific/Kiritimati"))) {
             TestUi.inTimeZone(ui, zone.getId());
-            var widget = widget(
-                    WidgetType.GRID,
-                    new ScriptedProvider("TITLE: Late shipments\nSUMMARY: Shipments after the promised date."));
+            var widget = widget(WidgetType.GRID, new ScriptedProvider("Shipments after the promised date."));
 
             widget.ask("Late shipments last month");
 
@@ -784,8 +750,8 @@ class InsightWidgetTest {
     /** Every answered turn tells the view, which then offers to save; a failed turn changed nothing and does not. */
     @Test
     void anAnsweredTurnTellsTheViewAndAFailedOneDoesNot() {
-        answers.add(() -> Flux.just("TITLE: Late shipments\nSUMMARY: Shipments after the date."));
-        answers.add(() -> Flux.error(new IllegalStateException("429: Rate limit reached")));
+        answers.add(new ScriptedProvider("Shipments after the date."));
+        answers.add(request -> Flux.error(new IllegalStateException("429: Rate limit reached")));
         var changes = new ArrayList<InsightWidget>();
         var widget = widget(WidgetType.GRID, answering);
         widget.onChanged(changes::add);
@@ -828,7 +794,7 @@ class InsightWidgetTest {
         var saved = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: Finland and Estonia.",
+                        "Finland and Estonia.",
                         new ToolCall(
                                 "update_chart_data_source",
                                 "{\"queries\":[\"SELECT wk AS category, n AS amount FROM weekly WHERE country = 'Finland'\","
@@ -881,7 +847,7 @@ class InsightWidgetTest {
         var saved = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week\nSUMMARY: One series per country.",
+                        "One series per country.",
                         new ToolCall(
                                 "update_chart_data_source",
                                 "{\"queries\":[\"SELECT country AS _series, wk AS category, n AS amount FROM weekly\"]}"),
@@ -893,7 +859,7 @@ class InsightWidgetTest {
         var restored = widget(
                 WidgetType.CHART,
                 new ScriptedProvider(
-                        "TITLE: Orders per week in Finland\nSUMMARY: Finland alone.",
+                        "Finland alone.",
                         new ToolCall(
                                 "update_chart_data_source",
                                 "{\"queries\":[\"SELECT wk AS category, n AS amount FROM weekly WHERE country = 'Finland'\"]}")));

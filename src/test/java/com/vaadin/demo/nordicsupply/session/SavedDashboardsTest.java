@@ -139,19 +139,17 @@ class SavedDashboardsTest {
     }
 
     /**
-     * A seeded reply is written as the model is asked to write one: the two lines first, and no figure in the note
-     * after them, since the model never sees a row; a year may be named.
+     * A seeded reply is written as the model is asked to write one: a sentence or two that name no figure, since the
+     * model never sees a row; a year may be named.
      */
     @Test
-    void aSeededReplyHasTheTwoLinesAndNoFigure() {
+    void aSeededReplyNamesNoFigure() {
         var visit = visit();
 
         USERS.keySet()
                 .forEach(user -> visit.forUser(user, HELSINKI).forEach(widget -> {
                     var reply = widget.history().getLast().content();
-                    assertThat(reply).as(widget.title()).startsWith("TITLE: " + widget.title() + "\nSUMMARY: ");
-                    var note = reply.substring(reply.indexOf("\n\n") + 2);
-                    assertThat(note.replaceAll("\\b20\\d\\d\\b", ""))
+                    assertThat(reply.replaceAll("\\b20\\d\\d\\b", ""))
                             .as(widget.title())
                             .doesNotContainPattern("\\d");
                 }));

@@ -48,6 +48,7 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
 import com.vaadin.demo.nordicsupply.ai.LLMProviders;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
@@ -221,6 +222,31 @@ class DashboardViewTest {
                         .filter(c -> c.hasClassName("chat-intro"))
                         .map(c -> ((Span) c).getText()))
                 .containsExactly("Shipments after the date.");
+    }
+
+    /**
+     * The intro follows the name as the model gives it, as the header does, while the turn still runs; a turn that
+     * fails after that leaves the header and the intro agreeing.
+     */
+    @Test
+    void theOpenChatsIntroFollowsTheNameAsTheModelGivesIt() {
+        Sinks.Many<String> reply = Sinks.many().unicast().onBackpressureBuffer();
+        modelAnswers(() -> new ScriptedProvider(
+                reply.asFlux(),
+                new ToolCall(
+                        "name_widget",
+                        "{\"title\":\"Late shipments\",\"description\":\"Shipments after the date.\"}")));
+
+        ask("Late shipments last month");
+
+        var widget = dashboard().getWidgets().getFirst();
+        assertThat(popover().getTarget()).isSameAs(widget);
+        assertThat(widget.getTitle()).isEqualTo("Late shipments");
+        assertThat(intro()).isEqualTo("Shipments after the date.");
+
+        reply.tryEmitError(new IllegalStateException("429: Rate limit reached"));
+
+        assertThat(intro()).isEqualTo("Shipments after the date.");
     }
 
     @Test
@@ -685,6 +711,15 @@ class DashboardViewTest {
     private Component scroller() {
         return view.getChildren()
                 .filter(c -> c.hasClassName("page-scroll"))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    /** The line over the open chat that says what the active widget contains. */
+    private String intro() {
+        return descendants(popover())
+                .filter(c -> c.hasClassName("chat-intro"))
+                .map(c -> ((Span) c).getText())
                 .findFirst()
                 .orElseThrow();
     }

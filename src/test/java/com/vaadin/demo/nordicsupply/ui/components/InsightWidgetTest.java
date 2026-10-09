@@ -33,6 +33,7 @@ import com.vaadin.flow.component.charts.model.ChartType;
 import com.vaadin.flow.component.charts.model.Configuration;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridNoneSelectionModel;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.messages.MessageInput;
 import com.vaadin.flow.component.messages.MessageListItem;
 import com.vaadin.flow.component.progressbar.ProgressBar;
@@ -164,6 +165,17 @@ class InsightWidgetTest {
                 .findFirst()
                 .orElseThrow()
                 .getConfiguration();
+    }
+
+    /** The line over the widget's chat that says what the widget contains. */
+    private static String introOf(InsightWidget widget) {
+        return widget.chat()
+                .getChildren()
+                .filter(c -> c.hasClassName("chat-intro"))
+                .map(Span.class::cast)
+                .map(Span::getText)
+                .findFirst()
+                .orElseThrow();
     }
 
     /** Vaadin Charts draws with Highcharts' own light theme unless styled mode is on; the demo's CSS colours the chart. */
@@ -308,6 +320,7 @@ class InsightWidgetTest {
                         tuple(InsightWidget.ASSISTANT_NAME, "Counted from late_shipments."));
         assertThat(widget.getTitle()).isEqualTo("Late shipments");
         assertThat(widget.description()).isEqualTo("Shipments after the promised date.");
+        assertThat(introOf(widget)).isEqualTo("Shipments after the promised date.");
     }
 
     /**
@@ -769,6 +782,16 @@ class InsightWidgetTest {
                 .isNull();
         assertThat(widget(WidgetType.CHART, new ScriptedProvider("unused")).state())
                 .isNull();
+    }
+
+    /** A saved widget's chat says what the widget was saved to contain, until the model says otherwise. */
+    @Test
+    void aSavedWidgetsChatSaysWhatItWasSavedToContain() {
+        var widget = widget(WidgetType.GRID, new ScriptedProvider("unused"));
+
+        widget.setDescription("Every order.");
+
+        assertThat(introOf(widget)).isEqualTo("Every order.");
     }
 
     /** A saved table runs its query again on the widget's connection, and hides the raw ids as a live one does. */

@@ -1,0 +1,36 @@
+/* a row of the Activity Log opens its details below it on a click */
+.page.activity-log vaadin-grid::part(body-cell) {
+  cursor: pointer;
+}
+
+/* the details: each label beside its text, labelled as the grid's headers are, the texts whole and as written */
+.activity-details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--vaadin-gap-s) var(--vaadin-gap-l);
+  margin: 0;
+  padding: var(--vaadin-padding-s) var(--vaadin-padding-m) var(--vaadin-padding-m);
+
+  dt {
+    color: var(--aura-accent-text-color);
+    text-transform: uppercase;
+    font-size: var(--aura-font-size-s);
+    font-weight: 700;
+    font-style: italic;
+    font-stretch: 90%;
+  }
+
+  dd {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* the AI's proposal or answer: a query, or the values it filled in, kept as written and wrapped where it is long */
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: var(--aura-font-size-s);
+  }
+}

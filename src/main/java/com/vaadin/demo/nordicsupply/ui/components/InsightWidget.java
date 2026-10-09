@@ -38,6 +38,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
+import com.vaadin.demo.nordicsupply.ai.TurnLog;
 import com.vaadin.demo.nordicsupply.ai.WidgetReply;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
@@ -72,6 +73,10 @@ public class InsightWidget extends DashboardWidget {
     /** What the chat input suggests: the kinds of change a widget takes. */
     private static final String CHAT_PLACEHOLDER =
             "Change the chart type, add or remove a column, narrow the period, or ask which data this is based on";
+
+    /** What the model reads besides the question, as the activity log records it with every turn. */
+    private static final String MODEL_COULD_SEE =
+            "The database schema, today's date, and this widget's chat and query; never a row";
 
     private static final String SYSTEM_PROMPT = """
             You help an analyst answer questions about live operations by querying the database described by the schema
@@ -125,6 +130,7 @@ public class InsightWidget extends DashboardWidget {
     private final ChatPanel chat = new ChatPanel();
     private final Conversations conversations;
     private final String conversationId = Conversations.newId();
+    private final TurnLog turns;
 
     /** The model's one-sentence description of the widget, in business terms; shown at the top of its chat. */
     private String description = "";
@@ -155,6 +161,7 @@ public class InsightWidget extends DashboardWidget {
      * @param userName how the chat names the user's turns
      * @param history the chat so far, oldest first: empty for a new widget, and for a saved one its saved chat, which
      *     the chat shows and the model is given as its memory
+     * @param turns where the widget's turns are recorded: the question, the query the model proposed, the answer
      */
     public InsightWidget(
             WidgetType type,
@@ -162,19 +169,25 @@ public class InsightWidget extends DashboardWidget {
             JdbcDatabaseProvider db,
             Conversations conversations,
             String userName,
-            List<ChatMessage> history) {
+            List<ChatMessage> history,
+            TurnLog turns) {
         super(title);
         this.type = type;
         this.conversations = conversations;
+        this.turns = turns;
         addClassName("insight-widget");
         Component visual;
         AIController controller;
+        // a controller reports its new state when a turn has changed it: the query the model proposed
         if (type == WidgetType.CHART) {
             chart = new Chart();
             chart.setSizeFull();
             styled(chart.getConfiguration());
             chartController = new ChartAIController(chart, db);
-            chartController.addStateChangeListener(state -> redraw());
+            chartController.addStateChangeListener(state -> {
+                redraw();
+                turns.proposed(String.join("\n\n", state.queries()));
+            });
             grid = null;
             gridController = null;
             controller = chartController;
@@ -185,7 +198,10 @@ public class InsightWidget extends DashboardWidget {
             grid.setSelectionMode(Grid.SelectionMode.NONE);
             grid.setSizeFull();
             gridController = new GridAIController(grid, db);
-            gridController.addStateChangeListener(state -> hideIdColumns());
+            gridController.addStateChangeListener(state -> {
+                hideIdColumns();
+                turns.proposed(state.query());
+            });
             chart = null;
             chartController = null;
             controller = gridController;
@@ -205,9 +221,12 @@ public class InsightWidget extends DashboardWidget {
                 .withInput(chat.messageInput())
                 .withController(controller)
                 .withMetadata(Conversations::sessionContext)
-                .withRequestInterceptor(InsightWidget::refuseALongQuestion)
-                // the wait shows where the answer will appear, also while the chat is closed
-                .withRequestListener(event -> progress.setVisible(true))
+                .withRequestInterceptor(this::refuseALongQuestion)
+                .withRequestListener(event -> {
+                    // the wait shows where the answer will appear, also while the chat is closed
+                    progress.setVisible(true);
+                    turns.asked(event, MODEL_COULD_SEE);
+                })
                 .withResponseListener(this::onResponse)
                 .withUserName(userName)
                 .withAssistantName(ASSISTANT_NAME);
@@ -253,12 +272,18 @@ public class InsightWidget extends DashboardWidget {
                 : SYSTEM_PROMPT.formatted("table", "chart");
     }
 
-    /** A question over the cap is answered by the chat, before it is a request: nothing is sent to the model. */
-    private static void refuseALongQuestion(RequestInterceptor.RequestInterceptEvent event) {
-        var length = event.getUserMessage().length();
-        if (length > MAX_QUESTION_LENGTH) {
-            event.reject(
-                    "A question can have at most " + MAX_QUESTION_LENGTH + " characters; this one has " + length + ".");
+    /**
+     * A question over the cap is answered by the chat, before it is a request: nothing is sent to the model. The
+     * activity log records the refusal with as much of the question as a question may have.
+     */
+    private void refuseALongQuestion(RequestInterceptor.RequestInterceptEvent event) {
+        var question = event.getUserMessage();
+        if (question.length() > MAX_QUESTION_LENGTH) {
+            var rule = "A question can have at most " + MAX_QUESTION_LENGTH + " characters; this one has "
+                    + question.length() + ".";
+            event.reject(rule);
+            var kept = question.codePoints().limit(MAX_QUESTION_LENGTH).toArray();
+            turns.refused(new String(kept, 0, kept.length) + "…", rule);
         }
     }
 
@@ -423,6 +448,7 @@ public class InsightWidget extends DashboardWidget {
      * reported and its question dropped from the memory, so that the next question is not answered twice over.
      */
     private void onResponse(ResponseListener.ResponseEvent event) {
+        turns.ended(event);
         if (!isAttached()) {
             // the widget went while the turn ran, and the memory advisor has written the turn since it was forgotten
             conversations.forget(conversationId);

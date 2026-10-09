@@ -44,13 +44,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.vaadin.demo.nordicsupply.ai.Conversations;
+import com.vaadin.demo.nordicsupply.ai.TurnLog;
+import com.vaadin.demo.nordicsupply.data.ActivityLog;
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
 import com.vaadin.demo.nordicsupply.data.ShipmentRepository;
+import com.vaadin.demo.nordicsupply.domain.ActivityView;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocument;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
+import com.vaadin.demo.nordicsupply.session.Visit;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 import com.vaadin.demo.nordicsupply.util.Pdfs;
 
@@ -64,6 +68,9 @@ import com.vaadin.demo.nordicsupply.util.Pdfs;
  * Every message is a new claim, so the form is emptied before the AI reads one, and one message is read at a time:
  * the area and the examples wait while the AI works. The message reaches the model as an attachment, never as the
  * prompt, so that what a customer wrote is read as data rather than as instructions.
+ * <p>
+ * Every turn goes to the activity log, with the form as the AI left it as what it proposed, and so does every claim
+ * created, as the user keeping it.
  */
 @Route("claims")
 @PageTitle("Claims")
@@ -84,6 +91,8 @@ public class ClaimsView extends PageView implements HasReadme {
                     When you click the badge, you see where the entered value came from, highlighted in the original message.
 
                     The confidence indicator shows whether the AI model found the exact match for the field value or if it had to deduct the result from multiple pieces of information in the customer message.
+
+                    The **Activity Log**, at the foot of the menu, records each message the AI read, the values it filled in and each claim created.
                     """),
             new ReadmeSection("Any Language Works", """
                     **The claim is always reported in English**, regardless of the customer's language . The translation happens automatically by the AI model.
@@ -143,6 +152,10 @@ public class ClaimsView extends PageView implements HasReadme {
      */
     private static final String PROMPT = "Fill in the claim form from the attached customer message.";
 
+    /** What the model reads besides the prompt, as the activity log records it with every turn. */
+    private static final String MODEL_COULD_SEE =
+            "The attached message, the claim form, and the customers, contacts, orders and shipments it looked up";
+
     private static final String TEXT = "text/plain";
 
     /**
@@ -174,6 +187,7 @@ public class ClaimsView extends PageView implements HasReadme {
 
     private final ClaimForm form;
     private final AIOrchestrator orchestrator;
+    private final TurnLog turns;
 
     /** The name of the message the AI is reading, or {@code null} while it waits for one. */
     private final ValueSignal<String> reading = new ValueSignal<>(null);
@@ -195,7 +209,9 @@ public class ClaimsView extends PageView implements HasReadme {
             ShipmentRepository shipments,
             Conversations conversations,
             CurrentUser currentUser,
-            ExampleDocuments examples) {
+            ExampleDocuments examples,
+            ActivityLog log,
+            Visit visit) {
         super("claims", "Claims", "Resolve Customer Issues", "Claims");
         form = new ClaimForm(
                 customers,
@@ -204,13 +220,19 @@ public class ClaimsView extends PageView implements HasReadme {
                 shipments,
                 currentUser.get().scope().countries(),
                 Signal.not(idle));
+        var author = visit.as(currentUser.get().id());
+        turns = new TurnLog(log, author, ActivityView.CLAIM_FORM);
         // every message is a claim of its own: the model reads it alone, and no earlier message is sent again; the
         // session context tells it the demo's date, time and weekday, which a message without a date counts from
         orchestrator = AIOrchestrator.builder(conversations.standalone(), SYSTEM_PROMPT)
                 .withController(form.aiController())
                 .withMetadata(Conversations::sessionContext)
+                .withRequestListener(event -> turns.asked(event, MODEL_COULD_SEE))
                 .withResponseListener(this::turnEnded)
                 .build();
+        // the form filler reports each field a turn changed, once the turn has ended: the form as the AI left it is
+        // what it proposed
+        form.aiController().addFieldValueChangeListener(e -> turns.proposed(form.summary()));
 
         // a region's account is offered the examples of its own countries' customers, the only ones it can find
         var chooser = new Div(
@@ -225,7 +247,10 @@ public class ClaimsView extends PageView implements HasReadme {
                 viewer.peek().show(e.getValueSource().orElse(null));
             }
         });
-        form.addCreatedListener(e -> closeMessage());
+        form.addCreatedListener(e -> {
+            log.applied(author, ActivityView.CLAIM_FORM, e.getClaim());
+            closeMessage();
+        });
 
         var source = new Section(title("New Claim Based on Customer Request"), chooser, message);
         source.addClassName("claim-source");
@@ -442,6 +467,7 @@ public class ClaimsView extends PageView implements HasReadme {
 
     /** The turn is over: the area takes the next message, after saying why the AI could not read this one. */
     private void turnEnded(ResponseEvent event) {
+        turns.ended(event);
         getUI().ifPresent(ui -> ui.access(() -> {
             event.getError().ifPresent(error -> {
                 LOG.warn("The AI could not fill in the claim form from {}", reading.peek(), error);

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.vaadin.flow.component.HasValidation;
@@ -250,6 +251,44 @@ class ClaimFormTest {
         assertThat(claimType.getValue()).isNull();
         assertThat(priority.getValue()).isEqualTo(Priority.NORMAL);
         assertThat(description.getValue()).isEmpty();
+    }
+
+    /** What the activity log records of a claim: each value by its field's label, as the field shows it. */
+    @Test
+    void theSummaryHasEachValueByItsLabelAndLeavesOutAnEmptyField() {
+        customer.setValue(AALBORG);
+        reportedBy.setValue(NIELS);
+        order.setValue(ORDER);
+        claimType.setValue(ClaimType.MISSING_ITEMS);
+        priority.setValue(Priority.HIGH);
+        neededBy.setValue(LocalDate.of(2026, 9, 14));
+        claimedAmount.setValue(new BigDecimal("120.50"));
+        description.setValue("Two cartons missing.");
+
+        assertThat(form.summary()).isEqualTo("""
+                        Customer: Aalborg Trekking ApS
+                        Reported By: Niels Madsen
+                        Order: SO-2026-006216
+                        Shipment: SH-2026-006654
+                        Claim Type: Missing items
+                        Priority: High
+                        Needed By: 2026-09-14
+                        Claimed Amount: 120.50
+                        Description: Two cartons missing.""");
+    }
+
+    @Test
+    void aCreatedClaimIsToldAsItWasBeforeTheFormEmpties() {
+        var created = new ArrayList<String>();
+        form.addCreatedListener(e -> created.add(e.getClaim()));
+        customer.setValue(AALBORG);
+        claimType.setValue(ClaimType.MISSING_ITEMS);
+
+        create.click();
+
+        assertThat(created)
+                .containsExactly("Customer: Aalborg Trekking ApS\nClaim Type: Missing items\nPriority: Normal");
+        assertThat(form.summary()).isEqualTo("Priority: Normal");
     }
 
     @Test

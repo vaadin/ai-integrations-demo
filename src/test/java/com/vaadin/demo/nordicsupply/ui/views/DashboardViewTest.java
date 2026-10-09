@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
@@ -19,16 +18,13 @@ import static org.mockito.Mockito.when;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.ai.common.ChatMessage;
-import com.vaadin.flow.component.ai.provider.LLMProvider;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.charts.Chart;
 import com.vaadin.flow.component.dashboard.Dashboard;
@@ -52,7 +48,7 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import reactor.core.publisher.Flux;
 
-import com.vaadin.demo.nordicsupply.ai.Conversations;
+import com.vaadin.demo.nordicsupply.ai.LLMProviders;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider.ToolCall;
 import com.vaadin.demo.nordicsupply.config.PackData;
@@ -74,7 +70,7 @@ import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
  */
 class DashboardViewTest {
 
-    private final Conversations conversations = mock(Conversations.class);
+    private final LLMProviders providers = mock(LLMProviders.class);
     private final CurrentUser user = mock(CurrentUser.class);
     private final ScopedConnections connections = mock(ScopedConnections.class);
     private final SavedDashboards dashboards = mock(SavedDashboards.class);
@@ -123,14 +119,14 @@ class DashboardViewTest {
 
     /** The page as the signed-in user opens it, with what their saved dashboard holds at that moment. */
     private DashboardView open() {
-        var opened = new DashboardView(new PackData(), connections, conversations, user, dashboards);
+        var opened = new DashboardView(new PackData(), connections, providers, user, dashboards);
         ui.add(opened);
         return opened;
     }
 
     /** Every widget made from now on gets a model of its own from the supplier. */
     private void modelAnswers(Supplier<ScriptedProvider> answering) {
-        when(conversations.restore(anyString(), anyList())).thenAnswer(call -> {
+        when(providers.forChat(anyList())).thenAnswer(call -> {
             var model = answering.get();
             models.add(model);
             return model;
@@ -345,7 +341,7 @@ class DashboardViewTest {
         assertThat(widgets.getLast().hasClassName("new-query-widget")).isTrue();
         assertThat(panel().getElement().getAttribute("mode")).isEqualTo("tile");
         verify(dashboards, atLeastOnce()).forUser(8, ZoneId.of("Europe/Helsinki"));
-        verify(conversations).restore(anyString(), eq(savedTable().history()));
+        verify(providers).forChat(savedTable().history());
         verify(connections, never()).templateFor(argThat(scope -> !scope.equals(Scopes.FI_EE)));
         assertThat(models)
                 .hasSize(2)
@@ -492,15 +488,7 @@ class DashboardViewTest {
     /** A question makes the dashboard differ at once, before the model has answered it. */
     @Test
     void aNewWidgetCanBeSavedBeforeItsAnswer() {
-        when(conversations.restore(anyString(), anyList())).thenReturn(new LLMProvider() {
-            @Override
-            public Flux<String> stream(LLMRequest request) {
-                return Flux.never();
-            }
-
-            @Override
-            public void setHistory(List<ChatMessage> history, Map<String, List<AIAttachment>> attachments) {}
-        });
+        when(providers.forChat(anyList())).thenReturn(request -> Flux.never());
 
         ask("Late shipments last month");
 

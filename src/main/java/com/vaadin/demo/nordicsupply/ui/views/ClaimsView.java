@@ -43,7 +43,8 @@ import com.vaadin.flow.signals.local.ValueSignal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.vaadin.demo.nordicsupply.ai.Conversations;
+import com.vaadin.demo.nordicsupply.ai.LLMProviders;
+import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
@@ -193,7 +194,7 @@ public class ClaimsView extends PageView implements HasReadme {
             CustomerContactRepository contacts,
             SalesOrderRepository orders,
             ShipmentRepository shipments,
-            Conversations conversations,
+            LLMProviders providers,
             CurrentUser currentUser,
             ExampleDocuments examples) {
         super("claims", "Claims", "Resolve Customer Issues", "Claims");
@@ -206,9 +207,9 @@ public class ClaimsView extends PageView implements HasReadme {
                 Signal.not(idle));
         // every message is a claim of its own: the model reads it alone, and no earlier message is sent again; the
         // session context tells it the demo's date, time and weekday, which a message without a date counts from
-        orchestrator = AIOrchestrator.builder(conversations.standalone(), SYSTEM_PROMPT)
+        orchestrator = AIOrchestrator.builder(providers.forSingleTurns(), SYSTEM_PROMPT)
                 .withController(form.aiController())
-                .withMetadata(Conversations::sessionContext)
+                .withMetadata(DemoClock::sessionContext)
                 .withResponseListener(this::turnEnded)
                 .build();
 

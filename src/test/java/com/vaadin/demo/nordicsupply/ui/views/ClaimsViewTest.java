@@ -19,11 +19,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import tools.jackson.databind.node.NullNode;
 
-import com.vaadin.demo.nordicsupply.ai.Conversations;
+import com.vaadin.demo.nordicsupply.ai.LLMProviders;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.config.DisplayLocale;
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
@@ -108,9 +107,9 @@ class ClaimsViewTest {
         var withSession = TestUi.withSession();
         withSession.setLocale(DisplayLocale.LOCALE);
         var model = new ScriptedProvider("The form is filled in.");
-        var conversations = mock(Conversations.class);
-        when(conversations.standalone()).thenReturn(model);
-        var view = viewFor(HEAD_OFFICE, conversations);
+        var providers = mock(LLMProviders.class);
+        when(providers.forSingleTurns()).thenReturn(model);
+        var view = viewFor(HEAD_OFFICE, providers);
         withSession.add(view);
         var example = examplesOf(view).getFirst();
 
@@ -148,14 +147,10 @@ class ClaimsViewTest {
     }
 
     private static ClaimsView viewFor(SignedInUser user) {
-        return viewFor(
-                user,
-                new Conversations(
-                        ChatClient.builder(mock(ChatModel.class)),
-                        MessageWindowChatMemory.builder().build()));
+        return viewFor(user, new LLMProviders(ChatClient.builder(mock(ChatModel.class))));
     }
 
-    private static ClaimsView viewFor(SignedInUser user, Conversations conversations) {
+    private static ClaimsView viewFor(SignedInUser user, LLMProviders providers) {
         var currentUser = mock(CurrentUser.class);
         when(currentUser.get()).thenReturn(user);
         when(currentUser.signal()).thenReturn(new SharedValueSignal<>(user));
@@ -164,7 +159,7 @@ class ClaimsViewTest {
                 mock(CustomerContactRepository.class),
                 mock(SalesOrderRepository.class),
                 mock(ShipmentRepository.class),
-                conversations,
+                providers,
                 currentUser,
                 EXAMPLES);
     }

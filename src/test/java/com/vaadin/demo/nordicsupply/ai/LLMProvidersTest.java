@@ -1,6 +1,7 @@
 package com.vaadin.demo.nordicsupply.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -36,11 +37,11 @@ class LLMProvidersTest {
 
     private final ChatModel model = mock(ChatModel.class);
     private final LLMProviders providers = new LLMProviders(ChatClient.builder(model));
+    private final ChatResponse done = new ChatResponse(List.of(new Generation(new AssistantMessage("Done."))));
 
     @BeforeEach
     void theModelAnswersDone() {
         when(model.getOptions()).thenReturn(ChatOptions.builder().build());
-        var done = new ChatResponse(List.of(new Generation(new AssistantMessage("Done."))));
         when(model.call(any(Prompt.class))).thenReturn(done);
         when(model.stream(any(Prompt.class))).thenReturn(Flux.just(done));
     }
@@ -102,6 +103,26 @@ class LLMProvidersTest {
 
         ask(chat, "Open claims");
         ask(other, "Late shipments");
+        ask(chat, "Only Finland");
+
+        var prompts = ArgumentCaptor.forClass(Prompt.class);
+        verify(model, times(3)).call(prompts.capture());
+        assertThat(texts(prompts.getValue().getInstructions())).containsExactly("Open claims", "Done.", "Only Finland");
+    }
+
+    /**
+     * A turn that fails, for a rate limit, the network or a missing key, leaves its question out of the memory: the
+     * next question is answered after the answered turns alone, as it would be in the chat saved and restored.
+     */
+    @Test
+    void aFailedTurnsQuestionIsLeftOutAndTheNextIsAnsweredWithoutIt() {
+        var chat = providers.forChat(List.of());
+        ask(chat, "Open claims");
+        when(model.call(any(Prompt.class)))
+                .thenThrow(new IllegalStateException("429: Rate limit reached"))
+                .thenReturn(done);
+
+        assertThatThrownBy(() -> ask(chat, "Group by carrier")).hasMessageContaining("429");
         ask(chat, "Only Finland");
 
         var prompts = ArgumentCaptor.forClass(Prompt.class);

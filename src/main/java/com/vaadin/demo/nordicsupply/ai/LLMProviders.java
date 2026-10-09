@@ -13,6 +13,7 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 
 /**
  * Where the application meets the model: an {@link LLMProvider} for every orchestrator, built on a Spring AI
@@ -40,8 +41,9 @@ public class LLMProviders {
     /**
      * A provider for a chat that goes on. The turns so far become the model's memory, so the next question is
      * answered in context; pass the same turns to {@code AIOrchestrator.Builder.withHistory} for the chat on screen.
-     * The reply comes whole and off the request thread: the chat shows the assistant typing meanwhile, instead of
-     * the model's narration word by word.
+     * The memory keeps what the chat shows as answered: the question of a turn that fails is dropped, so that the
+     * next question is not answered with it too. The reply comes whole and off the request thread: the chat shows
+     * the assistant typing meanwhile, instead of the model's narration word by word.
      *
      * @param history the chat so far, oldest first; empty for a chat that starts now
      * @return a provider with a memory of its own
@@ -55,10 +57,7 @@ public class LLMProviders {
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
                 .defaultAdvisors(advisors -> advisors.param(ChatMemory.CONVERSATION_ID, CHAT))
                 .build();
-        var provider = new SpringAILLMProvider(client);
-        provider.setStreaming(false);
-        provider.setBackgroundExecution(true);
-        return provider;
+        return new ChatProvider(client, memory);
     }
 
     /**
@@ -75,5 +74,40 @@ public class LLMProviders {
         return turn.role() == ChatMessage.Role.USER
                 ? new UserMessage(turn.content())
                 : new AssistantMessage(turn.content());
+    }
+
+    /**
+     * The kit's provider over a chat's client and memory. The memory advisor writes the question before the model
+     * is called, so a turn that fails for a rate limit, the network or a missing key would leave its question
+     * behind, and the model would answer it again with the next one; this provider drops it, as the chat's saved
+     * history leaves it out too.
+     */
+    private static final class ChatProvider extends SpringAILLMProvider {
+
+        private final transient ChatMemory memory;
+
+        ChatProvider(ChatClient client, ChatMemory memory) {
+            super(client);
+            this.memory = memory;
+            setStreaming(false);
+            setBackgroundExecution(true);
+        }
+
+        @Override
+        public Flux<String> stream(LLMRequest request) {
+            return super.stream(request).doOnError(error -> dropUnanswered());
+        }
+
+        /** Drops the last message of the memory when it is a question that got no answer. */
+        private void dropUnanswered() {
+            var messages = memory.get(CHAT);
+            if (!messages.isEmpty() && messages.getLast() instanceof UserMessage) {
+                memory.clear(CHAT);
+                var kept = messages.subList(0, messages.size() - 1);
+                if (!kept.isEmpty()) {
+                    memory.add(CHAT, kept);
+                }
+            }
+        }
     }
 }

@@ -34,6 +34,8 @@ import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.function.SerializableConsumer;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import tools.jackson.databind.json.JsonMapper;
 
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
@@ -43,8 +45,8 @@ import com.vaadin.demo.nordicsupply.domain.WidgetType;
 
 /**
  * One Dashboard widget: a grid or a chart with its own chat and orchestrator. The chat is shown in a popover beside
- * the widget while it is selected. After every turn the model names the widget through a tool of its own,
- * {@link WidgetNaming}: a short title and a one-sentence description in business terms. The model sees the schema text,
+ * the widget while it is selected. The model names the widget during a turn through a tool of the widget's own,
+ * {@link #nameWidget}: a short title and a one-sentence description in business terms. The model sees the schema text,
  * today's date, the widget's query and, for a chart, its configuration, and never a row. A saved widget comes back
  * with its chat, which the model is given as its memory, and with its query run anew.
  */
@@ -124,9 +126,6 @@ public class InsightWidget extends DashboardWidget {
     private final ProgressBar progress = new ProgressBar();
     private final AIOrchestrator orchestrator;
 
-    /** The tool the model names the widget with. */
-    private final WidgetNaming naming = new WidgetNaming();
-
     /** The legend setting the widget last gave the chart; any other setting on the chart is the model's. */
     private Boolean legendOfTheWidget;
 
@@ -192,7 +191,8 @@ public class InsightWidget extends DashboardWidget {
                 .withMessageList(chat.messageList())
                 .withInput(chat.messageInput())
                 .withController(controller)
-                .withTools(naming)
+                // the widget is the model's tool for naming it
+                .withTools(this)
                 .withMetadata(DemoClock::sessionContext)
                 .withRequestInterceptor(turns.refusing(InsightWidget::refuseALongQuestion))
                 // the wait shows where the answer will appear, also while the chat is closed
@@ -410,18 +410,36 @@ public class InsightWidget extends DashboardWidget {
             }));
             return;
         }
-        // the reply is in the chat already; the name the model gave meanwhile is the widget's to take
-        var name = naming.take();
-        getUI().ifPresent(ui -> ui.access(() -> {
-            name.ifPresent(this::rename);
-            changeListener.accept(this);
-        }));
+        getUI().ifPresent(ui -> ui.access(() -> changeListener.accept(this)));
     }
 
-    /** The name the model gave the widget: the title for its header, the description for its chat. */
-    private void rename(WidgetNaming.Name name) {
-        setTitle(name.title());
-        description = name.description();
+    /**
+     * The tool the model names the widget with, registered on the orchestrator with {@code withTools}: Spring AI
+     * reads the method's name, its description and the parameters' descriptions into the tool definition the model is
+     * sent. The model calls it during a turn, on the provider's thread, so the name is applied through
+     * {@code ui.access}, as every change from that thread; a widget that left the page meanwhile keeps its name. The
+     * title goes to the header and the description to the chat, and the view hears of both when the turn ends.
+     *
+     * @param title the widget's new title
+     * @param description what the widget shows, in one sentence
+     * @return what the model is told back
+     */
+    @Tool(
+            name = "name_widget",
+            description = "Names the widget for the user: its title and a one-sentence description of what it shows."
+                    + " Call it once the widget shows the data, and again when the user asks to rename the widget.")
+    public String nameWidget(
+            @ToolParam(description = "At most six words naming what the widget shows, e.g. Late shipments, August 2026")
+                    String title,
+            @ToolParam(
+                            description =
+                                    "One sentence in business terms saying what the widget contains and what was counted")
+                    String description) {
+        getUI().ifPresent(ui -> ui.access(() -> {
+            setTitle(title);
+            this.description = description;
+        }));
+        return "The widget is now named " + title + ".";
     }
 
     /**

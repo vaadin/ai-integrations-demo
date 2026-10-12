@@ -22,14 +22,16 @@ import com.vaadin.demo.nordicsupply.ui.components.Help;
 import com.vaadin.demo.nordicsupply.ui.components.POIIndicator;
 import com.vaadin.demo.nordicsupply.ui.components.ReadmePopover;
 import com.vaadin.demo.nordicsupply.ui.components.UserSwitcher;
+import com.vaadin.demo.nordicsupply.ui.views.ActivityLogView;
 import com.vaadin.demo.nordicsupply.ui.views.DashboardView;
 
 /**
  * The app shell, the layout of every view: a left rail with the Nordic Supply wordmark, the views that list
- * themselves with {@code @Menu} in the order they are to be tried, Help, the signed-in user, and the Vaadin mark at
- * its foot. No top bar: each view carries its own heading. Help opens the current view's readme, which also opens
- * by itself on the view's first visit in a session; Home has none, it is the readme, so Help is not shown there. The
- * user entry switches between the demo's users.
+ * themselves with {@code @Menu} in the order they are to be tried, and at its foot the Activity Log, Help, the
+ * signed-in user, and the Vaadin mark. The log sits at the foot on purpose: it is the audit trail of what the views
+ * above it do, not a place to start. No top bar: each view carries its own heading. Help opens the current view's
+ * readme, which also opens by itself on the view's first visit in a session; Home has none, it is the readme, so Help
+ * is not shown there. The user entry switches between the demo's users.
  */
 @Layout
 public class MainLayout extends AppLayout implements AfterNavigationObserver {
@@ -63,13 +65,17 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         scroller.addClassName("rail-nav");
         scroller.addThemeVariants(ScrollerVariant.OVERFLOW_INDICATORS);
 
+        var foot = new SideNav();
+        foot.addClassName("rail-foot");
+        foot.addItem(new SideNavItem("Activity Log", ActivityLogView.class, new SvgIcon("icons/clipboard-list.svg")));
+
         help = new Help(shownReadmes, new ReadmePopover());
 
         var powered = new Anchor("https://vaadin.com", new SvgIcon("icons/vaadin.svg"), new Span("Powered by Vaadin"));
         powered.setTarget(AnchorTarget.BLANK);
         powered.addClassName("powered-by");
 
-        addToDrawer(wordmark, scroller, help, new UserSwitcher(currentUser), powered);
+        addToDrawer(wordmark, scroller, foot, help, new UserSwitcher(currentUser), powered);
     }
 
     /**

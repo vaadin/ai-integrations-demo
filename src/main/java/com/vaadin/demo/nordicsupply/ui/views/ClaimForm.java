@@ -3,6 +3,7 @@ package com.vaadin.demo.nordicsupply.ui.views;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -11,6 +12,7 @@ import java.util.function.Function;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentEvent;
 import com.vaadin.flow.component.ComponentEventListener;
+import com.vaadin.flow.component.HasLabel;
 import com.vaadin.flow.component.HasValue;
 import com.vaadin.flow.component.ItemLabelGenerator;
 import com.vaadin.flow.component.ai.common.ValueSource;
@@ -87,8 +89,16 @@ class ClaimForm extends Div {
     /** A claim was created, and the form starts over. */
     static class CreatedEvent extends ComponentEvent<ClaimForm> {
 
-        CreatedEvent(ClaimForm form) {
+        private final String claim;
+
+        CreatedEvent(ClaimForm form, String claim) {
             super(form, false);
+            this.claim = claim;
+        }
+
+        /** The claim as it was created, in the terms of {@link ClaimForm#summary}. */
+        String getClaim() {
+            return claim;
         }
     }
 
@@ -500,8 +510,36 @@ class ClaimForm extends Div {
         }
         var confirmation = Notification.show(confirmation(draft, locale));
         confirmation.addThemeVariants(NotificationVariant.SUCCESS);
+        var created = summary();
         clear();
-        fireEvent(new CreatedEvent(this));
+        fireEvent(new CreatedEvent(this, created));
+    }
+
+    /**
+     * What the form holds, valid or not: each value by its field's label and as the field shows it, one to a line.
+     * The activity log records it as what the AI proposed, and as the claim a person created.
+     */
+    String summary() {
+        var lines = new ArrayList<String>();
+        shown(lines, customer, customer.getItemLabelGenerator());
+        shown(lines, reportedBy, reportedBy.getItemLabelGenerator());
+        shown(lines, order, order.getItemLabelGenerator());
+        shown(lines, shipment, shipment.getItemLabelGenerator());
+        shown(lines, claimType, claimType.getItemLabelGenerator());
+        shown(lines, priority, priority.getItemLabelGenerator());
+        shown(lines, requestedResolution, requestedResolution.getItemLabelGenerator());
+        shown(lines, neededBy, LocalDate::toString);
+        shown(lines, claimedAmount, BigDecimal::toPlainString);
+        shown(lines, description, Function.identity());
+        return String.join("\n", lines);
+    }
+
+    /** A line of {@link #summary}: the field's label and its value as {@code shown} writes it, unless it is empty. */
+    private static <V, F extends HasValue<?, V> & HasLabel> void shown(
+            List<String> lines, F field, Function<V, String> shown) {
+        if (!field.isEmpty()) {
+            lines.add(field.getLabel() + ": " + shown.apply(field.getValue()));
+        }
     }
 
     /** Where the value of the field in focus came from, when it came from the AI; see {@link SourceEvent}. */

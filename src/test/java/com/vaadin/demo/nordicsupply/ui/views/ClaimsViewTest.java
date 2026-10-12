@@ -2,7 +2,13 @@ package com.vaadin.demo.nordicsupply.ui.views;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -12,12 +18,16 @@ import java.util.stream.StreamSupport;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentUtil;
+import com.vaadin.flow.component.HasValue;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.ai.common.AIAttachment;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dnd.DragSource;
 import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.component.internal.PendingJavaScriptInvocation;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.upload.UploadDropZone;
 import com.vaadin.flow.dom.DomEvent;
 import com.vaadin.flow.dom.Element;
@@ -37,20 +47,25 @@ import tools.jackson.databind.node.NullNode;
 
 import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
+import com.vaadin.demo.nordicsupply.ai.ScriptedProvider.ToolCall;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Address;
 import com.vaadin.demo.nordicsupply.ai.budget.Budgets;
 import com.vaadin.demo.nordicsupply.config.DisplayLocale;
+import com.vaadin.demo.nordicsupply.data.ActivityLog;
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
 import com.vaadin.demo.nordicsupply.data.ShipmentRepository;
+import com.vaadin.demo.nordicsupply.domain.ActivityView;
+import com.vaadin.demo.nordicsupply.domain.ClaimType;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocument;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
 import com.vaadin.demo.nordicsupply.examples.PaintedExamples;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.CurrentUser.SignedInUser;
 import com.vaadin.demo.nordicsupply.session.Scopes;
+import com.vaadin.demo.nordicsupply.session.Visit;
 import com.vaadin.demo.nordicsupply.ui.TestUi;
 import com.vaadin.demo.nordicsupply.ui.components.AIPausedNotice;
 
@@ -256,6 +271,74 @@ class ClaimsViewTest {
                 .containsExactly("The AI reads emails, text files, PDFs and images of up to 300 KB.");
     }
 
+    /**
+     * Reading a message is a turn in the activity log, recorded with the message's name; the form as the AI left it is
+     * what the model proposed.
+     */
+    @Test
+    void readingAMessageIsRecordedWithItsNameAndTheFormTheAiFilledIn() {
+        var withSession = TestUi.withSession();
+        withSession.setLocale(DisplayLocale.LOCALE);
+        var model = new ScriptedProvider(
+                "The form is filled in.",
+                new ToolCall("fill_form", "{\"values\":{\"description\":\"Two cartons missing.\"}}"));
+        var conversations = mock(Conversations.class);
+        when(conversations.standalone()).thenReturn(model);
+        var log = mock(ActivityLog.class);
+        when(log.asked(any(), any(), anyString(), anyString())).thenReturn(5L);
+        var view = viewFor(HEAD_OFFICE, conversations, log);
+        withSession.add(view);
+        var example = examplesOf(view).getFirst();
+        var name = ((ExampleDocument) DragSource.configure(example).getDragData()).name();
+
+        ComponentUtil.fireEvent(example, new ClickEvent<>(example));
+        browserAnswers(withSession);
+
+        verify(log)
+                .asked(
+                        any(),
+                        eq(ActivityView.CLAIM_FORM),
+                        argThat(prompt ->
+                                prompt.startsWith("Fill in the claim form from the attached customer message.")
+                                        && prompt.endsWith("Attached: " + name)),
+                        startsWith("The attached message"));
+        verify(log).ended(eq(5L), eq("The form is filled in."), any(), any(), any());
+        verify(log).proposed(5L, "Priority: Normal\nDescription: Two cartons missing.");
+    }
+
+    /** Creating a claim is the user keeping what the form holds, the AI's values or their own. */
+    @Test
+    void aCreatedClaimIsRecordedAsKept() {
+        var log = mock(ActivityLog.class);
+        var view = viewFor(
+                HEAD_OFFICE,
+                new Conversations(
+                        ChatClient.builder(mock(ChatModel.class)),
+                        MessageWindowChatMemory.builder().build()),
+                log);
+        var withSession = TestUi.withSession();
+        withSession.setLocale(DisplayLocale.LOCALE);
+        withSession.add(view);
+        field(view, "customer", ComboBox.class)
+                .setValue(new CustomerRepository.Option(
+                        1186, "C-11186", "Aalborg Trekking ApS", "Aalborg", "aalborg.trekking.example"));
+        field(view, "claim-type", Select.class).setValue(ClaimType.MISSING_ITEMS);
+
+        ComponentTree.descendants(view)
+                .filter(Button.class::isInstance)
+                .map(Button.class::cast)
+                .filter(button -> "Create Claim".equals(button.getText()))
+                .findFirst()
+                .orElseThrow()
+                .click();
+
+        verify(log)
+                .applied(
+                        any(),
+                        eq(ActivityView.CLAIM_FORM),
+                        eq("Customer: Aalborg Trekking ApS\nClaim Type: Missing items\nPriority: Normal"));
+    }
+
     @Test
     void theReadmeSaysHowAMessageBecomesAClaim() {
         assertThat(viewFor(HEAD_OFFICE).readmeSections())
@@ -287,6 +370,15 @@ class ClaimsViewTest {
     }
 
     private static ClaimsView viewFor(SignedInUser user, Conversations conversations, AIBudget budget) {
+        return viewFor(user, conversations, budget, mock(ActivityLog.class));
+    }
+
+    private static ClaimsView viewFor(SignedInUser user, Conversations conversations, ActivityLog log) {
+        return viewFor(user, conversations, Budgets.budget(), log);
+    }
+
+    private static ClaimsView viewFor(
+            SignedInUser user, Conversations conversations, AIBudget budget, ActivityLog log) {
         var currentUser = mock(CurrentUser.class);
         when(currentUser.get()).thenReturn(user);
         when(currentUser.signal()).thenReturn(new SharedValueSignal<>(user));
@@ -298,7 +390,8 @@ class ClaimsViewTest {
                 conversations,
                 budget,
                 currentUser,
-                EXAMPLES);
+                EXAMPLES,
+                new Visit(log));
     }
 
     /** The notices shown on the UI, oldest first. */
@@ -350,7 +443,15 @@ class ClaimsViewTest {
         return component instanceof NativeButton use && use.hasClassName("file-use");
     }
 
-    /** Plays the browser for one round trip: every JavaScript call the page waits on returns, with nothing. */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static <T extends HasValue> T field(ClaimsView view, String id, Class<T> type) {
+        return ComponentTree.descendants(view)
+                .filter(component -> component.getId().filter(id::equals).isPresent())
+                .map(type::cast)
+                .findFirst()
+                .orElseThrow();
+    }
+
     /** The browser answers every pending call, and what the answers set up for the next response is run as well. */
     private static void browserAnswers(UI ui) {
         browserAnswers(ui, call -> true);

@@ -152,6 +152,12 @@ public class DashboardView extends PageView implements HasReadme {
     private final Popover popover = new Popover();
     private InsightWidget active;
 
+    /** The country filter's width: "All countries", its longest label, with room before the arrow. */
+    private static final String FILTER_WIDTH = "9.5rem";
+
+    /** Save Dashboard's width, a little over its label's, beside the filter. */
+    private static final String SAVE_WIDTH = "8.75rem";
+
     private final Button save = new Button("Save Dashboard", e -> save());
 
     private final CountryFilter filter;
@@ -181,6 +187,8 @@ public class DashboardView extends PageView implements HasReadme {
         // the filter shows the session's choice, as every tab does, and a choice made here becomes the session's
         filter.bindValue(user.filterSignal(), user::setFilter);
         shown = user.filter();
+        filter.setWidth(FILTER_WIDTH);
+        save.setWidth(SAVE_WIDTH);
         heading().addActions(filter, save);
 
         query = new QueryPanel(Map.of(WidgetType.GRID, TABLE_CHIPS, WidgetType.CHART, CHART_CHIPS), this::ask);

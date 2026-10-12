@@ -12,9 +12,8 @@ import com.vaadin.demo.nordicsupply.session.Scopes;
 class CountryFilterTest {
 
     @Test
-    void aRegionsFilterOffersTheRegionThenEachOfItsCountries() {
-        assertThat(labels(new CountryFilter(Scopes.FI_EE)))
-                .containsExactly("Finland and Estonia", "Finland", "Estonia");
+    void aRegionsFilterOffersAllItsCountriesThenEachOfThem() {
+        assertThat(labels(new CountryFilter(Scopes.FI_EE))).containsExactly("All countries", "Finland", "Estonia");
     }
 
     /** The head office's region is every country, and the filter says so rather than whose region it is. */

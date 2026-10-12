@@ -14,8 +14,8 @@ public class CountryFilter extends Select<Scope> {
     /** @param region the signed-in employee's region, the widest scope the filter offers */
     public CountryFilter(Scope region) {
         setItems(Scopes.filtersWithin(region));
-        // the head office's region is labelled for the user switcher; in a list of countries it reads as what it covers
-        setItemLabelGenerator(scope -> Scopes.ALL.equals(scope) ? "All countries" : scope.label());
+        // a region is labelled for the user switcher; first in a list of its countries, it reads as all of them
+        setItemLabelGenerator(scope -> scope.equals(region) ? "All countries" : scope.label());
         setAriaLabel("Countries");
         addClassName("country-filter");
     }

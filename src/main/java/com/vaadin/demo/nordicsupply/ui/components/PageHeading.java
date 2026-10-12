@@ -15,9 +15,10 @@ public class PageHeading extends HeroTitle {
 
     private final Div actions = new Div();
 
-    /** Puts the page's own actions at the heading's end. */
+    /** Puts the page's own actions at the heading's end, in a row that {@code page.css} spaces. */
     public void addActions(Component... components) {
         if (actions.getParent().isEmpty()) {
+            actions.addClassName("page-actions");
             actions.getElement().setAttribute("slot", "suffix");
             add(actions);
         }

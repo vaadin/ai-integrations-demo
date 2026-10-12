@@ -57,7 +57,10 @@ public class ActivityLog {
         entries.findById(turn).ifPresent(entry -> entry.end(answer, finishReason, inputTokens, outputTokens));
     }
 
-    /** What the model proposed in a turn, a widget's query or a form's values, which the log keeps over its answer. */
+    /**
+     * What the model proposed in a turn, a table's query, what a turn changed of a chart or a form's values, which the
+     * log keeps over its answer.
+     */
     @Transactional
     public void proposed(long turn, String proposal) {
         entries.findById(turn).ifPresent(entry -> entry.propose(proposal));

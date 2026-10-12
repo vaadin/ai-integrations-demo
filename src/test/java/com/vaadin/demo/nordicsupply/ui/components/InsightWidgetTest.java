@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -44,6 +45,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
@@ -57,6 +59,7 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
+import tools.jackson.databind.json.JsonMapper;
 
 import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
@@ -75,6 +78,8 @@ import com.vaadin.demo.nordicsupply.ui.TestUi;
  * description for itself, and shows the rest in its chat. A saved widget comes back with its chat and its query.
  */
 class InsightWidgetTest {
+
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final ScriptedProvider model = new ScriptedProvider(
             "TITLE: Late shipments\nSUMMARY: Shipments after the promised date.\n\nCounted from late_shipments.");
@@ -724,9 +729,83 @@ class InsightWidgetTest {
 
         widget.ask("Orders per week in Finland");
 
-        verify(log).asked(any(), eq(ActivityView.DASHBOARD), eq("Orders per week in Finland"), contains("never a row"));
+        verify(log)
+                .asked(
+                        any(),
+                        eq(ActivityView.DASHBOARD),
+                        eq("Orders per week in Finland"),
+                        contains("chart configuration; never a row"));
         verify(log).ended(eq(7L), startsWith("TITLE: Orders per week"), any(), any(), any());
         verify(log).proposed(7L, "SELECT wk AS category, n AS amount FROM weekly WHERE country = 'Finland'");
+    }
+
+    /**
+     * A new chart's first turn proposes its queries and the settings the model chose, without the number Vaadin Charts
+     * gives every axis.
+     */
+    @Test
+    void aNewChartsFirstTurnIsRecordedWithItsQueriesAndTheModelsSettings() {
+        when(log.asked(any(), any(), anyString(), anyString())).thenReturn(11L);
+        var query = "SELECT wk AS category, SUM(n) AS amount FROM weekly GROUP BY wk";
+        var widget = widget(
+                WidgetType.CHART,
+                new ScriptedProvider(
+                        "TITLE: Orders per week\nSUMMARY: Orders.",
+                        new ToolCall("update_chart_data_source", "{\"queries\":[\"" + query + "\"]}"),
+                        new ToolCall(
+                                "update_chart_configuration",
+                                "{\"configuration\":{\"chart\":{\"type\":\"line\"},\"xAxis\":{\"title\":{\"text\":\"Week\"}}}}")));
+
+        widget.ask("Orders per week as a line");
+
+        var proposal = ArgumentCaptor.forClass(String.class);
+        verify(log).proposed(eq(11L), proposal.capture());
+        assertThat(proposal.getValue()).startsWith(query + "\n\n");
+        assertThat(JSON.readTree(proposal.getValue().substring(query.length() + 2)))
+                .isEqualTo(JSON.readTree("{\"chart\":{\"type\":\"line\"},\"xAxis\":{\"title\":{\"text\":\"Week\"}}}"));
+    }
+
+    /**
+     * A turn that only changes how a saved chart is drawn proposes the settings it changed, not the queries it left as
+     * they were. A dashboard the user saved keeps the chart's styled mode, which the change of type resets in what the
+     * model reads; the model did not choose that, and the widget keeps the chart itself in styled mode.
+     */
+    @Test
+    void aChartsTurnThatChangesItsLookAloneIsRecordedWithTheConfiguration() {
+        when(log.asked(any(), any(), anyString(), anyString())).thenReturn(9L);
+        var widget = widget(
+                WidgetType.CHART,
+                new ScriptedProvider(
+                        "TITLE: Orders per week\nSUMMARY: As a line.",
+                        new ToolCall(
+                                "update_chart_configuration", "{\"configuration\":{\"chart\":{\"type\":\"line\"}}}")));
+        widget.restore(
+                "SELECT wk AS category, SUM(n) AS amount FROM weekly GROUP BY wk",
+                "{\"configuration\":{\"chart\":{\"type\":\"column\",\"styledMode\":true}}}");
+
+        widget.ask("Make it a line chart instead");
+
+        var proposal = ArgumentCaptor.forClass(String.class);
+        verify(log).proposed(eq(9L), proposal.capture());
+        assertThat(JSON.readTree(proposal.getValue())).isEqualTo(JSON.readTree("{\"chart\":{\"type\":\"line\"}}"));
+    }
+
+    /** A turn that leaves a chart as it was proposes nothing, and the log keeps the model's answer. */
+    @Test
+    void aChartsTurnThatChangesNothingIsRecordedWithItsAnswer() {
+        when(log.asked(any(), any(), anyString(), anyString())).thenReturn(10L);
+        var query = "SELECT wk AS category, SUM(n) AS amount FROM weekly GROUP BY wk";
+        var widget = widget(
+                WidgetType.CHART,
+                new ScriptedProvider(
+                        "TITLE: Orders per week\nSUMMARY: As it was.",
+                        new ToolCall("update_chart_data_source", "{\"queries\":[\"" + query + "\"]}")));
+        widget.restore(query, null);
+
+        widget.ask("Show it again");
+
+        verify(log).ended(eq(10L), startsWith("TITLE: Orders per week"), any(), any(), any());
+        verify(log, never()).proposed(anyLong(), anyString());
     }
 
     @Test

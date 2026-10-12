@@ -46,7 +46,8 @@ import com.vaadin.demo.nordicsupply.domain.WidgetType;
 /**
  * One Dashboard widget: a grid or a chart with its own chat and orchestrator. The chat is shown in a popover beside
  * the widget while it is selected. After every turn the model names the widget, a short title and a one-sentence
- * description in business terms. The model sees the schema text and today's date and never a row. A saved widget
+ * description in business terms. The model sees the schema text, today's date, the widget's query and, for a chart,
+ * its configuration, and never a row. A saved widget
  * comes back with its chat, which the model is given as its memory, and with its query run anew.
  */
 public class InsightWidget extends DashboardWidget {

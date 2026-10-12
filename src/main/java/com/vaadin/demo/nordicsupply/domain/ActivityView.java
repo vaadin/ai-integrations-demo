@@ -5,7 +5,9 @@ package com.vaadin.demo.nordicsupply.domain;
  * may read besides the prompt.
  */
 public enum ActivityView {
-    DASHBOARD("Dashboard", "The database schema, today's date, and this widget's chat and query; never a row"),
+    DASHBOARD(
+            "Dashboard",
+            "The database schema, today's date, this widget's chat, query and any chart configuration; never a row"),
     CLAIM_FORM(
             "Claims",
             "The attached message, the claim form, and the customers, contacts, orders and shipments it looked up");

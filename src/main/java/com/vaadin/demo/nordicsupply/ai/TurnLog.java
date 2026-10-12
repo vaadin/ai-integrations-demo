@@ -1,8 +1,10 @@
 package com.vaadin.demo.nordicsupply.ai;
 
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 import com.vaadin.flow.component.ai.chart.ChartAIController;
+import com.vaadin.flow.component.ai.chart.ChartState;
 import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.ai.form.FormAIController;
 import com.vaadin.flow.component.ai.grid.GridAIController;
@@ -10,7 +12,12 @@ import com.vaadin.flow.component.ai.orchestrator.RequestInterceptor;
 import com.vaadin.flow.component.ai.orchestrator.RequestListener;
 import com.vaadin.flow.component.ai.orchestrator.ResponseListener;
 import com.vaadin.flow.component.ai.provider.ResponseMetadata;
+import com.vaadin.flow.component.charts.model.Configuration;
+import com.vaadin.flow.component.charts.util.ChartSerialization;
 import com.vaadin.flow.function.SerializableSupplier;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import com.vaadin.demo.nordicsupply.data.ActivityLog;
 import com.vaadin.demo.nordicsupply.domain.ActivityView;
@@ -30,6 +37,8 @@ public class TurnLog {
     /** As much of a refused prompt as the log keeps: what a question may have, since the longest are refused. */
     private static final int KEPT_OF_A_REFUSED_PROMPT = 500;
 
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
     private final ActivityLog log;
     private final ActivityLog.Author author;
     private final ActivityView view;
@@ -40,6 +49,12 @@ public class TurnLog {
     /** Whether that turn has yet to end: a turn that fails in the interceptor ends without having been asked. */
     private volatile boolean underWay;
 
+    /** The chart this log watches, if it watches one. */
+    private ChartAIController chart;
+
+    /** That chart as the model could read it when the latest turn was asked, to tell what the turn changed. */
+    private ChartReading chartAsAsked = ChartReading.NONE;
+
     public TurnLog(ActivityLog log, ActivityLog.Author author, ActivityView view) {
         this.log = log;
         this.author = author;
@@ -48,13 +63,16 @@ public class TurnLog {
 
     /**
      * For {@code AIOrchestrator.Builder.withRequestListener}: records the prompt as it goes out, with the names of its
-     * attachments and what else the view's model may read.
+     * attachments and what else the view's model may read, and notes how a watched chart stands before the turn.
      */
     public void asked(RequestListener.RequestEvent event) {
         var prompt = event.getUserMessage();
         if (!event.getAttachments().isEmpty()) {
             prompt += "\n\nAttached: "
                     + event.getAttachments().stream().map(AIAttachment::name).collect(Collectors.joining(", "));
+        }
+        if (chart != null) {
+            chartAsAsked = ChartReading.of(chart.getState());
         }
         turn = log.asked(author, view, prompt, view.modelCouldSee());
         underWay = true;
@@ -101,9 +119,19 @@ public class TurnLog {
         controller.addStateChangeListener(state -> proposed(state.query()));
     }
 
-    /** Records what the model proposed in each turn of a chart: the queries it draws. */
+    /**
+     * Records what the model proposed in each turn of a chart: what the turn changed of the chart as the model reads
+     * it, the queries it draws or the configuration it is drawn with, which holds none of the values. A turn that
+     * changed neither keeps its answer.
+     */
     public void watch(ChartAIController controller) {
-        controller.addStateChangeListener(state -> proposed(String.join("\n\n", state.queries())));
+        chart = controller;
+        controller.addStateChangeListener(state -> {
+            var changed = ChartReading.of(state).changedSince(chartAsAsked);
+            if (!changed.isEmpty()) {
+                proposed(changed);
+            }
+        });
     }
 
     /**
@@ -156,5 +184,72 @@ public class TurnLog {
         }
         var kept = prompt.codePoints().limit(KEPT_OF_A_REFUSED_PROMPT).toArray();
         return new String(kept, 0, kept.length) + "…";
+    }
+
+    /**
+     * A chart as the model reads it back with the chart tools: its queries, and the configuration the model has set,
+     * without the series and categories the chart builds from the rows. A chart that has drawn nothing yet has no
+     * queries and a configuration with nothing set.
+     */
+    private record ChartReading(String queries, JsonNode configuration) {
+
+        static final ChartReading NONE = new ChartReading("", json(unset()));
+
+        /** A configuration with nothing set but the x and the y axis every chart has, numbered by Vaadin Charts. */
+        private static Configuration unset() {
+            var configuration = new Configuration();
+            configuration.getxAxis();
+            configuration.getyAxis();
+            return configuration;
+        }
+
+        static ChartReading of(ChartState state) {
+            return state == null
+                    ? NONE
+                    : new ChartReading(String.join("\n\n", state.queries()), json(state.llmConfiguration()));
+        }
+
+        /** What differs from the reading before: the queries, the settings indented to be read, both, or nothing. */
+        String changedSince(ChartReading before) {
+            var changed = new ArrayList<String>();
+            if (!queries.equals(before.queries)) {
+                changed.add(queries);
+            }
+            var settings = changed(configuration, before.configuration, NONE.configuration);
+            if (!settings.isEmpty()) {
+                changed.add(settings.toPrettyString());
+            }
+            return String.join("\n\n", changed);
+        }
+
+        /**
+         * The settings of a configuration that differ from those before it, in the form the model sends them and the
+         * chart merges into what it has. What every configuration holds before anything is set is left out: the model
+         * did not choose it.
+         */
+        private static ObjectNode changed(JsonNode after, JsonNode before, JsonNode unset) {
+            var changed = JSON.createObjectNode();
+            for (var setting : after.properties()) {
+                var name = setting.getKey();
+                var value = setting.getValue();
+                if (value.equals(before.get(name)) || value.equals(unset.get(name))) {
+                    continue;
+                }
+                if (value.isObject()
+                        && (before.path(name).isObject() || unset.path(name).isObject())) {
+                    var inner = changed(value, before.path(name), unset.path(name));
+                    if (!inner.isEmpty()) {
+                        changed.set(name, inner);
+                    }
+                } else {
+                    changed.set(name, value);
+                }
+            }
+            return changed;
+        }
+
+        private static JsonNode json(Configuration configuration) {
+            return JSON.readTree(ChartSerialization.toJSON(configuration));
+        }
     }
 }

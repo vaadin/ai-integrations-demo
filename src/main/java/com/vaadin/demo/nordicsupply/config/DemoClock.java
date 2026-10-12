@@ -6,6 +6,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.util.Locale;
 import java.util.Objects;
 
 import com.vaadin.flow.component.UI;
@@ -25,6 +29,9 @@ public final class DemoClock extends Clock {
 
     /** The demo's clock in Helsinki, where Nordic Supply keeps its books. */
     public static final DemoClock CLOCK = new DemoClock(ZoneId.of("Europe/Helsinki"));
+
+    /** The session context's form of a date and time, the orchestrator's own. */
+    private static final DateTimeFormatter CONTEXT_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mmXXX");
 
     private final ZoneId zone;
 
@@ -57,6 +64,19 @@ public final class DemoClock extends Clock {
         } catch (DateTimeException e) {
             return CLOCK;
         }
+    }
+
+    /**
+     * What an orchestrator tells the model about "now" on every turn, given to it with {@code withMetadata}: the
+     * demo's date and time, in the words and the form of the orchestrator's own default, which would give the server's
+     * clock and so a date after the dataset ends.
+     *
+     * @return the session context of a turn
+     */
+    public static String sessionContext() {
+        var now = ZonedDateTime.now(CLOCK);
+        return "Current date and time: " + now.format(CONTEXT_TIME) + " ("
+                + now.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + ", " + now.getZone() + ")";
     }
 
     /** The dataset's day at the real time of day in this clock's zone. */

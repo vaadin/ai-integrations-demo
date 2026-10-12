@@ -23,8 +23,8 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.signals.Signal;
 
-import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
+import com.vaadin.demo.nordicsupply.ai.LLMProviders;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.config.PackData;
@@ -127,7 +127,7 @@ public class DashboardView extends PageView implements HasReadme {
 
     private final PackData pack;
     private final ScopedConnections connections;
-    private final Conversations conversations;
+    private final LLMProviders providers;
     private final AIBudget budget;
     private final CurrentUser user;
     private final SavedDashboards dashboards;
@@ -168,7 +168,7 @@ public class DashboardView extends PageView implements HasReadme {
     public DashboardView(
             PackData pack,
             ScopedConnections connections,
-            Conversations conversations,
+            LLMProviders providers,
             AIBudget budget,
             CurrentUser user,
             SavedDashboards dashboards,
@@ -176,7 +176,7 @@ public class DashboardView extends PageView implements HasReadme {
         super("dashboard", "Dashboard", "Understand Your Operations", "Dashboard");
         this.pack = pack;
         this.connections = connections;
-        this.conversations = conversations;
+        this.providers = providers;
         this.budget = budget;
         this.user = user;
         this.dashboards = dashboards;
@@ -417,7 +417,7 @@ public class DashboardView extends PageView implements HasReadme {
         var db = new JdbcDatabaseProvider(() -> connections.templateFor(user.filter()), pack);
         var turns = visit.turns(ownerId, ActivityView.DASHBOARD);
         var widget = new InsightWidget(
-                type, title, db, conversations, budget, user.get().name(), history, turns);
+                type, title, db, providers.forChat(history), budget, user.get().name(), history, turns);
         widget.onAsk(this::activate);
         widget.onChanged(changed -> {
             markDirty();

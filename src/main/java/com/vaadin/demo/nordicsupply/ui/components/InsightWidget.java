@@ -17,7 +17,7 @@ import com.vaadin.flow.component.ai.grid.GridState;
 import com.vaadin.flow.component.ai.orchestrator.AIController;
 import com.vaadin.flow.component.ai.orchestrator.AIOrchestrator;
 import com.vaadin.flow.component.ai.orchestrator.ResponseListener;
-import com.vaadin.flow.component.ai.provider.SpringAILLMProvider;
+import com.vaadin.flow.component.ai.provider.LLMProvider;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.charts.Chart;
@@ -35,7 +35,6 @@ import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.function.SerializableConsumer;
 import tools.jackson.databind.json.JsonMapper;
 
-import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.TurnLog;
 import com.vaadin.demo.nordicsupply.ai.WidgetReply;
@@ -123,8 +122,6 @@ public class InsightWidget extends DashboardWidget {
     private final Chart chart;
     private final ChartAIController chartController;
     private final ChatPanel chat = new ChatPanel();
-    private final Conversations conversations;
-    private final String conversationId = Conversations.newId();
     /** Admits each question against the budget, and closes the turn when its response comes. */
     private final TurnGuard guard;
 
@@ -153,25 +150,24 @@ public class InsightWidget extends DashboardWidget {
      * @param type whether the widget answers with a chart or a table; it keeps that kind
      * @param title the widget's title until the model names it: the question that made it, or the saved title
      * @param db the model's way into the data, on the signed-in user's connection
-     * @param conversations where the widget's conversation lives, and is let go when the widget leaves the page
+     * @param provider the model, with the widget's chat so far as its memory
      * @param budget what admits a question before it is sent, and takes the turn's cost when it ends
      * @param userName how the chat names the user's turns
      * @param history the chat so far, oldest first: empty for a new widget, and for a saved one its saved chat, which
-     *     the chat shows and the model is given as its memory
+     *     the chat shows and the model remembers
      * @param turns where the widget's turns are recorded: the question, the query the model proposed, the answer
      */
     public InsightWidget(
             WidgetType type,
             String title,
             JdbcDatabaseProvider db,
-            Conversations conversations,
+            LLMProvider provider,
             AIBudget budget,
             String userName,
             List<ChatMessage> history,
             TurnLog turns) {
         super(title);
         this.type = type;
-        this.conversations = conversations;
         this.guard = budget.guard("insights");
         addClassName("insight-widget");
         Component visual;
@@ -200,20 +196,11 @@ public class InsightWidget extends DashboardWidget {
             controller = gridController;
             visual = grid;
         }
-        // the conversation id is the widget's own, so two tabs showing the same saved widget keep two memories
-        var provider = conversations.restore(conversationId, history);
-        if (provider instanceof SpringAILLMProvider spring) {
-            // the reply is two lines and a note, and the chat would otherwise show them and the model's narration
-            // word by word until the turn ends; the chat shows the assistant typing meanwhile, and the turn still runs
-            // off the request thread
-            spring.setStreaming(false);
-            spring.setBackgroundExecution(true);
-        }
         var builder = AIOrchestrator.builder(provider, systemPrompt(type))
                 .withMessageList(chat.messageList())
                 .withInput(chat.messageInput())
                 .withController(controller)
-                .withMetadata(Conversations::sessionContext)
+                .withMetadata(DemoClock::sessionContext)
                 .withRequestInterceptor(turns.refusing(guard::admit))
                 // the wait shows where the answer will appear, also while the chat is closed
                 .withRequestListener(turns.asking(event -> progress.setVisible(true)))
@@ -222,7 +209,7 @@ public class InsightWidget extends DashboardWidget {
                 .withUserName(userName)
                 .withAssistantName(ASSISTANT_NAME);
         if (!history.isEmpty()) {
-            // the chat and the orchestrator's own record; the model's memory was written by Conversations
+            // the chat and the orchestrator's own record; the provider holds the model's memory
             builder.withHistory(history, Map.of());
         }
         orchestrator = builder.build();
@@ -252,8 +239,6 @@ public class InsightWidget extends DashboardWidget {
         content.setSpacing(false);
         content.expand(visual);
         setContent(content);
-        // removed from the dashboard or gone with the page: the widget's conversation is no longer anyone's
-        addDetachListener(event -> conversations.forget(conversationId));
     }
 
     /** The system prompt for a widget of the given type. */
@@ -420,18 +405,12 @@ public class InsightWidget extends DashboardWidget {
     }
 
     /**
-     * Runs on the provider's thread: anything that touches the UI goes through {@code ui.access}. A failed turn is
-     * reported and its question dropped from the memory, so that the next question is not answered twice over.
+     * Runs on the provider's thread: anything that touches the UI goes through {@code ui.access}, which a widget that
+     * left the page while the turn ran no longer has.
      */
     private void onResponse(ResponseListener.ResponseEvent event) {
-        if (!isAttached()) {
-            // the widget went while the turn ran, and the memory advisor has written the turn since it was forgotten
-            conversations.forget(conversationId);
-            return;
-        }
         getUI().ifPresent(ui -> ui.access(() -> progress.setVisible(false)));
         if (event.getError().isPresent()) {
-            conversations.dropUnanswered(conversationId);
             getUI().ifPresent(ui -> ui.access(() -> {
                 var n = Notification.show(FAILED, ERROR_NOTIFICATION_MS, Notification.Position.BOTTOM_START);
                 n.addThemeVariants(NotificationVariant.ERROR);

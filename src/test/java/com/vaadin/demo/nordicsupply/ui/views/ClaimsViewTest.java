@@ -39,13 +39,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.util.unit.DataSize;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.NullNode;
 
-import com.vaadin.demo.nordicsupply.ai.Conversations;
+import com.vaadin.demo.nordicsupply.ai.LLMProviders;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider.ToolCall;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
@@ -142,9 +141,9 @@ class ClaimsViewTest {
         var withSession = TestUi.withSession();
         withSession.setLocale(DisplayLocale.LOCALE);
         var model = new ScriptedProvider("The form is filled in.");
-        var conversations = mock(Conversations.class);
-        when(conversations.standalone()).thenReturn(model);
-        var view = viewFor(HEAD_OFFICE, conversations);
+        var providers = mock(LLMProviders.class);
+        when(providers.forSingleTurns()).thenReturn(model);
+        var view = viewFor(HEAD_OFFICE, providers);
         withSession.add(view);
         var example = examplesOf(view).getFirst();
 
@@ -168,9 +167,9 @@ class ClaimsViewTest {
     void aMessageTheBudgetRefusesIsAnsweredWithANoticeAndNeverReachesTheModel() {
         var withSession = TestUi.withSession();
         var model = new ScriptedProvider("The form is filled in.");
-        var conversations = mock(Conversations.class);
-        when(conversations.standalone()).thenReturn(model);
-        var view = viewFor(HEAD_OFFICE, conversations, Budgets.disabled());
+        var providers = mock(LLMProviders.class);
+        when(providers.forSingleTurns()).thenReturn(model);
+        var view = viewFor(HEAD_OFFICE, providers, Budgets.disabled());
         withSession.add(view);
         var example = examplesOf(view).getFirst();
 
@@ -210,11 +209,11 @@ class ClaimsViewTest {
         // a provider serves one orchestrator: one per view
         var goneModel = new ScriptedProvider("The form is filled in.");
         var stayingModel = new ScriptedProvider("The form is filled in.");
-        var conversations = mock(Conversations.class);
-        when(conversations.standalone()).thenReturn(goneModel, stayingModel);
+        var providers = mock(LLMProviders.class);
+        when(providers.forSingleTurns()).thenReturn(goneModel, stayingModel);
         var oneAtATime = Budgets.withAddress(new Address(120, 1));
-        var gone = viewFor(HEAD_OFFICE, conversations, oneAtATime);
-        var staying = viewFor(HEAD_OFFICE, conversations, oneAtATime);
+        var gone = viewFor(HEAD_OFFICE, providers, oneAtATime);
+        var staying = viewFor(HEAD_OFFICE, providers, oneAtATime);
         withSession.add(gone, staying);
 
         var left = examplesOf(gone).getFirst();
@@ -233,9 +232,9 @@ class ClaimsViewTest {
     void aPastedTextIsReadAsAMessageAndOneOverTheCapIsRefused() {
         var withSession = TestUi.withSession();
         var model = new ScriptedProvider("The form is filled in.");
-        var conversations = mock(Conversations.class);
-        when(conversations.standalone()).thenReturn(model);
-        var view = viewFor(HEAD_OFFICE, conversations);
+        var providers = mock(LLMProviders.class);
+        when(providers.forSingleTurns()).thenReturn(model);
+        var view = viewFor(HEAD_OFFICE, providers);
         withSession.add(view);
 
         paste(view, "x".repeat(20_001));
@@ -259,9 +258,9 @@ class ClaimsViewTest {
     @Test
     void aFileTheBrowserRejectsIsAnsweredWithTheCapAsSet() {
         var withSession = TestUi.withSession();
-        var conversations = mock(Conversations.class);
-        when(conversations.standalone()).thenReturn(new ScriptedProvider("The form is filled in."));
-        var view = viewFor(HEAD_OFFICE, conversations, Budgets.withMaxFileSize(DataSize.ofKilobytes(300)));
+        var providers = mock(LLMProviders.class);
+        when(providers.forSingleTurns()).thenReturn(new ScriptedProvider("The form is filled in."));
+        var view = viewFor(HEAD_OFFICE, providers, Budgets.withMaxFileSize(DataSize.ofKilobytes(300)));
         withSession.add(view);
 
         browserRejects(view, "scan.pdf", "fileIsTooBig");
@@ -282,11 +281,11 @@ class ClaimsViewTest {
         var model = new ScriptedProvider(
                 "The form is filled in.",
                 new ToolCall("fill_form", "{\"values\":{\"description\":\"Two cartons missing.\"}}"));
-        var conversations = mock(Conversations.class);
-        when(conversations.standalone()).thenReturn(model);
+        var providers = mock(LLMProviders.class);
+        when(providers.forSingleTurns()).thenReturn(model);
         var log = mock(ActivityLog.class);
         when(log.asked(any(), any(), anyString(), anyString())).thenReturn(5L);
-        var view = viewFor(HEAD_OFFICE, conversations, log);
+        var view = viewFor(HEAD_OFFICE, providers, log);
         withSession.add(view);
         var example = examplesOf(view).getFirst();
         var name = ((ExampleDocument) DragSource.configure(example).getDragData()).name();
@@ -310,12 +309,7 @@ class ClaimsViewTest {
     @Test
     void aCreatedClaimIsRecordedAsKept() {
         var log = mock(ActivityLog.class);
-        var view = viewFor(
-                HEAD_OFFICE,
-                new Conversations(
-                        ChatClient.builder(mock(ChatModel.class)),
-                        MessageWindowChatMemory.builder().build()),
-                log);
+        var view = viewFor(HEAD_OFFICE, new LLMProviders(ChatClient.builder(mock(ChatModel.class))), log);
         var withSession = TestUi.withSession();
         withSession.setLocale(DisplayLocale.LOCALE);
         withSession.add(view);
@@ -358,27 +352,22 @@ class ClaimsViewTest {
     }
 
     private static ClaimsView viewFor(SignedInUser user) {
-        return viewFor(
-                user,
-                new Conversations(
-                        ChatClient.builder(mock(ChatModel.class)),
-                        MessageWindowChatMemory.builder().build()));
+        return viewFor(user, new LLMProviders(ChatClient.builder(mock(ChatModel.class))));
     }
 
-    private static ClaimsView viewFor(SignedInUser user, Conversations conversations) {
-        return viewFor(user, conversations, Budgets.budget());
+    private static ClaimsView viewFor(SignedInUser user, LLMProviders providers) {
+        return viewFor(user, providers, Budgets.budget());
     }
 
-    private static ClaimsView viewFor(SignedInUser user, Conversations conversations, AIBudget budget) {
-        return viewFor(user, conversations, budget, mock(ActivityLog.class));
+    private static ClaimsView viewFor(SignedInUser user, LLMProviders providers, AIBudget budget) {
+        return viewFor(user, providers, budget, mock(ActivityLog.class));
     }
 
-    private static ClaimsView viewFor(SignedInUser user, Conversations conversations, ActivityLog log) {
-        return viewFor(user, conversations, Budgets.budget(), log);
+    private static ClaimsView viewFor(SignedInUser user, LLMProviders providers, ActivityLog log) {
+        return viewFor(user, providers, Budgets.budget(), log);
     }
 
-    private static ClaimsView viewFor(
-            SignedInUser user, Conversations conversations, AIBudget budget, ActivityLog log) {
+    private static ClaimsView viewFor(SignedInUser user, LLMProviders providers, AIBudget budget, ActivityLog log) {
         var currentUser = mock(CurrentUser.class);
         when(currentUser.get()).thenReturn(user);
         when(currentUser.signal()).thenReturn(new SharedValueSignal<>(user));
@@ -387,7 +376,7 @@ class ClaimsViewTest {
                 mock(CustomerContactRepository.class),
                 mock(SalesOrderRepository.class),
                 mock(ShipmentRepository.class),
-                conversations,
+                providers,
                 budget,
                 currentUser,
                 EXAMPLES,

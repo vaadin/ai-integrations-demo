@@ -63,7 +63,10 @@ public class ActivityLog {
         entries.findById(turn).ifPresent(entry -> entry.propose(proposal));
     }
 
-    /** A result a person kept: a claim created from the form the AI filled in. */
+    /**
+     * A result a person kept: a claim created from the form the AI filled in. A dashboard's save is none: it keeps the
+     * dashboard as it is, also after a mere move or resize, which decides nothing about what the AI proposed.
+     */
     @Transactional
     public void applied(Author author, ActivityView view, String what) {
         entries.save(ActivityEntry.decision(

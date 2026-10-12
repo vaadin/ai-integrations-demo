@@ -74,10 +74,6 @@ public class InsightWidget extends DashboardWidget {
     private static final String CHAT_PLACEHOLDER =
             "Change the chart type, add or remove a column, narrow the period, or ask which data this is based on";
 
-    /** What the model reads besides the question, as the activity log records it with every turn. */
-    private static final String MODEL_COULD_SEE =
-            "The database schema, today's date, and this widget's chat and query; never a row";
-
     private static final String SYSTEM_PROMPT = """
             You help an analyst answer questions about live operations by querying the database described by the schema
             tool. Always call the tools; never invent data. Read the schema first if you have not. When a question can be
@@ -130,7 +126,6 @@ public class InsightWidget extends DashboardWidget {
     private final ChatPanel chat = new ChatPanel();
     private final Conversations conversations;
     private final String conversationId = Conversations.newId();
-    private final TurnLog turns;
 
     /** The model's one-sentence description of the widget, in business terms; shown at the top of its chat. */
     private String description = "";
@@ -174,20 +169,16 @@ public class InsightWidget extends DashboardWidget {
         super(title);
         this.type = type;
         this.conversations = conversations;
-        this.turns = turns;
         addClassName("insight-widget");
         Component visual;
         AIController controller;
-        // a controller reports its new state when a turn has changed it: the query the model proposed
         if (type == WidgetType.CHART) {
             chart = new Chart();
             chart.setSizeFull();
             styled(chart.getConfiguration());
             chartController = new ChartAIController(chart, db);
-            chartController.addStateChangeListener(state -> {
-                redraw();
-                turns.proposed(String.join("\n\n", state.queries()));
-            });
+            chartController.addStateChangeListener(state -> redraw());
+            turns.watch(chartController);
             grid = null;
             gridController = null;
             controller = chartController;
@@ -198,10 +189,8 @@ public class InsightWidget extends DashboardWidget {
             grid.setSelectionMode(Grid.SelectionMode.NONE);
             grid.setSizeFull();
             gridController = new GridAIController(grid, db);
-            gridController.addStateChangeListener(state -> {
-                hideIdColumns();
-                turns.proposed(state.query());
-            });
+            gridController.addStateChangeListener(state -> hideIdColumns());
+            turns.watch(gridController);
             chart = null;
             chartController = null;
             controller = gridController;
@@ -221,13 +210,10 @@ public class InsightWidget extends DashboardWidget {
                 .withInput(chat.messageInput())
                 .withController(controller)
                 .withMetadata(Conversations::sessionContext)
-                .withRequestInterceptor(this::refuseALongQuestion)
-                .withRequestListener(event -> {
-                    // the wait shows where the answer will appear, also while the chat is closed
-                    progress.setVisible(true);
-                    turns.asked(event, MODEL_COULD_SEE);
-                })
-                .withResponseListener(this::onResponse)
+                .withRequestInterceptor(turns.refusing(InsightWidget::refuseALongQuestion))
+                // the wait shows where the answer will appear, also while the chat is closed
+                .withRequestListener(turns.asking(event -> progress.setVisible(true)))
+                .withResponseListener(turns.ending(this::onResponse))
                 .withUserName(userName)
                 .withAssistantName(ASSISTANT_NAME);
         if (!history.isEmpty()) {
@@ -272,18 +258,12 @@ public class InsightWidget extends DashboardWidget {
                 : SYSTEM_PROMPT.formatted("table", "chart");
     }
 
-    /**
-     * A question over the cap is answered by the chat, before it is a request: nothing is sent to the model. The
-     * activity log records the refusal with as much of the question as a question may have.
-     */
-    private void refuseALongQuestion(RequestInterceptor.RequestInterceptEvent event) {
-        var question = event.getUserMessage();
-        if (question.length() > MAX_QUESTION_LENGTH) {
-            var rule = "A question can have at most " + MAX_QUESTION_LENGTH + " characters; this one has "
-                    + question.length() + ".";
-            event.reject(rule);
-            var kept = question.codePoints().limit(MAX_QUESTION_LENGTH).toArray();
-            turns.refused(new String(kept, 0, kept.length) + "…", rule);
+    /** A question over the cap is answered by the chat, before it is a request: nothing is sent to the model. */
+    private static void refuseALongQuestion(RequestInterceptor.RequestInterceptEvent event) {
+        var length = event.getUserMessage().length();
+        if (length > MAX_QUESTION_LENGTH) {
+            event.reject(
+                    "A question can have at most " + MAX_QUESTION_LENGTH + " characters; this one has " + length + ".");
         }
     }
 
@@ -448,7 +428,6 @@ public class InsightWidget extends DashboardWidget {
      * reported and its question dropped from the memory, so that the next question is not answered twice over.
      */
     private void onResponse(ResponseListener.ResponseEvent event) {
-        turns.ended(event);
         if (!isAttached()) {
             // the widget went while the turn ran, and the memory advisor has written the turn since it was forgotten
             conversations.forget(conversationId);

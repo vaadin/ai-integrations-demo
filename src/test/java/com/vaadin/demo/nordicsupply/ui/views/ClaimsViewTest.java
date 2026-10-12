@@ -254,7 +254,6 @@ class ClaimsViewTest {
                 conversations,
                 currentUser,
                 EXAMPLES,
-                log,
                 new Visit(log));
     }
 

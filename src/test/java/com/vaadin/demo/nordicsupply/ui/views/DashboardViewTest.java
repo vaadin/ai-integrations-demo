@@ -128,7 +128,7 @@ class DashboardViewTest {
 
     /** The page as the signed-in user opens it, with what their saved dashboard holds at that moment. */
     private DashboardView open() {
-        var opened = new DashboardView(new PackData(), connections, conversations, user, dashboards, log, visit);
+        var opened = new DashboardView(new PackData(), connections, conversations, user, dashboards, visit);
         ui.add(opened);
         return opened;
     }

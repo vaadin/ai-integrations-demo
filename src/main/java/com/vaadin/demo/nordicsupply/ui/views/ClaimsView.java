@@ -49,9 +49,11 @@ import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
 import com.vaadin.demo.nordicsupply.data.SalesOrderRepository;
 import com.vaadin.demo.nordicsupply.data.ShipmentRepository;
+import com.vaadin.demo.nordicsupply.domain.ActivityView;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocument;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
+import com.vaadin.demo.nordicsupply.session.Visit;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 import com.vaadin.demo.nordicsupply.util.Pdfs;
 
@@ -65,6 +67,8 @@ import com.vaadin.demo.nordicsupply.util.Pdfs;
  * Every message is a new claim, so the form is emptied before the AI reads one, and one message is read at a time:
  * the area and the examples wait while the AI works. The message reaches the model as an attachment, never as the
  * prompt, so that what a customer wrote is read as data rather than as instructions.
+ * <p>
+ * Every turn goes to the activity log, and so does every claim created, as the user keeping it.
  */
 @Route("claims")
 @PageTitle("Claims")
@@ -85,6 +89,8 @@ public class ClaimsView extends PageView implements HasReadme {
                     When you click the badge, you see where the entered value came from, highlighted in the original message.
 
                     The confidence indicator shows whether the AI model found the exact match for the field value or if it had to deduct the result from multiple pieces of information in the customer message.
+
+                    The **Activity Log**, at the foot of the menu, records each message the AI read, the values it filled in and each claim created.
                     """),
             new ReadmeSection("Any Language Works", """
                     **The claim is always reported in English**, regardless of the customer's language . The translation happens automatically by the AI model.
@@ -196,7 +202,8 @@ public class ClaimsView extends PageView implements HasReadme {
             ShipmentRepository shipments,
             LLMProviders providers,
             CurrentUser currentUser,
-            ExampleDocuments examples) {
+            ExampleDocuments examples,
+            Visit visit) {
         super("claims", "Claims", "Resolve Customer Issues", "Claims");
         form = new ClaimForm(
                 customers,
@@ -205,13 +212,16 @@ public class ClaimsView extends PageView implements HasReadme {
                 shipments,
                 currentUser.get().scope().countries(),
                 Signal.not(idle));
+        var turns = visit.turns(currentUser.get().id(), ActivityView.CLAIM_FORM);
         // every message is a claim of its own: the model reads it alone, and no earlier message is sent again; the
         // session context tells it the demo's date, time and weekday, which a message without a date counts from
         orchestrator = AIOrchestrator.builder(providers.forSingleTurns(), SYSTEM_PROMPT)
                 .withController(form.aiController())
                 .withMetadata(DemoClock::sessionContext)
-                .withResponseListener(this::turnEnded)
+                .withRequestListener(turns::asked)
+                .withResponseListener(turns.ending(this::turnEnded))
                 .build();
+        turns.watch(form.aiController(), form::summary);
 
         // a region's account is offered the examples of its own countries' customers, the only ones it can find
         var chooser = new Div(
@@ -227,6 +237,7 @@ public class ClaimsView extends PageView implements HasReadme {
             }
         });
         form.addCreatedListener(e -> closeMessage());
+        form.addCreatedListener(e -> turns.applied(e.getClaim()));
 
         var source = new Section(title("New Claim Based on Customer Request"), chooser, message);
         source.addClassName("claim-source");

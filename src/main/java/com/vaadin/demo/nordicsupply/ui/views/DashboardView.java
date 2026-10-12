@@ -28,10 +28,12 @@ import com.vaadin.demo.nordicsupply.ai.LLMProviders;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.config.PackData;
 import com.vaadin.demo.nordicsupply.config.ScopedConnections;
+import com.vaadin.demo.nordicsupply.domain.ActivityView;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.SavedDashboards;
 import com.vaadin.demo.nordicsupply.session.Scope;
+import com.vaadin.demo.nordicsupply.session.Visit;
 import com.vaadin.demo.nordicsupply.ui.components.CountryFilter;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 import com.vaadin.demo.nordicsupply.ui.components.InsightWidget;
@@ -51,6 +53,8 @@ import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
  * The country filter in the page's heading narrows the dashboard to one of the user's countries, or widens it back to
  * their region. It is the session's, so every tab follows it, and a change runs every widget's query again on that
  * scope's connection; the model is not asked, and the dashboard stays as saved, since a saved query names no country.
+ * <p>
+ * Every widget's turns go to the activity log.
  * <p>
  * The dashboard's own selection (the state its move, resize and remove controls need) follows keyboard focus and is
  * cleared as soon as focus leaves the widget, which it does when the user types into the chat. The view therefore
@@ -83,6 +87,8 @@ public class DashboardView extends PageView implements HasReadme {
                     **Ask questions about orders, shipments, claims or products**. The answer appears as a chart or table on your dashboard.
 
                     Only the database schema is sent to the AI model. No data ever leaves your network. Every widget shows what data it's based on.
+
+                    The **Activity Log**, at the foot of the menu, records each question, what the model could see and the query it wrote.
 
                     Click **Edit** to refine a widget, for example: "group it by week", "only the Göteborg warehouse", "add the customer", "call it Late orders".
                     """),
@@ -122,6 +128,7 @@ public class DashboardView extends PageView implements HasReadme {
     private final LLMProviders providers;
     private final CurrentUser user;
     private final SavedDashboards dashboards;
+    private final Visit visit;
 
     /**
      * Whose dashboard this is: the user signed in when the page was built. A switch reloads every tab, and a save
@@ -160,13 +167,15 @@ public class DashboardView extends PageView implements HasReadme {
             ScopedConnections connections,
             LLMProviders providers,
             CurrentUser user,
-            SavedDashboards dashboards) {
+            SavedDashboards dashboards,
+            Visit visit) {
         super("dashboard", "Dashboard", "Understand Your Operations", "Dashboard");
         this.pack = pack;
         this.connections = connections;
         this.providers = providers;
         this.user = user;
         this.dashboards = dashboards;
+        this.visit = visit;
         this.ownerId = user.get().id();
         filter = new CountryFilter(user.get().scope());
         // the filter shows the session's choice, as every tab does, and a choice made here becomes the session's
@@ -398,8 +407,9 @@ public class DashboardView extends PageView implements HasReadme {
      */
     private InsightWidget newWidget(WidgetType type, String title, List<ChatMessage> history) {
         var db = new JdbcDatabaseProvider(() -> connections.templateFor(user.filter()), pack);
+        var turns = visit.turns(ownerId, ActivityView.DASHBOARD);
         var widget = new InsightWidget(
-                type, title, db, providers.forChat(history), user.get().name(), history);
+                type, title, db, providers.forChat(history), user.get().name(), history, turns);
         widget.onAsk(this::activate);
         widget.onChanged(changed -> {
             markDirty();

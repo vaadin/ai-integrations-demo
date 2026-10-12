@@ -2,6 +2,16 @@ package com.vaadin.demo.nordicsupply.ui.components;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -32,18 +43,23 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
+import tools.jackson.databind.json.JsonMapper;
 
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider.ToolCall;
+import com.vaadin.demo.nordicsupply.ai.TurnLog;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.config.PackData;
+import com.vaadin.demo.nordicsupply.data.ActivityLog;
+import com.vaadin.demo.nordicsupply.domain.ActivityView;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 import com.vaadin.demo.nordicsupply.ui.TestUi;
 
@@ -53,8 +69,16 @@ import com.vaadin.demo.nordicsupply.ui.TestUi;
  */
 class InsightWidgetTest {
 
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
     private final ScriptedProvider model = new ScriptedProvider(
             "TITLE: Late shipments\nSUMMARY: Shipments after the promised date.\n\nCounted from late_shipments.");
+
+    /** Where the widgets' turns are recorded, as the Dashboard view hands it to them. */
+    private final ActivityLog log = mock(ActivityLog.class);
+
+    private final TurnLog turns =
+            new TurnLog(log, new ActivityLog.Author(UUID.randomUUID(), 8), ActivityView.DASHBOARD);
 
     /** A model that gives the next of the test's answers on every turn, each a reply or a failure. */
     private final Deque<Supplier<Flux<String>>> answers = new ArrayDeque<>();
@@ -112,7 +136,7 @@ class InsightWidgetTest {
 
     /** A widget with the given model, on the database of weekly counts, which the model's tools may query. */
     private InsightWidget widget(WidgetType type, LLMProvider model) {
-        var widget = new InsightWidget(type, "Late shipments last month", weeklyDb(), model, "Lars", List.of());
+        var widget = new InsightWidget(type, "Late shipments last month", weeklyDb(), model, "Lars", List.of(), turns);
         ui.add(widget);
         return widget;
     }
@@ -380,7 +404,8 @@ class InsightWidgetTest {
                     new JdbcDatabaseProvider(connection::get, new PackData()),
                     model,
                     "Lars",
-                    List.of());
+                    List.of(),
+                    turns);
             ui.add(widget);
             widget.restore("SELECT wk AS category, SUM(n) AS amount FROM weekly GROUP BY wk", null);
             assertThat(chartOf(widget).getxAxis().getCategories()).containsExactly("W35", "W36");
@@ -523,7 +548,8 @@ class InsightWidgetTest {
     @Test
     void aSavedWidgetsChatIsShownAndContinued() {
         answers.add(() -> Flux.just("TITLE: Late shipments by carrier\nSUMMARY: Per carrier.\n\nGrouped by carrier."));
-        var widget = new InsightWidget(WidgetType.GRID, "Late shipments", weeklyDb(), answering, "Lars", savedChat());
+        var widget =
+                new InsightWidget(WidgetType.GRID, "Late shipments", weeklyDb(), answering, "Lars", savedChat(), turns);
         ui.add(widget);
 
         assertThat(widget.chat().messageList().getItems())
@@ -579,6 +605,132 @@ class InsightWidgetTest {
                 .hasSize(2)
                 .extracting(turn -> turn.time().atZone(zone).toLocalDate())
                 .containsOnly(LocalDate.of(2026, 9, 7));
+    }
+
+    /**
+     * Every turn goes to the activity log: the question, what the model could see, its answer, and the query it
+     * proposed.
+     */
+    @Test
+    void aChartsTurnIsRecordedWithTheQueriesTheModelProposed() {
+        when(log.asked(any(), any(), anyString(), anyString())).thenReturn(7L);
+        var widget = widget(
+                WidgetType.CHART,
+                new ScriptedProvider(
+                        "TITLE: Orders per week\nSUMMARY: Finland alone.",
+                        new ToolCall(
+                                "update_chart_data_source",
+                                "{\"queries\":[\"SELECT wk AS category, n AS amount FROM weekly WHERE country = 'Finland'\"]}")));
+
+        widget.ask("Orders per week in Finland");
+
+        verify(log)
+                .asked(
+                        any(),
+                        eq(ActivityView.DASHBOARD),
+                        eq("Orders per week in Finland"),
+                        contains("chart configuration; never a row"));
+        verify(log).ended(eq(7L), startsWith("TITLE: Orders per week"), any(), any(), any());
+        verify(log).proposed(7L, "SELECT wk AS category, n AS amount FROM weekly WHERE country = 'Finland'");
+    }
+
+    /**
+     * A new chart's first turn proposes its queries and the settings the model chose, without the number Vaadin Charts
+     * gives every axis.
+     */
+    @Test
+    void aNewChartsFirstTurnIsRecordedWithItsQueriesAndTheModelsSettings() {
+        when(log.asked(any(), any(), anyString(), anyString())).thenReturn(11L);
+        var query = "SELECT wk AS category, SUM(n) AS amount FROM weekly GROUP BY wk";
+        var widget = widget(
+                WidgetType.CHART,
+                new ScriptedProvider(
+                        "TITLE: Orders per week\nSUMMARY: Orders.",
+                        new ToolCall("update_chart_data_source", "{\"queries\":[\"" + query + "\"]}"),
+                        new ToolCall(
+                                "update_chart_configuration",
+                                "{\"configuration\":{\"chart\":{\"type\":\"line\"},\"xAxis\":{\"title\":{\"text\":\"Week\"}}}}")));
+
+        widget.ask("Orders per week as a line");
+
+        var proposal = ArgumentCaptor.forClass(String.class);
+        verify(log).proposed(eq(11L), proposal.capture());
+        assertThat(proposal.getValue()).startsWith(query + "\n\n");
+        assertThat(JSON.readTree(proposal.getValue().substring(query.length() + 2)))
+                .isEqualTo(JSON.readTree("{\"chart\":{\"type\":\"line\"},\"xAxis\":{\"title\":{\"text\":\"Week\"}}}"));
+    }
+
+    /**
+     * A turn that only changes how a saved chart is drawn proposes the settings it changed, not the queries it left as
+     * they were. A dashboard the user saved keeps the chart's styled mode, which the change of type resets in what the
+     * model reads; the model did not choose that, and the widget keeps the chart itself in styled mode.
+     */
+    @Test
+    void aChartsTurnThatChangesItsLookAloneIsRecordedWithTheConfiguration() {
+        when(log.asked(any(), any(), anyString(), anyString())).thenReturn(9L);
+        var widget = widget(
+                WidgetType.CHART,
+                new ScriptedProvider(
+                        "TITLE: Orders per week\nSUMMARY: As a line.",
+                        new ToolCall(
+                                "update_chart_configuration", "{\"configuration\":{\"chart\":{\"type\":\"line\"}}}")));
+        widget.restore(
+                "SELECT wk AS category, SUM(n) AS amount FROM weekly GROUP BY wk",
+                "{\"configuration\":{\"chart\":{\"type\":\"column\",\"styledMode\":true}}}");
+
+        widget.ask("Make it a line chart instead");
+
+        var proposal = ArgumentCaptor.forClass(String.class);
+        verify(log).proposed(eq(9L), proposal.capture());
+        assertThat(JSON.readTree(proposal.getValue())).isEqualTo(JSON.readTree("{\"chart\":{\"type\":\"line\"}}"));
+    }
+
+    /** A turn that leaves a chart as it was proposes nothing, and the log keeps the model's answer. */
+    @Test
+    void aChartsTurnThatChangesNothingIsRecordedWithItsAnswer() {
+        when(log.asked(any(), any(), anyString(), anyString())).thenReturn(10L);
+        var query = "SELECT wk AS category, SUM(n) AS amount FROM weekly GROUP BY wk";
+        var widget = widget(
+                WidgetType.CHART,
+                new ScriptedProvider(
+                        "TITLE: Orders per week\nSUMMARY: As it was.",
+                        new ToolCall("update_chart_data_source", "{\"queries\":[\"" + query + "\"]}")));
+        widget.restore(query, null);
+
+        widget.ask("Show it again");
+
+        verify(log).ended(eq(10L), startsWith("TITLE: Orders per week"), any(), any(), any());
+        verify(log, never()).proposed(anyLong(), anyString());
+    }
+
+    @Test
+    void aTablesTurnIsRecordedWithTheQueryTheModelProposed() {
+        when(log.asked(any(), any(), anyString(), anyString())).thenReturn(8L);
+        var widget = widget(
+                WidgetType.GRID,
+                new ScriptedProvider(
+                        "TITLE: Orders\nSUMMARY: The orders.",
+                        new ToolCall("update_grid_data", "{\"query\":\"SELECT order_number FROM orders\"}")));
+
+        widget.ask("Our orders");
+
+        verify(log).proposed(8L, "SELECT order_number FROM orders");
+    }
+
+    /** A refused question never reaches the model; the log keeps the rule, and as much of it as a question may have. */
+    @Test
+    void aQuestionOverTheCapIsRecordedAsRefusedWithItsRule() {
+        var widget = widget(WidgetType.GRID);
+
+        widget.ask("x".repeat(InsightWidget.MAX_QUESTION_LENGTH + 100));
+
+        verify(log)
+                .refused(
+                        any(),
+                        eq(ActivityView.DASHBOARD),
+                        eq("x".repeat(InsightWidget.MAX_QUESTION_LENGTH) + "…"),
+                        eq("A question can have at most 500 characters; this one has 600."));
+        verify(log, never()).asked(any(), any(), anyString(), anyString());
     }
 
     /**

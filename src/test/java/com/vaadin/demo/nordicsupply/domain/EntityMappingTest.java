@@ -27,8 +27,9 @@ import com.vaadin.demo.nordicsupply.data.StaffRepository;
 
 /**
  * Every entity maps a table or view that the dataset or a set-up script creates. Hibernate is told never to touch
- * the schema, so nothing validates the mappings at start-up; this test does, by reading a row of every entity,
- * which selects every column, and by checking that each association reaches the row the foreign key names.
+ * the schema, so nothing validates the mappings at start-up; this test does, by reading a row of every entity the
+ * dataset fills, which selects every column, and by checking that each association reaches the row the foreign key
+ * names. The activity log starts empty; its own tests write and read every column it maps.
  */
 @SpringBootTest
 class EntityMappingTest {

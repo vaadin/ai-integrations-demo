@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
@@ -53,12 +54,15 @@ import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider.ToolCall;
 import com.vaadin.demo.nordicsupply.config.PackData;
 import com.vaadin.demo.nordicsupply.config.ScopedConnections;
+import com.vaadin.demo.nordicsupply.data.ActivityLog;
+import com.vaadin.demo.nordicsupply.domain.ActivityView;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.CurrentUser.SignedInUser;
 import com.vaadin.demo.nordicsupply.session.SavedDashboards;
 import com.vaadin.demo.nordicsupply.session.Scope;
 import com.vaadin.demo.nordicsupply.session.Scopes;
+import com.vaadin.demo.nordicsupply.session.Visit;
 import com.vaadin.demo.nordicsupply.ui.TestUi;
 import com.vaadin.demo.nordicsupply.ui.components.CountryFilter;
 import com.vaadin.demo.nordicsupply.ui.components.InsightWidget;
@@ -74,6 +78,8 @@ class DashboardViewTest {
     private final CurrentUser user = mock(CurrentUser.class);
     private final ScopedConnections connections = mock(ScopedConnections.class);
     private final SavedDashboards dashboards = mock(SavedDashboards.class);
+    private final ActivityLog log = mock(ActivityLog.class);
+    private final Visit visit = new Visit(log);
 
     /** The session's country filter, as the session bean holds it for every tab. */
     private final SharedValueSignal<Scope> countries = new SharedValueSignal<>(Scopes.FI_EE);
@@ -119,7 +125,7 @@ class DashboardViewTest {
 
     /** The page as the signed-in user opens it, with what their saved dashboard holds at that moment. */
     private DashboardView open() {
-        var opened = new DashboardView(new PackData(), connections, providers, user, dashboards);
+        var opened = new DashboardView(new PackData(), connections, providers, user, dashboards, visit);
         ui.add(opened);
         return opened;
     }
@@ -396,6 +402,27 @@ class DashboardViewTest {
         assertThat(dashboard().getWidgets()).hasSize(4);
         assertThat(save().isVisible()).isTrue();
         assertThat(save().isEnabled()).isFalse();
+    }
+
+    /**
+     * A save keeps the dashboard as it is, which decides nothing about what the AI proposed: the log has the turn that
+     * made the widget, and no row for the save.
+     */
+    @Test
+    void aSaveWritesNoRowToTheActivityLog() {
+        when(dashboards.forUser(eq(8), any())).thenReturn(List.of(savedTable()));
+        view = open();
+        modelAnswers(() -> new ScriptedProvider(
+                "TITLE: Orders by number\nSUMMARY: One column per order.",
+                new ToolCall(
+                        "update_chart_data_source",
+                        "{\"queries\":[\"SELECT order_number AS category, 1 AS amount FROM orders\"]}")));
+        ask("Orders by number");
+
+        save().click();
+
+        verify(log).asked(eq(visit.as(8)), eq(ActivityView.DASHBOARD), eq("Orders by number"), anyString());
+        verify(log, never()).applied(any(), any(), any());
     }
 
     /** A save made after a switch to another user, before the page has reloaded, goes to the dashboard on screen. */

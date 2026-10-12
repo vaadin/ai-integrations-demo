@@ -23,8 +23,8 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.signals.Signal;
 
-import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
+import com.vaadin.demo.nordicsupply.ai.LLMProviders;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.config.PackData;
 import com.vaadin.demo.nordicsupply.config.ScopedConnections;
@@ -125,7 +125,7 @@ public class DashboardView extends PageView implements HasReadme {
 
     private final PackData pack;
     private final ScopedConnections connections;
-    private final Conversations conversations;
+    private final LLMProviders providers;
     private final CurrentUser user;
     private final SavedDashboards dashboards;
     private final Visit visit;
@@ -165,14 +165,14 @@ public class DashboardView extends PageView implements HasReadme {
     public DashboardView(
             PackData pack,
             ScopedConnections connections,
-            Conversations conversations,
+            LLMProviders providers,
             CurrentUser user,
             SavedDashboards dashboards,
             Visit visit) {
         super("dashboard", "Dashboard", "Understand Your Operations", "Dashboard");
         this.pack = pack;
         this.connections = connections;
-        this.conversations = conversations;
+        this.providers = providers;
         this.user = user;
         this.dashboards = dashboards;
         this.visit = visit;
@@ -408,8 +408,8 @@ public class DashboardView extends PageView implements HasReadme {
     private InsightWidget newWidget(WidgetType type, String title, List<ChatMessage> history) {
         var db = new JdbcDatabaseProvider(() -> connections.templateFor(user.filter()), pack);
         var turns = visit.turns(ownerId, ActivityView.DASHBOARD);
-        var widget =
-                new InsightWidget(type, title, db, conversations, user.get().name(), history, turns);
+        var widget = new InsightWidget(
+                type, title, db, providers.forChat(history), user.get().name(), history, turns);
         widget.onAsk(this::activate);
         widget.onChanged(changed -> {
             markDirty();

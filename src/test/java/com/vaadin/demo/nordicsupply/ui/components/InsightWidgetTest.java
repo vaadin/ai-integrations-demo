@@ -3,7 +3,6 @@ package com.vaadin.demo.nordicsupply.ui.components;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -31,7 +30,6 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.ai.common.ChatMessage;
 import com.vaadin.flow.component.ai.provider.LLMProvider;
-import com.vaadin.flow.component.ai.provider.SpringAILLMProvider;
 import com.vaadin.flow.component.charts.Chart;
 import com.vaadin.flow.component.charts.model.ChartType;
 import com.vaadin.flow.component.charts.model.Configuration;
@@ -46,13 +44,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
@@ -61,7 +52,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 import tools.jackson.databind.json.JsonMapper;
 
-import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider.ToolCall;
@@ -83,7 +73,6 @@ class InsightWidgetTest {
 
     private final ScriptedProvider model = new ScriptedProvider(
             "TITLE: Late shipments\nSUMMARY: Shipments after the promised date.\n\nCounted from late_shipments.");
-    private final Conversations conversations = mock(Conversations.class);
 
     /** Where the widgets' turns are recorded, as the Dashboard view hands it to them. */
     private final ActivityLog log = mock(ActivityLog.class);
@@ -91,37 +80,20 @@ class InsightWidgetTest {
     private final TurnLog turns =
             new TurnLog(log, new ActivityLog.Author(UUID.randomUUID(), 8), ActivityView.DASHBOARD);
 
-    /**
-     * Conversations over a real memory, with a model that writes each turn into it as the memory advisor does: the
-     * question when the turn starts, the answer when it ends. The answers are queued by the test.
-     */
-    private final InMemoryChatMemoryRepository repository = new InMemoryChatMemoryRepository();
-
-    private final MessageWindowChatMemory memory =
-            MessageWindowChatMemory.builder().chatMemoryRepository(repository).build();
+    /** A model that gives the next of the test's answers on every turn, each a reply or a failure. */
     private final Deque<Supplier<Flux<String>>> answers = new ArrayDeque<>();
-    private final Conversations remembering = new Conversations(ChatClient.builder(mock(ChatModel.class)), memory) {
-        @Override
-        public LLMProvider restore(String conversationId, List<ChatMessage> history) {
-            super.restore(conversationId, history); // writes the history into the memory
-            return new LLMProvider() {
-                @Override
-                public Flux<String> stream(LLMRequest request) {
-                    memory.add(conversationId, List.of(new UserMessage(request.userMessage())));
-                    var written = new StringBuilder();
-                    return answers.remove()
-                            .get()
-                            .doOnNext(written::append)
-                            .doOnComplete(() ->
-                                    memory.add(conversationId, List.of(new AssistantMessage(written.toString()))));
-                }
 
-                @Override
-                public void setHistory(List<ChatMessage> history, Map<String, List<AIAttachment>> attachments) {}
-            };
+    private final LLMProvider answering = new LLMProvider() {
+        @Override
+        public Flux<String> stream(LLMRequest request) {
+            return answers.remove().get();
+        }
+
+        @Override
+        public void setHistory(List<ChatMessage> history, Map<String, List<AIAttachment>> attachments) {
+            // a restored chat is the provider's memory to keep; this one keeps none
         }
     };
-    private final JdbcDatabaseProvider db = new JdbcDatabaseProvider(() -> null, new PackData());
 
     private final UI ui = TestUi.withSession();
 
@@ -150,7 +122,6 @@ class InsightWidgetTest {
     @BeforeEach
     void aModel() {
         UI.setCurrent(ui);
-        when(conversations.restore(anyString(), anyList())).thenReturn(model);
     }
 
     @AfterEach
@@ -160,25 +131,18 @@ class InsightWidgetTest {
 
     /** A widget on the page, so that the model's reply reaches it. */
     private InsightWidget widget(WidgetType type) {
-        var widget = new InsightWidget(type, "Late shipments last month", db, conversations, "Lars", List.of(), turns);
+        return widget(type, model);
+    }
+
+    /** A widget with the given model, on the database of weekly counts, which the model's tools may query. */
+    private InsightWidget widget(WidgetType type, LLMProvider model) {
+        var widget = new InsightWidget(type, "Late shipments last month", weeklyDb(), model, "Lars", List.of(), turns);
         ui.add(widget);
         return widget;
     }
 
-    /** A widget whose model calls the tools, on the database of weekly counts. */
-    private InsightWidget widget(WidgetType type, ScriptedProvider scripted) {
-        var own = mock(Conversations.class);
-        when(own.restore(anyString(), anyList())).thenReturn(scripted);
-        var widget = new InsightWidget(
-                type,
-                "Orders per week",
-                new JdbcDatabaseProvider(() -> new JdbcTemplate(weekly), new PackData()),
-                own,
-                "Lars",
-                List.of(),
-                turns);
-        ui.add(widget);
-        return widget;
+    private static JdbcDatabaseProvider weeklyDb() {
+        return new JdbcDatabaseProvider(() -> new JdbcTemplate(weekly), new PackData());
     }
 
     private static Grid<?> gridOf(InsightWidget widget) {
@@ -259,22 +223,6 @@ class InsightWidgetTest {
         assertThat(chartOf(hidden).getLegend().getEnabled()).isFalse();
         assertThat(chartOf(shown).getSeries()).hasSize(1);
         assertThat(chartOf(shown).getLegend().getEnabled()).isTrue();
-    }
-
-    /**
-     * The chat would otherwise show the model's narration and the two lines word by word until the turn ends; the
-     * widget shows the wait itself, and the turn still runs off the request thread.
-     */
-    @Test
-    void aSpringAiProviderAnswersWholeAndOffTheRequestThread() {
-        var spring = new SpringAILLMProvider(
-                ChatClient.builder(mock(ChatModel.class)).build());
-        when(conversations.restore(anyString(), anyList())).thenReturn(spring);
-
-        widget(WidgetType.GRID);
-
-        assertThat(spring.isStreaming()).isFalse();
-        assertThat(spring.isBackgroundExecution()).isTrue();
     }
 
     /** The rows are the model's answer, not a list to pick from. */
@@ -396,23 +344,14 @@ class InsightWidgetTest {
     /** A model that gives the next of its replies on every turn. */
     private static LLMProvider replying(String... replies) {
         var next = new ArrayDeque<>(List.of(replies));
-        return new LLMProvider() {
-            @Override
-            public Flux<String> stream(LLMRequest request) {
-                return Flux.just(next.poll());
-            }
-
-            @Override
-            public void setHistory(List<ChatMessage> history, Map<String, List<AIAttachment>> attachments) {}
-        };
+        return request -> Flux.just(next.poll());
     }
 
     /** With no note, the chat shows the summary; a reply without the two lines leaves the widget's name as it was. */
     @Test
     void aReplyWithoutANoteShowsTheSummaryAndOneWithoutLinesChangesNothing() {
-        when(conversations.restore(anyString(), anyList()))
-                .thenReturn(replying("TITLE: Open claims\nSUMMARY: Claims not yet resolved.", "Here it is."));
-        var widget = widget(WidgetType.GRID);
+        var widget = widget(
+                WidgetType.GRID, replying("TITLE: Open claims\nSUMMARY: Claims not yet resolved.", "Here it is."));
 
         widget.ask("Open claims");
         assertThat(widget.chat().messageList().getItems().getLast().getText()).isEqualTo("Claims not yet resolved.");
@@ -429,9 +368,8 @@ class InsightWidgetTest {
      */
     @Test
     void aTurnThatEndsWithoutAReplyIsSaidSoInTheChat() {
-        when(conversations.restore(anyString(), anyList()))
-                .thenReturn(replying("TITLE: Open claims\nSUMMARY: Claims not yet resolved.", "", " \n"));
-        var widget = widget(WidgetType.GRID);
+        var widget =
+                widget(WidgetType.GRID, replying("TITLE: Open claims\nSUMMARY: Claims not yet resolved.", "", " \n"));
         widget.ask("Open claims");
 
         widget.ask("Sort by days open");
@@ -464,7 +402,7 @@ class InsightWidgetTest {
                     WidgetType.CHART,
                     "Orders per week",
                     new JdbcDatabaseProvider(connection::get, new PackData()),
-                    conversations,
+                    model,
                     "Lars",
                     List.of(),
                     turns);
@@ -511,24 +449,21 @@ class InsightWidgetTest {
     }
 
     /**
-     * A turn that fails ends the wait, and its question does not stay in the memory to be answered again with the
-     * next one. The error notification is only on the page when Flow writes a response; the manual cases
-     * check it.
+     * A turn that fails ends the wait and leaves the widget as it was. The error notification is only on the page
+     * when Flow writes a response; the manual cases check it.
      */
     @Test
-    void aFailedTurnEndsAndItsQuestionIsLeftOutOfTheMemory() {
+    void aFailedTurnEndsTheWaitAndLeavesTheWidgetAsItWas() {
         answers.add(() -> Flux.just("TITLE: Late shipments\nSUMMARY: Shipments after the date."));
         answers.add(() -> Flux.error(new IllegalStateException("401: Incorrect API key provided")));
-        var widget = rememberingWidget();
+        var widget = widget(WidgetType.GRID, answering);
 
         widget.ask("Late shipments last month");
         widget.ask("And by carrier");
 
-        assertThat(remembered())
-                .containsExactly(
-                        "Late shipments last month", "TITLE: Late shipments\nSUMMARY: Shipments after the date.");
         assertThat(progressOf(widget).isVisible()).isFalse();
         assertThat(widget.getTitle()).isEqualTo("Late shipments");
+        assertThat(widget.description()).isEqualTo("Shipments after the date.");
     }
 
     /** A model that answers when the test says so. */
@@ -544,9 +479,6 @@ class InsightWidgetTest {
             return answer.asFlux();
         }
 
-        @Override
-        public void setHistory(List<ChatMessage> history, Map<String, List<AIAttachment>> attachments) {}
-
         void answer(String text) {
             answer.tryEmitNext(text);
             answer.tryEmitComplete();
@@ -560,8 +492,7 @@ class InsightWidgetTest {
     @Test
     void whileATurnRunsTheWidgetShowsTheWaitAndTheInputStaysEnabled() {
         var waiting = new Waiting();
-        when(conversations.restore(anyString(), anyList())).thenReturn(waiting);
-        var widget = widget(WidgetType.GRID);
+        var widget = widget(WidgetType.GRID, waiting);
 
         widget.ask("Late shipments last month");
 
@@ -582,31 +513,18 @@ class InsightWidgetTest {
                 .orElseThrow();
     }
 
-    /** Removed from the dashboard or gone with the page, a widget's conversation is let go. */
+    /** A turn that ends after its widget left the page has no widget to change, and nothing fails. */
     @Test
-    void aWidgetThatLeavesThePageLeavesNothingInTheMemory() {
-        answers.add(() -> Flux.just("TITLE: Late shipments\nSUMMARY: Shipments after the date."));
-        var widget = rememberingWidget();
-        widget.ask("Late shipments last month");
-        assertThat(remembered()).hasSize(2);
-
-        ui.remove(widget);
-
-        assertThat(repository.findConversationIds()).isEmpty();
-    }
-
-    /** The memory advisor writes a turn when it ends, so a turn that outlives its widget must not leave it behind. */
-    @Test
-    void aTurnThatEndsAfterItsWidgetLeftLeavesNothingInTheMemoryEither() {
+    void aTurnThatEndsAfterItsWidgetLeftChangesNothing() {
         var waiting = new Waiting();
-        answers.add(waiting::flux);
-        var widget = rememberingWidget();
+        var widget = widget(WidgetType.GRID, waiting);
         widget.ask("Late shipments last month");
 
         ui.remove(widget);
         waiting.answer("TITLE: Late shipments\nSUMMARY: Shipments after the date.");
 
-        assertThat(repository.findConversationIds()).isEmpty();
+        assertThat(widget.getTitle()).isEqualTo("Late shipments last month");
+        assertThat(widget.description()).isEmpty();
     }
 
     /** A saved chat as the orchestrator keeps it: the question, and the model's reply with its two lines. */
@@ -624,13 +542,14 @@ class InsightWidgetTest {
     }
 
     /**
-     * A saved widget comes back with its chat, shown the way the live one was, and the model remembers it: a
-     * follow-up is asked in the conversation the chat shows, and the chat saved next time holds both.
+     * A saved widget comes back with its chat, shown the way the live one was; a follow-up continues it, and the chat
+     * saved next time holds both. The model remembers the saved turns through its provider.
      */
     @Test
-    void aSavedWidgetsChatIsShownAndRemembered() {
+    void aSavedWidgetsChatIsShownAndContinued() {
         answers.add(() -> Flux.just("TITLE: Late shipments by carrier\nSUMMARY: Per carrier.\n\nGrouped by carrier."));
-        var widget = new InsightWidget(WidgetType.GRID, "Late shipments", db, remembering, "Lars", savedChat(), turns);
+        var widget =
+                new InsightWidget(WidgetType.GRID, "Late shipments", weeklyDb(), answering, "Lars", savedChat(), turns);
         ui.add(widget);
 
         assertThat(widget.chat().messageList().getItems())
@@ -638,14 +557,9 @@ class InsightWidgetTest {
                 .containsExactly(
                         tuple("Lars", "Late shipments last month"),
                         tuple(InsightWidget.ASSISTANT_NAME, "Counted per week."));
-        assertThat(remembered())
-                .containsExactly(
-                        "Late shipments last month",
-                        "TITLE: Late shipments\nSUMMARY: Shipments after the promised date.\n\nCounted per week.");
 
         widget.ask("And by carrier");
 
-        assertThat(remembered()).hasSize(4).startsWith("Late shipments last month");
         assertThat(widget.history())
                 .extracting(ChatMessage::content)
                 .containsExactly(
@@ -655,31 +569,12 @@ class InsightWidgetTest {
                         "TITLE: Late shipments by carrier\nSUMMARY: Per carrier.\n\nGrouped by carrier.");
     }
 
-    /**
-     * Two tabs showing the same saved widget restore its chat into two memories, so that removing one widget, or
-     * closing its tab, leaves the other's conversation as it was.
-     */
-    @Test
-    void twoWidgetsRestoredFromOneSavedChatKeepTheirOwnMemories() {
-        var first = new InsightWidget(WidgetType.GRID, "Late shipments", db, remembering, "Lars", savedChat(), turns);
-        var second = new InsightWidget(WidgetType.GRID, "Late shipments", db, remembering, "Lars", savedChat(), turns);
-        ui.add(first, second);
-
-        assertThat(repository.findConversationIds()).hasSize(2);
-
-        ui.remove(first);
-
-        assertThat(repository.findConversationIds())
-                .singleElement()
-                .satisfies(id -> assertThat(repository.findByConversationId(id)).hasSize(2));
-    }
-
-    /** A question whose turn failed is not saved with the chat, as the model's memory left it out too. */
+    /** A question whose turn failed is not saved with the chat. */
     @Test
     void aQuestionThatGotNoReplyIsNotSaved() {
         answers.add(() -> Flux.just("TITLE: Late shipments\nSUMMARY: Shipments after the date."));
         answers.add(() -> Flux.error(new IllegalStateException("429: Rate limit reached")));
-        var widget = rememberingWidget();
+        var widget = widget(WidgetType.GRID, answering);
 
         widget.ask("Late shipments last month");
         widget.ask("And by carrier");
@@ -892,7 +787,7 @@ class InsightWidgetTest {
         answers.add(() -> Flux.just("TITLE: Late shipments\nSUMMARY: Shipments after the date."));
         answers.add(() -> Flux.error(new IllegalStateException("429: Rate limit reached")));
         var changes = new ArrayList<InsightWidget>();
-        var widget = rememberingWidget();
+        var widget = widget(WidgetType.GRID, answering);
         widget.onChanged(changes::add);
 
         widget.ask("Late shipments last month");
@@ -1016,23 +911,5 @@ class InsightWidgetTest {
 
         assertThat(chartOf(restored).getSeries()).hasSize(1);
         assertThat(chartOf(restored).getLegend().getEnabled()).isFalse();
-    }
-
-    /** A widget whose conversation lives in a real memory. */
-    private InsightWidget rememberingWidget() {
-        var widget = new InsightWidget(
-                WidgetType.GRID, "Late shipments last month", db, remembering, "Lars", List.of(), turns);
-        ui.add(widget);
-        return widget;
-    }
-
-    /** What the memory holds of the one conversation the test's widget started, oldest first. */
-    private List<String> remembered() {
-        var ids = repository.findConversationIds();
-        return ids.isEmpty()
-                ? List.of()
-                : repository.findByConversationId(ids.getFirst()).stream()
-                        .map(Message::getText)
-                        .toList();
     }
 }

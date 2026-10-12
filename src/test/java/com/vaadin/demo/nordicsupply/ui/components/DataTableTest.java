@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -174,6 +175,58 @@ class DataTableTest {
         table.date("Since", row -> LocalDate.of(2026, 8, 28));
 
         assertThat(rendered(table, new Row("Row 1"))).containsExactly("9\u00a0034,50", "12\u00a0426", "2026-08-28");
+    }
+
+    @Test
+    void timesAreWrittenToTheSecondAsTheDatesAre() {
+        var table = new DataTable<Row>("Rows", Sort.by("name"), this::fetch, "Search name");
+        table.dateTime("When", row -> LocalDateTime.of(2026, 9, 7, 14, 3, 12));
+
+        assertThat(rendered(table, new Row("Row 1"))).containsExactly("2026-09-07 14:03:12");
+    }
+
+    /**
+     * A long text's column starts narrow and takes the room the other columns leave, which keep their content's
+     * width, wherever it stands among them; the user can still widen it. The whole text is the row details' to show.
+     */
+    @Test
+    void aLongTextsColumnTakesTheRoomTheOthersLeave() {
+        var table = new DataTable<Row>("Rows", Sort.by("name"), this::fetch, "Search name");
+        table.text("Name", Row::name);
+        table.longText("Note", row -> row.name() + " " + "and more ".repeat(40));
+        table.text("Also", Row::name);
+
+        var columns = grid(table).getColumns();
+
+        assertThat(columns).extracting(Grid.Column::getFlexGrow).containsExactly(0, 1, 0);
+        assertThat(columns.get(1).isAutoWidth()).isFalse();
+        assertThat(columns.get(1).getWidth()).isEqualTo("10rem");
+        assertThat(columns.get(1).isResizable()).isTrue();
+    }
+
+    /** Without a long text, the columns share the room left over, as the back office's lists do. */
+    @Test
+    void columnsOfShortTextsShareTheRoomLeft() {
+        var table = new DataTable<Row>("Rows", Sort.by("name"), this::fetch, "Search name");
+        table.text("Name", Row::name);
+        table.text("Also", Row::name);
+
+        assertThat(grid(table).getColumns())
+                .extracting(Grid.Column::getFlexGrow)
+                .containsExactly(1, 1);
+    }
+
+    /** A table can start empty, as the activity log does, and say why; a search that finds nothing says that. */
+    @Test
+    void anEmptyTableSaysWhatItWasToldUntilASearchFindsNothing() {
+        var table = table();
+        table.setEmptyStateText("Nothing yet");
+
+        assertThat(grid(table).getEmptyStateText()).isEqualTo("Nothing yet");
+        search(table).setValue("Row 1000");
+        assertThat(grid(table).getEmptyStateText()).isEqualTo("No matches");
+        search(table).clear();
+        assertThat(grid(table).getEmptyStateText()).isEqualTo("Nothing yet");
     }
 
     /** What the grid's renderers write into a row's cells, column by column. */

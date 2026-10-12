@@ -38,6 +38,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import com.vaadin.demo.nordicsupply.ai.Conversations;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
+import com.vaadin.demo.nordicsupply.ai.TurnLog;
 import com.vaadin.demo.nordicsupply.ai.WidgetReply;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
@@ -45,7 +46,8 @@ import com.vaadin.demo.nordicsupply.domain.WidgetType;
 /**
  * One Dashboard widget: a grid or a chart with its own chat and orchestrator. The chat is shown in a popover beside
  * the widget while it is selected. After every turn the model names the widget, a short title and a one-sentence
- * description in business terms. The model sees the schema text and today's date and never a row. A saved widget
+ * description in business terms. The model sees the schema text, today's date, the widget's query and, for a chart,
+ * its configuration, and never a row. A saved widget
  * comes back with its chat, which the model is given as its memory, and with its query run anew.
  */
 public class InsightWidget extends DashboardWidget {
@@ -155,6 +157,7 @@ public class InsightWidget extends DashboardWidget {
      * @param userName how the chat names the user's turns
      * @param history the chat so far, oldest first: empty for a new widget, and for a saved one its saved chat, which
      *     the chat shows and the model is given as its memory
+     * @param turns where the widget's turns are recorded: the question, the query the model proposed, the answer
      */
     public InsightWidget(
             WidgetType type,
@@ -162,7 +165,8 @@ public class InsightWidget extends DashboardWidget {
             JdbcDatabaseProvider db,
             Conversations conversations,
             String userName,
-            List<ChatMessage> history) {
+            List<ChatMessage> history,
+            TurnLog turns) {
         super(title);
         this.type = type;
         this.conversations = conversations;
@@ -175,6 +179,7 @@ public class InsightWidget extends DashboardWidget {
             styled(chart.getConfiguration());
             chartController = new ChartAIController(chart, db);
             chartController.addStateChangeListener(state -> redraw());
+            turns.watch(chartController);
             grid = null;
             gridController = null;
             controller = chartController;
@@ -186,6 +191,7 @@ public class InsightWidget extends DashboardWidget {
             grid.setSizeFull();
             gridController = new GridAIController(grid, db);
             gridController.addStateChangeListener(state -> hideIdColumns());
+            turns.watch(gridController);
             chart = null;
             chartController = null;
             controller = gridController;
@@ -205,10 +211,10 @@ public class InsightWidget extends DashboardWidget {
                 .withInput(chat.messageInput())
                 .withController(controller)
                 .withMetadata(Conversations::sessionContext)
-                .withRequestInterceptor(InsightWidget::refuseALongQuestion)
+                .withRequestInterceptor(turns.refusing(InsightWidget::refuseALongQuestion))
                 // the wait shows where the answer will appear, also while the chat is closed
-                .withRequestListener(event -> progress.setVisible(true))
-                .withResponseListener(this::onResponse)
+                .withRequestListener(turns.asking(event -> progress.setVisible(true)))
+                .withResponseListener(turns.ending(this::onResponse))
                 .withUserName(userName)
                 .withAssistantName(ASSISTANT_NAME);
         if (!history.isEmpty()) {

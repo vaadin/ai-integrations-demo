@@ -10,6 +10,11 @@ vaadin-scroller.rail-nav[slot=drawer] {
   padding-inline-start: max(0px, var(--app-rail-inset) - var(--safe-area-inset-inline-start));
 }
 
+/* the Activity Log at the foot of the rail, above Help, in line with the views' entries above it */
+vaadin-side-nav.rail-foot {
+  margin: var(--vaadin-gap-s) var(--app-rail-inset) 0;
+}
+
 vaadin-side-nav-item:not([current]) {
   @media (any-hover: hover) {
     &::part(content):hover {

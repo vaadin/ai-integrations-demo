@@ -64,7 +64,7 @@ public class SavedWidgetMessage {
         return role;
     }
 
-    /** The text as it was said; a reply keeps the model's title and summary lines. */
+    /** The text as it was said. */
     public String getContent() {
         return content;
     }

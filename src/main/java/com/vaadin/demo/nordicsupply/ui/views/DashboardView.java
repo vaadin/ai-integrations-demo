@@ -25,6 +25,7 @@ import com.vaadin.flow.signals.Signal;
 
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.LLMProviders;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.config.PackData;
 import com.vaadin.demo.nordicsupply.config.ScopedConnections;
@@ -34,6 +35,7 @@ import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.SavedDashboards;
 import com.vaadin.demo.nordicsupply.session.Scope;
 import com.vaadin.demo.nordicsupply.session.Visit;
+import com.vaadin.demo.nordicsupply.ui.components.AIPausedNotice;
 import com.vaadin.demo.nordicsupply.ui.components.CountryFilter;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 import com.vaadin.demo.nordicsupply.ui.components.InsightWidget;
@@ -126,6 +128,7 @@ public class DashboardView extends PageView implements HasReadme {
     private final PackData pack;
     private final ScopedConnections connections;
     private final LLMProviders providers;
+    private final AIBudget budget;
     private final CurrentUser user;
     private final SavedDashboards dashboards;
     private final Visit visit;
@@ -163,6 +166,7 @@ public class DashboardView extends PageView implements HasReadme {
             PackData pack,
             ScopedConnections connections,
             LLMProviders providers,
+            AIBudget budget,
             CurrentUser user,
             SavedDashboards dashboards,
             Visit visit) {
@@ -170,6 +174,7 @@ public class DashboardView extends PageView implements HasReadme {
         this.pack = pack;
         this.connections = connections;
         this.providers = providers;
+        this.budget = budget;
         this.user = user;
         this.dashboards = dashboards;
         this.visit = visit;
@@ -180,7 +185,10 @@ public class DashboardView extends PageView implements HasReadme {
         shown = user.filter();
         heading().addActions(filter, save);
 
-        query = new QueryPanel(Map.of(WidgetType.GRID, TABLE_CHIPS, WidgetType.CHART, CHART_CHIPS), this::ask);
+        query = new QueryPanel(
+                Map.of(WidgetType.GRID, TABLE_CHIPS, WidgetType.CHART, CHART_CHIPS),
+                budget.limits().maxQuestionLength(),
+                this::ask);
 
         dashboard.setWidthFull();
         dashboard.setEditable(true);
@@ -250,7 +258,7 @@ public class DashboardView extends PageView implements HasReadme {
         empty.addClassName("dashboard-empty");
         scroller.addClassName("page-scroll");
 
-        add(empty, scroller, popover);
+        add(new AIPausedNotice(budget), empty, scroller, popover);
         loadSaved();
         layout();
         // a change of the filter, made here or in another tab, runs every widget's query again on the new scope's
@@ -404,7 +412,7 @@ public class DashboardView extends PageView implements HasReadme {
         var db = new JdbcDatabaseProvider(() -> connections.templateFor(user.filter()), pack);
         var turns = visit.turns(ownerId, ActivityView.DASHBOARD);
         var widget = new InsightWidget(
-                type, title, db, providers.forChat(history), user.get().name(), history, turns);
+                type, title, db, providers.forChat(history), budget, user.get().name(), history, turns);
         widget.onAsk(this::activate);
         widget.onChanged(changed -> markDirty());
         return widget;

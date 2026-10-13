@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,7 +15,6 @@ import java.util.stream.IntStream;
 import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.ai.common.ChatMessage;
 import com.vaadin.flow.component.ai.provider.LLMProvider;
-import com.vaadin.flow.component.ai.provider.SpringAILLMProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -42,7 +42,6 @@ class LLMProvidersTest {
     @BeforeEach
     void theModelAnswersDone() {
         when(model.getOptions()).thenReturn(ChatOptions.builder().build());
-        when(model.call(any(Prompt.class))).thenReturn(done);
         when(model.stream(any(Prompt.class))).thenReturn(Flux.just(done));
     }
 
@@ -90,7 +89,7 @@ class LLMProvidersTest {
         ask(widget, "Only Finland");
 
         var prompt = ArgumentCaptor.forClass(Prompt.class);
-        verify(model).call(prompt.capture());
+        verify(model).stream(prompt.capture());
         assertThat(texts(prompt.getValue().getInstructions()))
                 .containsExactly("Late shipments last month", "TITLE: Late shipments", "Only Finland");
     }
@@ -106,7 +105,7 @@ class LLMProvidersTest {
         ask(chat, "Only Finland");
 
         var prompts = ArgumentCaptor.forClass(Prompt.class);
-        verify(model, times(3)).call(prompts.capture());
+        verify(model, times(3)).stream(prompts.capture());
         assertThat(texts(prompts.getValue().getInstructions())).containsExactly("Open claims", "Done.", "Only Finland");
     }
 
@@ -118,25 +117,25 @@ class LLMProvidersTest {
     void aFailedTurnsQuestionIsLeftOutAndTheNextIsAnsweredWithoutIt() {
         var chat = providers.forChat(List.of());
         ask(chat, "Open claims");
-        when(model.call(any(Prompt.class)))
-                .thenThrow(new IllegalStateException("429: Rate limit reached"))
-                .thenReturn(done);
+        when(model.stream(any(Prompt.class)))
+                .thenReturn(Flux.error(new IllegalStateException("429: Rate limit reached")))
+                .thenReturn(Flux.just(done));
 
         assertThatThrownBy(() -> ask(chat, "Group by carrier")).hasMessageContaining("429");
         ask(chat, "Only Finland");
 
         var prompts = ArgumentCaptor.forClass(Prompt.class);
-        verify(model, times(3)).call(prompts.capture());
+        verify(model, times(3)).stream(prompts.capture());
         assertThat(texts(prompts.getValue().getInstructions())).containsExactly("Open claims", "Done.", "Only Finland");
     }
 
-    /** The reply comes whole and off the request thread, so the chat shows the assistant typing meanwhile. */
+    /** A chat's reply streams into the chat as the model writes it, as the kit's provider streams by default. */
     @Test
-    void aChatsReplyComesWholeAndOffTheRequestThread() {
-        assertThat(providers.forChat(List.of())).isInstanceOfSatisfying(SpringAILLMProvider.class, spring -> {
-            assertThat(spring.isStreaming()).isFalse();
-            assertThat(spring.isBackgroundExecution()).isTrue();
-        });
+    void aChatsReplyIsStreamed() {
+        ask(providers.forChat(List.of()), "Open claims");
+
+        verify(model).stream(any(Prompt.class));
+        verify(model, never()).call(any(Prompt.class));
     }
 
     @Test
@@ -162,7 +161,7 @@ class LLMProvidersTest {
         ask(chat, "message 41");
 
         var prompt = ArgumentCaptor.forClass(Prompt.class);
-        verify(model).call(prompt.capture());
+        verify(model).stream(prompt.capture());
         assertThat(texts(prompt.getValue().getInstructions()))
                 .containsExactlyElementsOf(IntStream.rangeClosed(21, 41)
                         .mapToObj(i -> "message " + i)

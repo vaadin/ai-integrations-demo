@@ -15,6 +15,8 @@ import java.util.regex.Pattern;
 
 import com.vaadin.flow.component.ai.provider.DatabaseProvider;
 import com.vaadin.flow.component.ai.provider.ToolException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.ColumnMapRowMapper;
@@ -34,6 +36,8 @@ import com.vaadin.demo.nordicsupply.util.Errors;
  * on the next question.
  */
 public class JdbcDatabaseProvider implements DatabaseProvider {
+
+    private static final Logger LOG = LoggerFactory.getLogger(JdbcDatabaseProvider.class);
 
     /**
      * H2 functions a query may not call, refused by name with one sentence the model can act on in the same turn. The
@@ -174,6 +178,8 @@ public class JdbcDatabaseProvider implements DatabaseProvider {
                     "The catalogue is not available on this connection; the schema text lists the tables and their"
                             + " columns.");
         }
+        // what the model asked the database, for a look at how a widget came to be; the rows are not logged
+        LOG.debug("Query: {}", sql);
         try {
             // model-written SQL runs here on purpose: the account may read only the filtered views, so anything
             // else fails at the database

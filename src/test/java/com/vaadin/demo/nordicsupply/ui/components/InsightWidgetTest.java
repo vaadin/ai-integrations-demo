@@ -55,6 +55,9 @@ import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider.ToolCall;
 import com.vaadin.demo.nordicsupply.ai.TurnLog;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudgetProperties.Address;
+import com.vaadin.demo.nordicsupply.ai.budget.Budgets;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.config.PackData;
 import com.vaadin.demo.nordicsupply.data.ActivityLog;
@@ -93,6 +96,7 @@ class InsightWidgetTest {
             // a restored chat is the provider's memory to keep; this one keeps none
         }
     };
+    private final AIBudget budget = Budgets.budget();
 
     private final UI ui = TestUi.withSession();
 
@@ -135,7 +139,13 @@ class InsightWidgetTest {
 
     /** A widget with the given model, on the database of weekly counts, which the model's tools may query. */
     private InsightWidget widget(WidgetType type, LLMProvider model) {
-        var widget = new InsightWidget(type, "Late shipments last month", weeklyDb(), model, "Lars", List.of(), turns);
+        return widget(type, model, budget);
+    }
+
+    /** A widget with the given model, whose questions the given budget admits. */
+    private InsightWidget widget(WidgetType type, LLMProvider model, AIBudget admitting) {
+        var widget = new InsightWidget(
+                type, "Late shipments last month", weeklyDb(), model, admitting, "Lars", List.of(), turns);
         ui.add(widget);
         return widget;
     }
@@ -324,6 +334,55 @@ class InsightWidgetTest {
     }
 
     /**
+     * Every question is admitted by the budget before it is a request: one over it is answered by the chat with the
+     * reason, and nothing reaches the model.
+     */
+    @Test
+    void aQuestionOverTheBudgetIsAnsweredByTheChatAndNeverReachesTheModel() {
+        var widget = widget(WidgetType.GRID, model, Budgets.withAddress(new Address(1, 3)));
+
+        widget.ask("Late shipments last month");
+        widget.ask("And the month before");
+
+        assertThat(model.requests()).hasSize(1);
+        assertThat(widget.chat().messageList().getItems().getLast())
+                .extracting(MessageListItem::getUserName, MessageListItem::getText)
+                .containsExactly(
+                        InsightWidget.ASSISTANT_NAME,
+                        "You have reached today's limit of 1 questions; the AI is available to you again tomorrow.");
+        assertThat(progressOf(widget).isVisible()).isFalse();
+    }
+
+    /** A turn holds one of its caller's slots while it runs, and gives it back when it ends, answered or failed. */
+    @Test
+    void aTurnGivesItsSlotBackWhenItEndsAnsweredOrFailed() {
+        var oneAtATime = Budgets.withAddress(new Address(120, 1));
+        var answered = widget(WidgetType.GRID, model, oneAtATime);
+        answered.ask("Late shipments last month");
+        answered.ask("And the month before");
+        assertThat(model.requests()).hasSize(2);
+
+        var failing = new ScriptedProvider("Counted from late_shipments.") {
+            private boolean failed;
+
+            @Override
+            public Flux<String> stream(LLMRequest request) {
+                var answer = super.stream(request);
+                if (!failed) {
+                    failed = true;
+                    return Flux.error(new IllegalStateException("The model is down"));
+                }
+                return answer;
+            }
+        };
+        var recovered = widget(WidgetType.GRID, failing, oneAtATime);
+        recovered.ask("Late shipments last month");
+        recovered.ask("Late shipments last month");
+
+        assertThat(failing.requests()).hasSize(2);
+    }
+
+    /**
      * Every question is a paid model call, so a widget's chat takes a sentence or two: a longer question is answered by
      * the chat and never reaches the model, and one at the cap is asked.
      */
@@ -391,6 +450,7 @@ class InsightWidgetTest {
                     "Orders per week",
                     new JdbcDatabaseProvider(connection::get, new PackData()),
                     model,
+                    budget,
                     "Lars",
                     List.of(),
                     turns);
@@ -533,8 +593,8 @@ class InsightWidgetTest {
     @Test
     void aSavedWidgetsChatIsShownAndContinued() {
         answers.add(new ScriptedProvider("Grouped by carrier.", named("Late shipments by carrier", "Per carrier.")));
-        var widget =
-                new InsightWidget(WidgetType.GRID, "Late shipments", weeklyDb(), answering, "Lars", savedChat(), turns);
+        var widget = new InsightWidget(
+                WidgetType.GRID, "Late shipments", weeklyDb(), answering, budget, "Lars", savedChat(), turns);
         ui.add(widget);
 
         assertThat(widget.chat().messageList().getItems())
@@ -703,13 +763,13 @@ class InsightWidgetTest {
     void aQuestionOverTheCapIsRecordedAsRefusedWithItsRule() {
         var widget = widget(WidgetType.GRID);
 
-        widget.ask("x".repeat(InsightWidget.MAX_QUESTION_LENGTH + 100));
+        widget.ask("x".repeat(Budgets.DEFAULTS.maxQuestionLength() + 100));
 
         verify(log)
                 .refused(
                         any(),
                         eq(ActivityView.DASHBOARD),
-                        eq("x".repeat(InsightWidget.MAX_QUESTION_LENGTH) + "…"),
+                        eq("x".repeat(Budgets.DEFAULTS.maxQuestionLength()) + "…"),
                         eq("A question can have at most 500 characters; this one has 600."));
         verify(log, never()).asked(any(), any(), anyString(), anyString());
     }

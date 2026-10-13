@@ -53,6 +53,8 @@ import reactor.core.publisher.Sinks;
 import com.vaadin.demo.nordicsupply.ai.LLMProviders;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider;
 import com.vaadin.demo.nordicsupply.ai.ScriptedProvider.ToolCall;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
+import com.vaadin.demo.nordicsupply.ai.budget.Budgets;
 import com.vaadin.demo.nordicsupply.config.PackData;
 import com.vaadin.demo.nordicsupply.config.ScopedConnections;
 import com.vaadin.demo.nordicsupply.data.ActivityLog;
@@ -65,6 +67,7 @@ import com.vaadin.demo.nordicsupply.session.Scope;
 import com.vaadin.demo.nordicsupply.session.Scopes;
 import com.vaadin.demo.nordicsupply.session.Visit;
 import com.vaadin.demo.nordicsupply.ui.TestUi;
+import com.vaadin.demo.nordicsupply.ui.components.AIPausedNotice;
 import com.vaadin.demo.nordicsupply.ui.components.CountryFilter;
 import com.vaadin.demo.nordicsupply.ui.components.InsightWidget;
 import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
@@ -130,9 +133,26 @@ class DashboardViewTest {
 
     /** The page as the signed-in user opens it, with what their saved dashboard holds at that moment. */
     private DashboardView open() {
-        var opened = new DashboardView(new PackData(), connections, providers, user, dashboards, visit);
+        return open(Budgets.budget());
+    }
+
+    private DashboardView open(AIBudget budget) {
+        var opened = new DashboardView(new PackData(), connections, providers, budget, user, dashboards, visit);
         ui.add(opened);
         return opened;
+    }
+
+    /** While the AI answers nobody, the page says so under its heading; otherwise it says nothing of it. */
+    @Test
+    void thePageSaysWhenTheAIAnswersNobody() {
+        var paused = open(Budgets.disabled());
+
+        assertThat(ComponentTree.descendants(paused).filter(AIPausedNotice.class::isInstance))
+                .singleElement()
+                .satisfies(notice -> assertThat(notice.isVisible()).isTrue());
+        assertThat(ComponentTree.descendants(view).filter(AIPausedNotice.class::isInstance))
+                .singleElement()
+                .satisfies(notice -> assertThat(notice.isVisible()).isFalse());
     }
 
     /** Every widget made from now on gets a model of its own from the supplier. */

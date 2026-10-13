@@ -22,8 +22,10 @@ import com.vaadin.demo.nordicsupply.domain.WidgetType;
 
 /**
  * The "ask a question" panel of Dashboard: a prompt bar with an arrow, a "Render as" toggle between chart and table
- * under it, suggested questions, and the privacy footnote. It sits in the middle of an empty dashboard and, once
- * widgets exist, inside the "New Query" tile at the end of the dashboard, where it stacks its parts to fit one cell.
+ * under it, suggested questions, and the privacy footnote. A suggestion only fills in the question: the user reads
+ * it, may change it, and sends it, since every question sent is a paid model call. It sits in the middle of an empty
+ * dashboard and, once widgets exist, inside the "New Query" tile at the end of the dashboard, where it stacks its
+ * parts to fit one cell.
  */
 public class QueryPanel extends Div {
 
@@ -44,9 +46,6 @@ public class QueryPanel extends Div {
      */
     private static final String TILE_PLACEHOLDER = "Ask about orders, shipments, claims or customers";
 
-    /** Said under the field when a question is over the cap; the field keeps the text for the user to shorten. */
-    private static final String TOO_LONG = "At most " + InsightWidget.MAX_QUESTION_LENGTH + " characters";
-
     /** Where the panel sits; a tile has less room and stacks the bar. */
     public enum Mode {
         CENTER,
@@ -66,9 +65,12 @@ public class QueryPanel extends Div {
 
     /**
      * @param chips the suggested questions per kind of request; a kind without an entry shows none
+     * @param maxQuestionLength the longest question the field takes, the budget's cap; the field says so under itself
+     *     when a question is over it, and keeps the text for the user to shorten
      * @param onAsk receives the question and the kind the user chose
      */
-    public QueryPanel(Map<WidgetType, List<String>> chips, BiConsumer<String, WidgetType> onAsk) {
+    public QueryPanel(
+            Map<WidgetType, List<String>> chips, int maxQuestionLength, BiConsumer<String, WidgetType> onAsk) {
         this.chips = chips;
         this.onAsk = onAsk;
         addClassName("query-panel");
@@ -76,8 +78,9 @@ public class QueryPanel extends Div {
         question.setClearButtonVisible(true);
         question.setWidthFull();
         question.setMaxHeight(MAX_QUESTION_HEIGHT);
-        question.setMaxLength(InsightWidget.MAX_QUESTION_LENGTH);
-        question.setI18n(new TextArea.TextAreaI18n().setMaxLengthErrorMessage(TOO_LONG));
+        question.setMaxLength(maxQuestionLength);
+        question.setI18n(
+                new TextArea.TextAreaI18n().setMaxLengthErrorMessage("At most " + maxQuestionLength + " characters"));
         var send = new Button(new SvgIcon("icons/arrow-right.svg"), e -> submit(question.getValue()));
         send.addThemeVariants(ButtonVariant.PRIMARY);
         send.setAriaLabel("Ask");
@@ -125,10 +128,16 @@ public class QueryPanel extends Div {
         tryChips.setVisible(!suggestions.isEmpty());
         tryChips.add(new Span("Try:"));
         for (var chip : suggestions) {
-            var b = new Button(chip, e -> onAsk.accept(chip, kind));
+            var b = new Button(chip, e -> suggest(chip));
             b.addThemeVariants(ButtonVariant.SMALL);
             tryChips.add(b);
         }
+    }
+
+    /** Puts a suggestion in the field, in place of what it held, with the cursor after it, ready to send or change. */
+    private void suggest(String chip) {
+        question.setValue(chip);
+        question.focus();
     }
 
     private void submit(String value) {

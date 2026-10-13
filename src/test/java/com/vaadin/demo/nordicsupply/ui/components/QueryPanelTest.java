@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 
-/** The prompt sends a question with the kind of widget chosen, and suggests questions that fit that kind. */
+/** The prompt sends a question with the kind of widget chosen, and suggests questions that fit that kind to send. */
 class QueryPanelTest {
 
     private record Asked(String question, WidgetType kind) {}
@@ -66,14 +66,41 @@ class QueryPanelTest {
     }
 
     @Test
-    void theSuggestionsFollowTheKindAndSendTheirTextAsTheQuestion() {
+    void theSuggestionsFollowTheKind() {
         assertThat(chips()).extracting(Button::getText).containsExactly("Orders per month", "Open claims by type");
 
         kind().setValue(WidgetType.GRID);
+
         assertThat(chips()).extracting(Button::getText).containsExactly("Claims open over 7 days");
+    }
+
+    /**
+     * Every question sent is a paid model call, so a suggestion only fills in the question, in place of what was
+     * typed: the user reads it, may change it, and sends it.
+     */
+    @Test
+    void aSuggestionFillsInTheQuestionAndAsksNothingUntilItIsSent() {
+        question().setValue("Late shipments");
 
         chips().getFirst().click();
-        assertThat(asked).containsExactly(new Asked("Claims open over 7 days", WidgetType.GRID));
+
+        assertThat(question().getValue()).isEqualTo("Orders per month");
+        assertThat(asked).isEmpty();
+
+        send().click();
+
+        assertThat(asked).containsExactly(new Asked("Orders per month", WidgetType.CHART));
+    }
+
+    /** "Render as" decides the kind when the question is sent, so a suggestion can be sent as either. */
+    @Test
+    void aSuggestionIsAskedAsTheKindChosenWhenItIsSent() {
+        chips().getFirst().click();
+        kind().setValue(WidgetType.GRID);
+
+        send().click();
+
+        assertThat(asked).containsExactly(new Asked("Orders per month", WidgetType.GRID));
     }
 
     /** Every question is a paid model call, so the field takes a sentence or two and no more. */

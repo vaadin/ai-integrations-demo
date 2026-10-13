@@ -22,8 +22,10 @@ import com.vaadin.demo.nordicsupply.domain.WidgetType;
 
 /**
  * The "ask a question" panel of Dashboard: a prompt bar with an arrow, a "Render as" toggle between chart and table
- * under it, suggested questions, and the privacy footnote. It sits in the middle of an empty dashboard and, once
- * widgets exist, inside the "New Query" tile at the end of the dashboard, where it stacks its parts to fit one cell.
+ * under it, suggested questions, and the privacy footnote. A suggestion only fills in the question: the user reads
+ * it, may change it, and sends it, since every question sent is a paid model call. It sits in the middle of an empty
+ * dashboard and, once widgets exist, inside the "New Query" tile at the end of the dashboard, where it stacks its
+ * parts to fit one cell.
  */
 public class QueryPanel extends Div {
 
@@ -125,10 +127,16 @@ public class QueryPanel extends Div {
         tryChips.setVisible(!suggestions.isEmpty());
         tryChips.add(new Span("Try:"));
         for (var chip : suggestions) {
-            var b = new Button(chip, e -> onAsk.accept(chip, kind));
+            var b = new Button(chip, e -> suggest(chip));
             b.addThemeVariants(ButtonVariant.SMALL);
             tryChips.add(b);
         }
+    }
+
+    /** Puts a suggestion in the field, in place of what it held, with the cursor after it, ready to send or change. */
+    private void suggest(String chip) {
+        question.setValue(chip);
+        question.focus();
     }
 
     private void submit(String value) {

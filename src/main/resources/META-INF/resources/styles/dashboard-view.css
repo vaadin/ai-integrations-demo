@@ -242,10 +242,11 @@
   gap: 0.5rem;
 }
 
+/* the line over the chat's messages, inside the chat panel: the bottom margin keeps it off the messages */
 .popover-chat .chat-intro {
   color: var(--vaadin-text-color-secondary);
   font-size: var(--aura-font-size-s);
-  margin: 1.25rem 0.25rem 0;
+  margin: 1.25rem 0.25rem 0.5rem;
 }
 
 .popover-chat .chat-intro:empty {

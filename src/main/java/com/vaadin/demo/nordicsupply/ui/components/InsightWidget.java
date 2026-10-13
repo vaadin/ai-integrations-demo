@@ -119,7 +119,7 @@ public class InsightWidget extends DashboardWidget {
     /** Admits each question against the budget, and closes the turn when its response comes. */
     private final TurnGuard guard;
 
-    /** The model's one-sentence description of the widget, in business terms; shown at the top of its chat. */
+    /** The model's one-sentence description of the widget, in business terms; shown over its chat. */
     private String description = "";
 
     private final Button ask = new Button("Edit", new SvgIcon("icons/sparkle.svg"));
@@ -251,9 +251,10 @@ public class InsightWidget extends DashboardWidget {
         return description;
     }
 
-    /** The description a saved widget was stored with, shown until the model writes another. */
+    /** The widget's description, as it was saved or as the model gives it: shown over the widget's chat. */
     public void setDescription(String description) {
         this.description = description == null ? "" : description;
+        chat.setIntro(this.description);
     }
 
     /** Called when the user asks for this widget's chat from the button in its header. */
@@ -413,7 +414,8 @@ public class InsightWidget extends DashboardWidget {
      * reads the method's name, its description and the parameters' descriptions into the tool definition the model is
      * sent. The model calls it during a turn, on the provider's thread, so the name is applied through
      * {@code ui.access}, as every change from that thread; a widget that left the page meanwhile keeps its name. The
-     * title goes to the header and the description to the chat, and the view hears of both when the turn ends.
+     * title goes to the header and the description over the chat at once; the view hears of the change when the
+     * turn ends.
      *
      * @param title the widget's new title
      * @param description what the widget shows, in one sentence
@@ -432,7 +434,7 @@ public class InsightWidget extends DashboardWidget {
                     String description) {
         getUI().ifPresent(ui -> ui.access(() -> {
             setTitle(title);
-            this.description = description;
+            setDescription(description);
         }));
         return "The widget is now named " + title + ".";
     }

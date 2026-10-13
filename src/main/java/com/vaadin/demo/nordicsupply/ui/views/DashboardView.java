@@ -143,9 +143,6 @@ public class DashboardView extends PageView implements HasReadme {
     private final QueryPanel query;
     private final Div empty = new Div();
 
-    /** What the active widget contains, in business terms, over its chat; the widget itself shows only its title. */
-    private final Span intro = new Span();
-
     private final Div scroller = new Div(dashboard);
     private final DashboardWidget newQuery = new DashboardWidget();
 
@@ -259,7 +256,6 @@ public class DashboardView extends PageView implements HasReadme {
         popover.addOpenedChangeListener(
                 e -> setActive(e.isOpened() && popover.getTarget() instanceof InsightWidget widget ? widget : null));
         empty.addClassName("dashboard-empty");
-        intro.addClassName("chat-intro");
         scroller.addClassName("page-scroll");
 
         add(new AIPausedNotice(budget), empty, scroller, popover);
@@ -354,8 +350,7 @@ public class DashboardView extends PageView implements HasReadme {
         var footnote = new Span(QueryPanel.FOOTNOTE);
         footnote.addClassName("footnote");
         var content = new Div();
-        intro.setText(widget.description());
-        content.add(intro, widget.chat(), footnote);
+        content.add(widget.chat(), footnote);
         content.addClassName("popover-chat");
         var close = new Button(new SvgIcon("icons/x.svg"), e -> popover.close());
         close.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
@@ -419,13 +414,7 @@ public class DashboardView extends PageView implements HasReadme {
         var widget = new InsightWidget(
                 type, title, db, providers.forChat(history), budget, user.get().name(), history, turns);
         widget.onAsk(this::activate);
-        widget.onChanged(changed -> {
-            markDirty();
-            // the model may have described the widget anew; the chat beside it says so at once
-            if (changed == active) {
-                intro.setText(changed.description());
-            }
-        });
+        widget.onChanged(changed -> markDirty());
         return widget;
     }
 

@@ -15,7 +15,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * A model for the UI tests: it calls the tools it is given, in order, as a model would during a turn, answers every
- * prompt with the same text, and keeps the requests it was sent. A tool is one of a controller's, or a {@code @Tool}
+ * prompt with the same reply, a text or a flux the test drives, and keeps the requests it was sent. A tool is one of a controller's, or a {@code @Tool}
  * method of an object registered with {@code withTools}, called through Spring AI's own callback for it.
  */
 public class ScriptedProvider implements LLMProvider {
@@ -25,11 +25,16 @@ public class ScriptedProvider implements LLMProvider {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
-    private final String reply;
+    private final Flux<String> reply;
     private final List<ToolCall> calls;
     private final List<LLMRequest> requests = new ArrayList<>();
 
     public ScriptedProvider(String reply, ToolCall... calls) {
+        this(Flux.just(reply), calls);
+    }
+
+    /** A model whose reply the test drives: a flux that answers, waits or fails as the test says. */
+    public ScriptedProvider(Flux<String> reply, ToolCall... calls) {
         this.reply = reply;
         this.calls = List.of(calls);
     }
@@ -45,7 +50,7 @@ public class ScriptedProvider implements LLMProvider {
                             tool -> tool.execute(JSON.readTree(call.arguments())),
                             () -> annotatedTool(request, call.name()).call(call.arguments()));
         }
-        return Flux.just(reply);
+        return reply;
     }
 
     private static ToolCallback annotatedTool(LLMRequest request, String name) {

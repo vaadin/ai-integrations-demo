@@ -16,7 +16,6 @@ import com.vaadin.flow.component.ai.grid.GridAIController;
 import com.vaadin.flow.component.ai.grid.GridState;
 import com.vaadin.flow.component.ai.orchestrator.AIController;
 import com.vaadin.flow.component.ai.orchestrator.AIOrchestrator;
-import com.vaadin.flow.component.ai.orchestrator.RequestInterceptor;
 import com.vaadin.flow.component.ai.orchestrator.ResponseListener;
 import com.vaadin.flow.component.ai.provider.LLMProvider;
 import com.vaadin.flow.component.button.Button;
@@ -40,6 +39,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.TurnLog;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
+import com.vaadin.demo.nordicsupply.ai.budget.TurnGuard;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 
@@ -54,9 +55,6 @@ public class InsightWidget extends DashboardWidget {
 
     /** How the chat names the model's turns. */
     public static final String ASSISTANT_NAME = "Assistant";
-
-    /** The longest question a chat takes: a sentence or two, since every question is a paid model call. */
-    public static final int MAX_QUESTION_LENGTH = 500;
 
     /** Long enough to read the notice of a failed turn before it disappears. */
     private static final int ERROR_NOTIFICATION_MS = 8000;
@@ -118,6 +116,8 @@ public class InsightWidget extends DashboardWidget {
     private final Chart chart;
     private final ChartAIController chartController;
     private final ChatPanel chat = new ChatPanel();
+    /** Admits each question against the budget, and closes the turn when its response comes. */
+    private final TurnGuard guard;
 
     /** The model's one-sentence description of the widget, in business terms; shown at the top of its chat. */
     private String description = "";
@@ -145,6 +145,7 @@ public class InsightWidget extends DashboardWidget {
      * @param title the widget's title until the model names it: the question that made it, or the saved title
      * @param db the model's way into the data, on the signed-in user's connection
      * @param provider the model, with the widget's chat so far as its memory
+     * @param budget what admits a question before it is sent, and takes the turn's cost when it ends
      * @param userName how the chat names the user's turns
      * @param history the chat so far, oldest first: empty for a new widget, and for a saved one its saved chat, which
      *     the chat shows and the model remembers
@@ -155,11 +156,13 @@ public class InsightWidget extends DashboardWidget {
             String title,
             JdbcDatabaseProvider db,
             LLMProvider provider,
+            AIBudget budget,
             String userName,
             List<ChatMessage> history,
             TurnLog turns) {
         super(title);
         this.type = type;
+        this.guard = budget.guard("insights");
         addClassName("insight-widget");
         Component visual;
         AIController controller;
@@ -194,10 +197,11 @@ public class InsightWidget extends DashboardWidget {
                 // the widget is the model's tool for naming it
                 .withTools(this)
                 .withMetadata(DemoClock::sessionContext)
-                .withRequestInterceptor(turns.refusing(InsightWidget::refuseALongQuestion))
+                .withRequestInterceptor(turns.refusing(guard::admit))
                 // the wait shows where the answer will appear, also while the chat is closed
                 .withRequestListener(turns.asking(event -> progress.setVisible(true)))
-                .withResponseListener(turns.ending(this::onResponse))
+                // the budget has its slot back first, whatever becomes of the log
+                .withResponseListener(guard.closing(turns.ending(this::onResponse)))
                 .withUserName(userName)
                 .withAssistantName(ASSISTANT_NAME);
         if (!history.isEmpty()) {
@@ -230,15 +234,6 @@ public class InsightWidget extends DashboardWidget {
         return type == WidgetType.CHART
                 ? SYSTEM_PROMPT.formatted("chart", "table")
                 : SYSTEM_PROMPT.formatted("table", "chart");
-    }
-
-    /** A question over the cap is answered by the chat, before it is a request: nothing is sent to the model. */
-    private static void refuseALongQuestion(RequestInterceptor.RequestInterceptEvent event) {
-        var length = event.getUserMessage().length();
-        if (length > MAX_QUESTION_LENGTH) {
-            event.reject(
-                    "A question can have at most " + MAX_QUESTION_LENGTH + " characters; this one has " + length + ".");
-        }
     }
 
     /** The widget's chat; the view shows it in a popover while the widget is selected. */

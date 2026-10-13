@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
 
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -82,6 +83,28 @@ public final class Pdfs {
             return out.toByteArray();
         } catch (IOException e) {
             throw new UncheckedIOException("could not write the PDF", e);
+        }
+    }
+
+    /**
+     * The first pages of a PDF as a PDF of their own, or the document itself, the same bytes, when it has no more
+     * pages than that.
+     *
+     * @throws UncheckedIOException when PDFBox cannot read the document
+     */
+    public static byte[] firstPages(byte[] pdf, int count) {
+        try (var document = Loader.loadPDF(pdf)) {
+            if (document.getNumberOfPages() <= count) {
+                return pdf;
+            }
+            while (document.getNumberOfPages() > count) {
+                document.removePage(document.getNumberOfPages() - 1);
+            }
+            var out = new ByteArrayOutputStream();
+            document.save(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new UncheckedIOException("could not read the PDF", e);
         }
     }
 

@@ -50,6 +50,22 @@ class AttachmentViewer extends Div {
     /** The most pages of a PDF shown; a customer message is a page or two. */
     static final int MAX_PAGES = 10;
 
+    /**
+     * A PDF cut to the pages the viewer shows, {@link #MAX_PAGES}, so that the model reads what the user sees and no
+     * more; any other message as it is.
+     *
+     * @throws java.io.UncheckedIOException for a PDF PDFBox cannot read
+     */
+    static AIAttachment shownPages(AIAttachment attachment) {
+        if (!Pdfs.MIME_TYPE.equals(attachment.mimeType())) {
+            return attachment;
+        }
+        var pages = Pdfs.firstPages(attachment.data(), MAX_PAGES);
+        return pages == attachment.data()
+                ? attachment
+                : new AIAttachment(attachment.name(), attachment.mimeType(), pages);
+    }
+
     /** Twice the PDF's own 72 dots per inch: sharp on a high-density screen at the width the column gives it. */
     private static final float DPI = 144;
 
@@ -90,7 +106,7 @@ class AttachmentViewer extends Div {
                 shape = geometry(document);
                 layout = PdfText.of(document, MAX_PAGES);
             } catch (IOException e) {
-                // the model may still read what cannot be shown here; the viewer then shows no pages
+                // the view reads a PDF before it shows it here, so this is not expected; the viewer then shows no pages
                 LOG.warn("A PDF could not be read", e);
             }
             geometry = shape;

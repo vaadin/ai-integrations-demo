@@ -1,6 +1,7 @@
 package com.vaadin.demo.nordicsupply.ui.views;
 
 import java.io.ByteArrayInputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
@@ -44,6 +45,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.vaadin.demo.nordicsupply.ai.LLMProviders;
+import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
+import com.vaadin.demo.nordicsupply.ai.budget.TurnGuard;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
@@ -54,6 +57,7 @@ import com.vaadin.demo.nordicsupply.examples.ExampleDocument;
 import com.vaadin.demo.nordicsupply.examples.ExampleDocuments;
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.Visit;
+import com.vaadin.demo.nordicsupply.ui.components.AIPausedNotice;
 import com.vaadin.demo.nordicsupply.ui.components.HasReadme;
 import com.vaadin.demo.nordicsupply.util.Pdfs;
 
@@ -172,8 +176,6 @@ public class ClaimsView extends PageView implements HasReadme {
             .map(extension -> "." + extension)
             .toList();
 
-    private static final long MAX_FILE_SIZE = 10L * 1024 * 1024;
-
     /** The name a pasted text is read under. */
     private static final String PASTED_TEXT = "Pasted text";
 
@@ -181,6 +183,8 @@ public class ClaimsView extends PageView implements HasReadme {
 
     private final ClaimForm form;
     private final AIOrchestrator orchestrator;
+    /** Admits each message against the budget, and closes the turn when its response comes. */
+    private final TurnGuard guard;
 
     /** The name of the message the AI is reading, or {@code null} while it waits for one. */
     private final ValueSignal<String> reading = new ValueSignal<>(null);
@@ -201,10 +205,12 @@ public class ClaimsView extends PageView implements HasReadme {
             SalesOrderRepository orders,
             ShipmentRepository shipments,
             LLMProviders providers,
+            AIBudget budget,
             CurrentUser currentUser,
             ExampleDocuments examples,
             Visit visit) {
         super("claims", "Claims", "Resolve Customer Issues", "Claims");
+        this.guard = budget.guard("claims");
         form = new ClaimForm(
                 customers,
                 contacts,
@@ -219,7 +225,8 @@ public class ClaimsView extends PageView implements HasReadme {
                 .withController(form.aiController())
                 .withMetadata(DemoClock::sessionContext)
                 .withRequestListener(turns::asked)
-                .withResponseListener(turns.ending(this::turnEnded))
+                // the budget has its slot back first, whatever becomes of the log
+                .withResponseListener(guard.closing(turns.ending(this::turnEnded)))
                 .build();
         turns.watch(form.aiController(), form::summary);
 
@@ -245,7 +252,7 @@ public class ClaimsView extends PageView implements HasReadme {
         entry.addClassName("claim-entry");
         var columns = new Div(source, entry);
         columns.addClassName("claim-columns");
-        add(columns);
+        add(new AIPausedNotice(budget), columns);
     }
 
     @Override
@@ -270,13 +277,15 @@ public class ClaimsView extends PageView implements HasReadme {
     private UploadDropZone dropZone() {
         var manager = new UploadManager(this);
         manager.setMaxFiles(1);
-        manager.setMaxFileSize(MAX_FILE_SIZE);
+        manager.setMaxFileSize(guard.limits().maxFileSize().toBytes());
         manager.setAcceptedFileExtensions(ACCEPTED.toArray(String[]::new));
         manager.setUploadHandler(UploadHandler.inMemory((file, data) -> {
             manager.clearFileList();
             read(new AIAttachment(file.fileName(), mimeTypeOf(file.fileName()), data));
         }));
-        manager.addFileRejectedListener(e -> warn("The AI reads emails, text files, PDFs and images of up to 10 MB."));
+        // what the browser tells of a file it does not send: too large, or of a kind the form does not take
+        manager.addFileRejectedListener(
+                e -> warn("The AI reads emails, text files, PDFs and images of up to " + guard.fileCap() + "."));
 
         var choose = new UploadButton("Choose", manager);
         choose.addThemeVariants(ButtonVariant.TERTIARY);
@@ -387,23 +396,51 @@ public class ClaimsView extends PageView implements HasReadme {
         return tile;
     }
 
-    /** Hands a message to the AI on an empty form, unless it is still reading the one before. */
+    /**
+     * Hands a message to the AI on an empty form, unless it is still reading the one before. A message over a cap,
+     * a file too large or a text too long, is refused with the reason. A PDF is cut to the pages the viewer shows,
+     * so that the model reads what the user sees and no more; one PDFBox cannot read is not sent at all. The turn
+     * itself starts, and is admitted, one round trip later in {@link #start}.
+     */
     private void read(AIAttachment attachment) {
         if (reading.peek() != null) {
             return;
         }
+        var refused = guard.refusal(attachment);
+        if (refused.isPresent()) {
+            warn(refused.get());
+            return;
+        }
+        AIAttachment message;
+        try {
+            message = AttachmentViewer.shownPages(attachment);
+        } catch (UncheckedIOException e) {
+            LOG.warn("A PDF could not be read, so it was not sent to the model", e);
+            warn("The PDF could not be read. Try another file, or fill in the form yourself.");
+            return;
+        }
         form.clear();
-        reading.set(attachment.name());
-        var shown = new AttachmentViewer(attachment);
-        openMessage(attachment.name(), shown);
+        reading.set(message.name());
+        var shown = new AttachmentViewer(message);
+        openMessage(message.name(), shown);
         // the model is told the attachment's shape, to place the regions it reports on its pages
         var prompt = shown.geometry().isEmpty() ? PROMPT : PROMPT + " It is " + shown.geometry() + ".";
         // A workaround, to be filed on flow-components and dropped when the form filler handles it: the filler guards
         // the fields on the client when a turn starts, and a value emptied in that same round trip stays on screen
         // for a moment. So the turn starts one round trip later, once the browser has shown the empty form.
-        getElement()
-                .executeJs("return null")
-                .then(ignored -> orchestrator.prompt(prompt, List.of(attachment)), error -> reading.set(null));
+        getElement().executeJs("return null").then(ignored -> start(prompt, message), error -> reading.set(null));
+    }
+
+    /**
+     * Starts the turn once the browser has shown the empty form, so that a turn is counted only when its model
+     * request is about to start and a browser that never answers leaves nothing held. Refused, the visitor is told
+     * why, the message stays open to look at and the form stays empty.
+     */
+    private void start(String prompt, AIAttachment message) {
+        guard.admit(() -> orchestrator.prompt(prompt, List.of(message)), refusal -> {
+            reading.set(null);
+            warn(refusal);
+        });
     }
 
     /**

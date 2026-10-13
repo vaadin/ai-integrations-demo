@@ -44,6 +44,7 @@ public class UserSwitcher extends Button implements AfterNavigationObserver {
                 currentUser.set(event.getValue());
             }
         });
+        users.getElement().setAttribute("autofocus", "");
 
         popover = new Popover(users);
         popover.setTarget(this);

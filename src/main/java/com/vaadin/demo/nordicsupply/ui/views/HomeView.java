@@ -7,6 +7,8 @@ import java.util.Locale;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.badge.Badge;
+import com.vaadin.flow.component.badge.BadgeVariant;
 import com.vaadin.flow.component.card.Card;
 import com.vaadin.flow.component.card.CardVariant;
 import com.vaadin.flow.component.html.Anchor;
@@ -49,7 +51,7 @@ public class HomeView extends PageView {
                 LocalDate.now(DemoClock.CLOCK).format(formatter),
                 "Home");
 
-        var aboutTitle = new H2("About this demo");
+        var aboutTitle = new H2("About This Demo");
         aboutTitle.addClassName("about-title");
         var intro = new Paragraph(MainLayout.COMPANY + " is a fictional outdoor-equipment wholesaler, and this "
                 + "application is its back office, built to showcase Vaadin AI integrations. The orders, "
@@ -58,22 +60,22 @@ public class HomeView extends PageView {
         var about = new Div(aboutTitle, intro);
         about.addClassName("about");
 
-        var tryTitle = new H3("Try");
+        var tryTitle = new H2("Try These");
         tryTitle.addClassName("section-title");
-        var badge = new Span("Start here");
-        badge.addClassName("badge");
+        var badge = new Badge("Start Here");
+        badge.addThemeVariants(BadgeVariant.FILLED);
         var cards = new Div(
                 tryCard(
-                        new Span(new Span("Dashboard"), badge),
+                        "Dashboard", badge,
                         "Ask a question about orders, shipments or claims and get a chart or a table.",
                         DashboardView.class),
                 tryCard(
-                        new Span("Claims"),
+                        "Claims", null,
                         "Drop a customer's complaint and let the AI fill in the claim form.",
                         ClaimsView.class));
         cards.addClassName("start-cards");
 
-        var readMore = new H3("Read more");
+        var readMore = new H2("Learn More");
         readMore.addClassName("section-title");
         var docs = new Div(
                 card("AI support in Vaadin Flow", "The documentation of Vaadin's AI components.", DOCS),
@@ -87,13 +89,12 @@ public class HomeView extends PageView {
     }
 
     /** A card that is one link to a view of the demo: a title and one line saying what to try there. */
-    private static RouterLink tryCard(Component title, String text, Class<? extends Component> view) {
+    private static RouterLink tryCard(String title, Component badge, String text, Class<? extends Component> view) {
         var card = new Card();
-        card.addThemeVariants(CardVariant.OUTLINED);
-        card.setTitle(title);
-        var line = new Span(text);
-        line.addClassName("text");
-        card.add(line);
+        card.addThemeVariants(CardVariant.ELEVATED);
+        card.setTitle(title, 3);
+        card.setHeaderSuffix(badge);
+        card.add(text);
         var link = new RouterLink(view);
         link.add(card);
         link.addClassName("start-card");
@@ -103,11 +104,8 @@ public class HomeView extends PageView {
     /** A card that is one link, opening in a new tab: a title and one line saying what is there. */
     private static Anchor card(String title, String text, String href) {
         var card = new Card();
-        card.addThemeVariants(CardVariant.OUTLINED);
-        card.setTitle(title, 4);
-        var line = new Span(text);
-        line.addClassName("text");
-        card.add(line);
+        card.setTitle(title, 3);
+        card.add(text);
         var link = new Anchor(href, card);
         link.setTarget(AnchorTarget.BLANK);
         link.addClassName("start-card");

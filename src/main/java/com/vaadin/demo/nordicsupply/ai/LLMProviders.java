@@ -42,8 +42,8 @@ public class LLMProviders {
      * A provider for a chat that goes on. The turns so far become the model's memory, so the next question is
      * answered in context; pass the same turns to {@code AIOrchestrator.Builder.withHistory} for the chat on screen.
      * The memory keeps what the chat shows as answered: the question of a turn that fails is dropped, so that the
-     * next question is not answered with it too. The reply comes whole and off the request thread: the chat shows
-     * the assistant typing meanwhile, instead of the model's narration word by word.
+     * next question is not answered with it too. The reply streams into the chat as the model writes it, as the
+     * kit's provider does by default.
      *
      * @param history the chat so far, oldest first; empty for a chat that starts now
      * @return a provider with a memory of its own
@@ -89,8 +89,6 @@ public class LLMProviders {
         ChatProvider(ChatClient client, ChatMemory memory) {
             super(client);
             this.memory = memory;
-            setStreaming(false);
-            setBackgroundExecution(true);
         }
 
         @Override

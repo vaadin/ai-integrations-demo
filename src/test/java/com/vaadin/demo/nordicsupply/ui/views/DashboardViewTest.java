@@ -112,7 +112,11 @@ class DashboardViewTest {
     private final UI ui = TestUi.withSession();
 
     DashboardViewTest() {
-        modelAnswers(() -> new ScriptedProvider("TITLE: Late shipments\nSUMMARY: Shipments after the date."));
+        modelAnswers(() -> new ScriptedProvider(
+                "Shipments after the date.",
+                new ToolCall(
+                        "name_widget",
+                        "{\"title\":\"Late shipments\",\"description\":\"Shipments after the date.\"}")));
         when(user.get()).thenReturn(new SignedInUser(8, "Lars Nygaard", Scopes.FI_EE));
         when(user.filterSignal()).thenReturn(countries.asReadonly());
         when(user.filter()).thenAnswer(call -> countries.peek());
@@ -169,11 +173,7 @@ class DashboardViewTest {
                 null,
                 List.of(
                         new ChatMessage(ChatMessage.Role.USER, "Our orders", null, null),
-                        new ChatMessage(
-                                ChatMessage.Role.ASSISTANT,
-                                "TITLE: Our orders\nSUMMARY: Every order.\n\nListed by number.",
-                                null,
-                                null)));
+                        new ChatMessage(ChatMessage.Role.ASSISTANT, "Listed by number.", null, null)));
     }
 
     /** A saved chart without a look, as the seeded ones are. */
@@ -331,7 +331,7 @@ class DashboardViewTest {
     @Test
     void aQuestionIsAnsweredOnTheSignedInUsersRegion() {
         modelAnswers(() -> new ScriptedProvider(
-                "TITLE: Orders\nSUMMARY: The orders.",
+                "The orders.",
                 new ToolCall(
                         "update_chart_data_source",
                         "{\"queries\":[\"SELECT order_number AS category, 1 AS amount FROM orders\"]}")));
@@ -400,12 +400,12 @@ class DashboardViewTest {
         when(dashboards.forUser(eq(8), any())).thenReturn(List.of(savedTable()));
         view = open();
         modelAnswers(() -> new ScriptedProvider(
-                "TITLE: Orders by number\nSUMMARY: One column per order.",
+                "One column per order.",
                 new ToolCall(
                         "update_chart_data_source",
                         "{\"queries\":[\"SELECT order_number AS category, 1 AS amount FROM orders\"]}")));
         ask("Orders by number");
-        modelAnswers(() -> new ScriptedProvider("TITLE: Nothing yet\nSUMMARY: The model ran no query."));
+        modelAnswers(() -> new ScriptedProvider("The model ran no query."));
         ask("A question the model answers without a query");
 
         save().click();
@@ -418,7 +418,7 @@ class DashboardViewTest {
                 .containsExactly(tuple("Our orders", WidgetType.GRID), tuple("Orders by number", WidgetType.CHART));
         assertThat(kept.getValue().get(1).history())
                 .extracting(ChatMessage::content)
-                .containsExactly("Orders by number", "TITLE: Orders by number\nSUMMARY: One column per order.");
+                .containsExactly("Orders by number", "One column per order.");
         assertThat(dashboard().getWidgets()).hasSize(4);
         assertThat(save().isVisible()).isTrue();
         assertThat(save().isEnabled()).isFalse();
@@ -433,7 +433,7 @@ class DashboardViewTest {
         when(dashboards.forUser(eq(8), any())).thenReturn(List.of(savedTable()));
         view = open();
         modelAnswers(() -> new ScriptedProvider(
-                "TITLE: Orders by number\nSUMMARY: One column per order.",
+                "One column per order.",
                 new ToolCall(
                         "update_chart_data_source",
                         "{\"queries\":[\"SELECT order_number AS category, 1 AS amount FROM orders\"]}")));
@@ -597,7 +597,7 @@ class DashboardViewTest {
     @Test
     void aQuestionIsAnsweredOnTheChosenCountrysConnection() {
         modelAnswers(() -> new ScriptedProvider(
-                "TITLE: Orders\nSUMMARY: The orders.",
+                "The orders.",
                 new ToolCall(
                         "update_chart_data_source",
                         "{\"queries\":[\"SELECT order_number AS category, 1 AS amount FROM orders\"]}")));

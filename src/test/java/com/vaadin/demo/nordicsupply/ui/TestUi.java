@@ -17,6 +17,7 @@ import com.vaadin.flow.component.page.ExtendedClientDetails;
 import com.vaadin.flow.server.Command;
 import com.vaadin.flow.server.VaadinContext;
 import com.vaadin.flow.server.VaadinService;
+import com.vaadin.flow.server.VaadinServiceEventBus;
 import com.vaadin.flow.server.VaadinSession;
 
 /**
@@ -39,6 +40,8 @@ public final class TestUi {
                 .thenAnswer(call -> TestFeatureFlags.attribute(flags));
         var service = mock(VaadinService.class);
         when(service.getContext()).thenReturn(context);
+        // a real service always has one, and Flow reports data provider queries on it
+        when(service.getEventBus()).thenReturn(new VaadinServiceEventBus(service));
         when(service.accessSession(any(), any())).thenAnswer(call -> {
             call.getArgument(1, Command.class).execute();
             return CompletableFuture.completedFuture(null);

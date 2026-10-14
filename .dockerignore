@@ -1,6 +1,0 @@
-# Only the sources reach the build; build output, tests and local files stay out
-*
-!pom.xml
-!src/main
-src/main/frontend/generated
-src/main/bundles

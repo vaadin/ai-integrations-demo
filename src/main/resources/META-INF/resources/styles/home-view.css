@@ -20,60 +20,61 @@
   .about-title {
     font-size: var(--aura-font-size-xl);
     line-height: var(--aura-line-height-xl);
+    font-weight: 700;
   }
 
   .section-title {
-    font-size: var(--aura-font-size-s);
-    line-height: var(--aura-line-height-s);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--vaadin-text-color-secondary);
-    margin-block: var(--vaadin-gap-s);
+    font-weight: 700;
+    font-size: var(--aura-font-size-l);
+    color: var(--aura-accent-text-color);
+    margin-block: var(--vaadin-gap-m);
   }
 
   .start-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(18em, 1fr));
     gap: var(--vaadin-gap-l);
     width: 100%;
     align-items: stretch;
+    margin-bottom: var(--vaadin-gap-xl);
+    min-height: 10em;
+    max-width: 60em;
   }
 
   .start-card {
     text-decoration: none;
-    color: inherit;
-  }
-
-  .start-card vaadin-card {
-    --vaadin-card-padding: var(--vaadin-padding-l);
-    --vaadin-card-title-color: var(--aura-accent-text-color);
-    --vaadin-card-title-font-size: var(--aura-font-size-l);
-    --vaadin-card-title-font-weight: 700;
-    height: 100%;
-  }
-
-  .start-card vaadin-card:hover {
-    --vaadin-card-border-color: var(--aura-accent-border-color);
-  }
-
-  .start-card vaadin-card .text {
-    font-size: var(--aura-font-size-m);
     color: var(--vaadin-text-color-secondary);
   }
 
-  /* "Start here" beside the Dashboard card's title */
-  .start-card .badge {
-    display: inline-block;
-    margin-inline-start: var(--vaadin-gap-s);
-    padding: 0.1rem 0.5rem;
-    border-radius: 999px;
-    font-size: var(--aura-font-size-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    vertical-align: middle;
-    color: var(--aura-accent-contrast-color);
-    background: var(--aura-accent-color);
+  .start-card vaadin-card {
+    --vaadin-card-title-font-weight: var(--aura-font-weight-semibold);
+    height: 100%;
+    transition: all 80ms;
+    backdrop-filter: blur(8px);
+
+    &::part(header) {
+      width: fit-content;
+      gap: var(--vaadin-gap-m);
+    }
+
+    &::part(content) {
+      text-wrap: pretty;
+    }
+
+    @media (any-hover: hover) {
+      &:hover {
+        --aura-surface-level: 4;
+        --aura-surface-opacity: 1;
+        --vaadin-card-shadow: var(--aura-shadow-s);
+        --vaadin-card-border-color: var(--vaadin-border-color);
+      }
+    }
+
+    &:active {
+      --aura-surface-level: 3;
+      --aura-surface-opacity: 1;
+      scale: 0.98;
+    }
   }
 
   @media (prefers-reduced-motion: no-preference) {

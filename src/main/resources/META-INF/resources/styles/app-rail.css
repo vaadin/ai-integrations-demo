@@ -153,6 +153,10 @@ vaadin-popover.help {
     color: var(--vaadin-text-color-secondary);
   }
 
+  &::part(content) {
+    height: 100%;
+  }
+
   > vaadin-markdown:not(:empty) {
     padding-inline: var(--vaadin-padding-m);
   }

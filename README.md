@@ -22,6 +22,22 @@ mvn spring-boot:run                       # http://localhost:8080 (PORT=8093 mvn
 Presenting: `SPRING_PROFILES_ACTIVE=demo mvn spring-boot:run` keeps development mode but switches the development
 tools and Copilot off, so nothing can appear over the app or catch a click.
 
+### With Docker
+
+To try the demo out without installing Java or Maven, Docker is enough. The image builds the application from the
+checkout in production mode, which takes a few minutes:
+
+```bash
+docker build -t ai-integrations-demo .
+docker run --rm -p 8080:8080 -e OPENAI_API_KEY ai-integrations-demo    # http://localhost:8080
+```
+
+`-e OPENAI_API_KEY` hands the container the key from your shell, so set it there first; it never becomes part of the
+image. Without a key the application still starts, and each AI request ends in an error message.
+
+Charts and Dashboard are commercial Vaadin components, and the image is built without a Vaadin license, so the
+application shows Vaadin's commercial banner at the foot of the page.
+
 ## Tests
 
 ```bash

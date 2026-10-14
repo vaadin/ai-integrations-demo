@@ -15,9 +15,7 @@ import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.AnchorTarget;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -66,11 +64,13 @@ public class HomeView extends PageView {
         badge.addThemeVariants(BadgeVariant.FILLED);
         var cards = new Div(
                 tryCard(
-                        "Dashboard", badge,
+                        "Dashboard",
+                        badge,
                         "Ask a question about orders, shipments or claims and get a chart or a table.",
                         DashboardView.class),
                 tryCard(
-                        "Claims", null,
+                        "Claims",
+                        null,
                         "Drop a customer's complaint and let the AI fill in the claim form.",
                         ClaimsView.class));
         cards.addClassName("start-cards");

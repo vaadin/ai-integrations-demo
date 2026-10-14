@@ -15,17 +15,16 @@ import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.radiobutton.RadioGroupVariant;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.data.value.ValueChangeMode;
+
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
 
 /**
  * The "ask a question" panel of Dashboard: a prompt bar with an arrow, a "Render as" toggle between chart and table
  * under it, suggested questions, and the privacy footnote. A suggestion only fills in the question: the user reads
- * it, may change it, and sends it, since every question sent is a paid model call. It sits in the middle of an empty
- * dashboard and, once widgets exist, inside the "New Query" tile at the end of the dashboard, where it stacks its
- * parts to fit one cell.
+ * it, may change it, and sends it, since every question sent is a paid model call. The dashboard view keeps it sticky
+ * at the bottom and centers it vertically while there are no widgets.
  */
 public class QueryPanel extends Div {
-
 
     /** What the panel promises about the data: the model is shown the schema, never the rows. */
     public static final String FOOTNOTE = "Schema-only queries · No data leaves your network";
@@ -59,8 +58,8 @@ public class QueryPanel extends Div {
 
         question.setPlaceholder(PLACEHOLDER);
         question.setMaxLength(maxQuestionLength);
-        question.setI18n(new TextArea.TextAreaI18n().setMaxLengthErrorMessage(
-                "At most " + maxQuestionLength + " characters"));
+        question.setI18n(
+                new TextArea.TextAreaI18n().setMaxLengthErrorMessage("At most " + maxQuestionLength + " characters"));
         question.setMinRows(1);
         question.setMaxRows(7);
         var send = new Button(new SvgIcon("icons/arrow-up.svg"), e -> submit(question.getValue()));

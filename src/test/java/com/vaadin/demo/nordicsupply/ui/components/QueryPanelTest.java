@@ -160,7 +160,8 @@ class QueryPanelTest {
 
     private List<Button> chips() {
         return descendants()
-                .filter(c -> c.getParent().map(p -> p.hasClassName("chips")).orElse(false))
+                .filter(c ->
+                        c.getParent().map(p -> p.hasClassName("suggestions")).orElse(false))
                 .filter(Button.class::isInstance)
                 .map(Button.class::cast)
                 .toList();

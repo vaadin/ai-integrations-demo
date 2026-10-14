@@ -10,7 +10,6 @@ import com.vaadin.flow.component.ai.common.ChatMessage;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dashboard.Dashboard;
-import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.SvgIcon;
 import com.vaadin.flow.component.notification.Notification;
@@ -41,15 +40,14 @@ import com.vaadin.demo.nordicsupply.ui.components.InsightWidget;
 import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
 
 /**
- * The self-service dashboard. The page opens with the signed-in user's dashboard of this visit, the
- * seeded one until the visitor saves their own: its widgets with their chats, their queries run anew. An empty
- * dashboard shows one prompt in the middle of the page. A question adds a grid or chart widget and opens its chat in
- * a popover beside it; the Edit button in a widget's header opens it again, and closes it while it is open. The last
- * tile of the dashboard is "New Query" and holds the same prompt, so the next question is typed where the next
- * widget will appear. The popover also closes with Escape, its close button, or a click anywhere else on the page;
- * its own widget is not elsewhere, so the table or chart can be used while the chat is open. Widgets can be moved,
- * resized and removed; Save Dashboard, in the page's heading, keeps the dashboard as it is on screen for the rest of
- * the visit, and until then a reload goes back to the saved one.
+ * The self-service dashboard. The page opens with the signed-in user's dashboard of this visit, the seeded one until
+ * the visitor saves their own: its widgets with their chats, their queries run anew. The query prompt stays at the
+ * bottom of the page, centered vertically while the dashboard is empty. A question adds a grid or chart widget and
+ * opens its chat in a popover beside it; the Edit button in a widget's header opens it again, and closes it while it
+ * is open. The popover also closes with Escape, its close button, or a click anywhere else on the page; its own widget
+ * is not elsewhere, so the table or chart can be used while the chat is open. Widgets can be moved, resized and
+ * removed; Save, in the page's heading, keeps the dashboard as it is on screen for the rest of the visit, and until
+ * then a reload goes back to the saved one.
  * <p>
  * The country filter in the page's heading narrows the dashboard to one of the user's countries, or widens it back to
  * their region. It is the session's, so every tab follows it, and a change runs every widget's query again on that
@@ -133,9 +131,6 @@ public class DashboardView extends PageView implements HasReadme {
     private final Dashboard dashboard = new Dashboard();
     private final QueryPanel query;
 
-    /** What the active widget contains, in business terms, over its chat; the widget itself shows only its title. */
-    private final Span intro = new Span();
-
     private final Popover popover = new Popover();
     private InsightWidget active;
 
@@ -214,8 +209,6 @@ public class DashboardView extends PageView implements HasReadme {
         // open, none while it is closed.
         popover.addOpenedChangeListener(
                 e -> setActive(e.isOpened() && popover.getTarget() instanceof InsightWidget widget ? widget : null));
-        intro.addClassName("chat-intro");
-
         add(new AIPausedNotice(budget), dashboard, popover, query);
         loadSaved();
         layout();
@@ -279,14 +272,18 @@ public class DashboardView extends PageView implements HasReadme {
         setActive(widget);
         var footnote = new Span(QueryPanel.FOOTNOTE);
         footnote.addClassName("footnote");
-        intro.setText(widget.description());
         var close = new Button(new SvgIcon("icons/x.svg"), e -> popover.close());
         close.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
         close.addClassName("popover-close");
         close.setAriaLabel("Close the chat");
         close.setTooltipText("Close the chat");
         popover.removeAll();
-        popover.add(close, intro, widget.chat().messageList(), widget.chat().messageInput(), footnote);
+        popover.add(
+                close,
+                widget.chat().intro(),
+                widget.chat().messageList(),
+                widget.chat().messageInput(),
+                footnote);
         if (popover.getTarget() != widget) {
             popover.setTarget(widget);
         }

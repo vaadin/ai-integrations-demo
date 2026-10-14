@@ -18,14 +18,14 @@ public class ChatPanel extends VerticalLayout {
     /** What the chat is about, in business terms; hidden while empty. */
     private final Span intro = new Span();
 
-    private final MessageList messageList = new MessageList(){
-    @Override
-    public void addItem(MessageListItem item) {
-        var fromAssistant = InsightWidget.ASSISTANT_NAME.equals(item.getUserName());
-        item.addThemeVariants(fromAssistant ? MessageListItemVariant.FULL_WIDTH : MessageListItemVariant.SELF);
-        super.addItem(item);
-    }
-};
+    private final MessageList messageList = new MessageList() {
+        @Override
+        public void addItem(MessageListItem item) {
+            var fromAssistant = InsightWidget.ASSISTANT_NAME.equals(item.getUserName());
+            item.addThemeVariants(fromAssistant ? MessageListItemVariant.FULL_WIDTH : MessageListItemVariant.SELF);
+            super.addItem(item);
+        }
+    };
     private final MessageInput messageInput = new MessageInput();
 
     public ChatPanel() {
@@ -47,6 +47,11 @@ public class ChatPanel extends VerticalLayout {
     /** Says what the chat is about, over the messages; empty shows nothing. */
     public void setIntro(String text) {
         intro.setText(text);
+    }
+
+    /** The line saying what the chat is about. */
+    public Span intro() {
+        return intro;
     }
 
     /** The list the orchestrator writes the turns into. */

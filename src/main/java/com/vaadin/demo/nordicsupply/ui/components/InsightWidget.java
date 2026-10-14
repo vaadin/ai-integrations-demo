@@ -26,8 +26,11 @@ import com.vaadin.flow.component.charts.model.Configuration;
 import com.vaadin.flow.component.charts.util.ChartSerialization;
 import com.vaadin.flow.component.dashboard.DashboardWidget;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.icon.SvgIcon;
 import com.vaadin.flow.component.messages.MessageInputI18n;
+import com.vaadin.flow.component.messages.MessageInputVariant;
+import com.vaadin.flow.component.messages.MessageListItemVariant;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -122,7 +125,7 @@ public class InsightWidget extends DashboardWidget {
     /** The model's one-sentence description of the widget, in business terms; shown over its chat. */
     private String description = "";
 
-    private final Button ask = new Button("Edit", new SvgIcon("icons/sparkle.svg"));
+    private final Button ask = new Button("Edit", new SvgIcon("icons/sparkles.svg"));
     private final ProgressBar progress = new ProgressBar();
     private final AIOrchestrator orchestrator;
 
@@ -214,6 +217,7 @@ public class InsightWidget extends DashboardWidget {
         chat.messageInput().addSubmitListener(event -> keepTheDemosDate());
         chat.messageInput()
                 .setI18n(new MessageInputI18n().setMessage(CHAT_PLACEHOLDER).setSend("Send"));
+        chat.messageInput().addThemeVariants(MessageInputVariant.AURA_ICON_BUTTON);
         ask.addThemeVariants(ButtonVariant.PRIMARY, ButtonVariant.SMALL);
         ask.setAriaLabel("Edit this widget");
         ask.addClassName("widget-ask");

@@ -10,7 +10,6 @@ import com.vaadin.flow.component.ai.common.ChatMessage;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dashboard.Dashboard;
-import com.vaadin.flow.component.dashboard.DashboardWidget;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.SvgIcon;
@@ -72,17 +71,9 @@ public class DashboardView extends PageView implements HasReadme {
     private static final int MAX_COLUMNS = 3;
 
     /** Narrower than this and a chart's axis labels collide; three columns fit from about 1100px. */
-    private static final String MIN_COLUMN_WIDTH = "260px";
+    private static final String MIN_COLUMN_WIDTH = "20em";
 
-    /** The widgets' proportions as designed: about 4:3 at three columns on a 1440px screen. */
-    private static final String ROW_HEIGHT = "300px";
-
-    private static final String GAP = "1rem";
-
-    /** The popover beside a widget: as wide as a one-column widget, and tall enough for a few turns of chat. */
-    private static final String POPOVER_WIDTH = "400px";
-
-    private static final String POPOVER_HEIGHT = "500px";
+    private static final String ROW_HEIGHT = "22em";
 
     private static final List<ReadmeSection> README_SECTIONS = List.of(
             new ReadmeSection("Create and Edit Widgets with AI", """
@@ -100,7 +91,7 @@ public class DashboardView extends PageView implements HasReadme {
                     """),
             new ReadmeSection("Save Your Dashboard", """
                     Move, resize and remove widgets
-                    as you like, and press **Save Dashboard** to keep the dashboard as it is, chats included, for the rest of
+                    as you like, and press **Save** in the page header to keep the dashboard as it is, chats included, for the rest of
                     your visit.
                     """));
 
@@ -141,18 +132,14 @@ public class DashboardView extends PageView implements HasReadme {
 
     private final Dashboard dashboard = new Dashboard();
     private final QueryPanel query;
-    private final Div empty = new Div();
 
-    private final Div scroller = new Div(dashboard);
-    private final DashboardWidget newQuery = new DashboardWidget();
-
-    /** The New Query tile's content: a title and, while the dashboard has widgets, the prompt. */
-    private final Div newQueryBox = new Div();
+    /** What the active widget contains, in business terms, over its chat; the widget itself shows only its title. */
+    private final Span intro = new Span();
 
     private final Popover popover = new Popover();
     private InsightWidget active;
 
-    private final Button save = new Button("Save Dashboard", e -> save());
+    private final Button save = new Button("Save", new SvgIcon("icons/check.svg"), e -> save());
 
     private final CountryFilter filter;
 
@@ -183,6 +170,7 @@ public class DashboardView extends PageView implements HasReadme {
         // the filter shows the session's choice, as every tab does, and a choice made here becomes the session's
         filter.bindValue(user.filterSignal(), user::setFilter);
         shown = user.filter();
+        save.addClassName("save-button");
         heading().addActions(filter, save);
 
         query = new QueryPanel(
@@ -195,7 +183,6 @@ public class DashboardView extends PageView implements HasReadme {
         dashboard.setMaximumColumnCount(MAX_COLUMNS);
         dashboard.setMinimumColumnWidth(MIN_COLUMN_WIDTH);
         dashboard.setRowHeight(ROW_HEIGHT);
-        dashboard.setGap(GAP);
         dashboard.setItemRemoveHandler(e -> {
             if (e.getItem() instanceof InsightWidget widget) {
                 remove(widget);
@@ -205,7 +192,6 @@ public class DashboardView extends PageView implements HasReadme {
             if (e.getItem() instanceof InsightWidget) {
                 markDirty();
             }
-            keepNewQueryLast();
         });
         dashboard.addItemResizedListener(e -> {
             if (e.getItem() instanceof InsightWidget) {
@@ -213,39 +199,12 @@ public class DashboardView extends PageView implements HasReadme {
             }
         });
 
-        var tileTitle = new Span("New Query");
-        tileTitle.addClassName("tile-title");
-        newQueryBox.add(tileTitle);
-        newQueryBox.addClassName("new-query-box");
-        newQuery.setContent(newQueryBox);
-        newQuery.addClassName("new-query-widget");
-        // The dashboard is editable at all times and has no per-widget switch, so the tile opts out itself. Its
-        // header, with the move and remove buttons, is hidden by CSS. The drag is refused here, before the dashboard
-        // sees it. A move by keyboard is undone by keepNewQueryLast and a keyboard remove is ignored by the remove
-        // handler, so neither needs blocking.
-        newQuery.getElement()
-                .addEventListener("dragstart", e -> {})
-                .preventDefault()
-                .stopPropagation();
-        // An editable widget puts an invisible cover over its content that selects the widget on click. It lives in
-        // the widget's shadow root without a part, so no Flow or CSS API reaches it; this is the one place the view
-        // runs a script. With clicks passing through, a click on the prompt focuses the prompt. The tile leaves the
-        // dashboard whenever the last widget goes, and Flow creates a new element for it when it comes back, so the
-        // script runs on every attach.
-        newQuery.addAttachListener(event -> newQuery.getElement().executeJs("""
-                        this.updateComplete.then(() => {
-                            this.shadowRoot.getElementById('focus-button-wrapper').style.pointerEvents = 'none';
-                        });
-                        """));
-
         popover.setOpenOnClick(false);
         // not modal, and closed by a click elsewhere: the popover counts a click on its target, the widget, as
         // inside, so the table or chart beside the chat stays usable while the chat is open
         popover.setModal(false);
         popover.setCloseOnOutsideClick(true);
         popover.setPosition(PopoverPosition.END_TOP);
-        popover.setWidth(POPOVER_WIDTH);
-        popover.setHeight(POPOVER_HEIGHT);
         popover.setAutofocus(true);
         popover.addClassName("dashboard-widget-popover");
         // The client reports every opening and closing, whether the user, the browser or the view caused it, and
@@ -255,10 +214,9 @@ public class DashboardView extends PageView implements HasReadme {
         // open, none while it is closed.
         popover.addOpenedChangeListener(
                 e -> setActive(e.isOpened() && popover.getTarget() instanceof InsightWidget widget ? widget : null));
-        empty.addClassName("dashboard-empty");
-        scroller.addClassName("page-scroll");
+        intro.addClassName("chat-intro");
 
-        add(new AIPausedNotice(budget), empty, scroller, popover);
+        add(new AIPausedNotice(budget), dashboard, popover, query);
         loadSaved();
         layout();
         // a change of the filter, made here or in another tab, runs every widget's query again on the new scope's
@@ -301,42 +259,14 @@ public class DashboardView extends PageView implements HasReadme {
         }
     }
 
-    /**
-     * Empty: the prompt in the middle, nothing else. With widgets: the dashboard, ending with the New Query tile that
-     * holds the prompt. Save Dashboard shows while there is something to save, a widget or the removal of the last
-     * one, and can be pressed while the dashboard differs from the saved one. An empty page is marked {@code empty},
-     * which keeps its title large, as the design draws the empty dashboard.
-     */
     private void layout() {
         boolean hasWidgets = !widgets().isEmpty();
         getElement().getClassList().set("empty", !hasWidgets);
-        empty.setVisible(!hasWidgets);
-        scroller.setVisible(hasWidgets);
-        save.setVisible(hasWidgets || dirty);
         save.setEnabled(dirty);
-        if (!hasWidgets) {
-            popover.close();
-            dashboard.remove(newQuery);
-            query.setMode(QueryPanel.Mode.CENTER);
-            empty.removeAll();
-            empty.add(query);
+        if (dirty) {
+            save.addThemeVariants(ButtonVariant.PRIMARY);
         } else {
-            if (!dashboard.getWidgets().contains(newQuery)) {
-                dashboard.add(newQuery);
-            }
-            if (query.getParent().orElse(null) != newQueryBox) {
-                query.setMode(QueryPanel.Mode.TILE);
-                newQueryBox.add(query); // moves it out of the empty state
-            }
-        }
-    }
-
-    /** The New Query tile is always the last one; a move that put it elsewhere is undone. */
-    private void keepNewQueryLast() {
-        var widgets = dashboard.getWidgets();
-        if (widgets.contains(newQuery) && widgets.getLast() != newQuery) {
-            dashboard.remove(newQuery);
-            dashboard.add(newQuery);
+            save.removeThemeVariants(ButtonVariant.PRIMARY);
         }
     }
 
@@ -349,16 +279,14 @@ public class DashboardView extends PageView implements HasReadme {
         setActive(widget);
         var footnote = new Span(QueryPanel.FOOTNOTE);
         footnote.addClassName("footnote");
-        var content = new Div();
-        content.add(widget.chat(), footnote);
-        content.addClassName("popover-chat");
+        intro.setText(widget.description());
         var close = new Button(new SvgIcon("icons/x.svg"), e -> popover.close());
         close.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.SMALL);
         close.addClassName("popover-close");
         close.setAriaLabel("Close the chat");
         close.setTooltipText("Close the chat");
         popover.removeAll();
-        popover.add(close, content);
+        popover.add(close, intro, widget.chat().messageList(), widget.chat().messageInput(), footnote);
         if (popover.getTarget() != widget) {
             popover.setTarget(widget);
         }
@@ -389,15 +317,10 @@ public class DashboardView extends PageView implements HasReadme {
         }
     }
 
-    /** A question adds one widget of the chosen kind in front of the New Query tile and asks it there. */
+    /** A question adds one widget of the chosen kind at the end of the dashboard. */
     private void ask(String question, WidgetType type) {
         var widget = newWidget(type, question, List.of());
-        int index = dashboard.getWidgets().indexOf(newQuery);
-        if (index < 0) {
-            dashboard.add(widget);
-        } else {
-            dashboard.addWidgetAtIndex(index, widget);
-        }
+        dashboard.add(widget);
         markDirty();
         layout();
         activate(widget);
@@ -438,6 +361,7 @@ public class DashboardView extends PageView implements HasReadme {
         dirty = true;
         save.setVisible(true);
         save.setEnabled(true);
+        save.addThemeVariants(ButtonVariant.PRIMARY);
     }
 
     /**

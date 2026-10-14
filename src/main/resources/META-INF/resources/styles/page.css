@@ -30,7 +30,9 @@ vaadin-drawer-toggle {
 
 .page-actions {
   display: flex;
-  gap: var(--vaadin-gap-s);
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: var(--vaadin-gap-xs) var(--vaadin-gap-s);
 }
 
 .page:not(.first-visit) {

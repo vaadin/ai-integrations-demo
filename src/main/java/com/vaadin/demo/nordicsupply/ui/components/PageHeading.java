@@ -19,6 +19,7 @@ public class PageHeading extends HeroTitle {
     public void addActions(Component... components) {
         if (actions.getParent().isEmpty()) {
             actions.getElement().setAttribute("slot", "suffix");
+            actions.addClassName("page-actions");
             add(actions);
         }
         actions.add(components);

@@ -45,8 +45,9 @@ class PdfTextTest {
 
     @Test
     void aSnippetOverALineBreakIsABoxPerLine() {
+        // over a line break the text itself has: where a paragraph wraps depends on the platform's fonts
         var boxes = damagedPallet
-                .find("crushed and the stretch wrap torn open", 1, ANYWHERE)
+                .find("Ridge Sport & Fritid Oy Kauppakatu 5", 1, ANYWHERE)
                 .orElseThrow();
 
         assertThat(boxes).hasSize(2);

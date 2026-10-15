@@ -73,8 +73,8 @@ import com.vaadin.demo.nordicsupply.ui.components.InsightWidget;
 import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
 
 /**
- * The page opens with the saved dashboard, or with one prompt when there is none; every question becomes a widget in
- * front of the New Query tile, and Save Dashboard keeps what is on screen.
+ * The page opens with the saved dashboard and a prompt below it; every question becomes a widget at the end, and Save
+ * keeps what is on screen.
  */
 class DashboardViewTest {
 
@@ -202,21 +202,16 @@ class DashboardViewTest {
     void anEmptyDashboardIsOnePromptInTheMiddleOfThePage() {
         // the page is marked empty, which keeps its title large
         assertThat(view.hasClassName("empty")).isTrue();
-        assertThat(empty().isVisible()).isTrue();
-        assertThat(scroller().isVisible()).isFalse();
-        assertThat(panel().getParent()).contains(empty());
-        assertThat(panel().getElement().getAttribute("mode")).isEqualTo("center");
+        assertThat(view.getChildren().toList()).containsSubsequence(dashboard(), panel());
         assertThat(dashboard().getWidgets()).isEmpty();
     }
 
     @Test
-    void aQuestionBecomesAnActiveWidgetAndThePromptMovesIntoTheNewQueryTile() {
+    void aQuestionBecomesAnActiveWidgetAndThePromptStaysBelowTheDashboard() {
         ask("Late shipments last month");
 
         assertThat(view.hasClassName("empty")).isFalse();
-        assertThat(empty().isVisible()).isFalse();
-        assertThat(scroller().isVisible()).isTrue();
-        assertThat(dashboard().getWidgets()).hasSize(2);
+        assertThat(dashboard().getWidgets()).hasSize(1);
         var widget = (InsightWidget) dashboard().getWidgets().getFirst();
         // the question is the title until the model names the widget, which the scripted model did at once
         assertThat(widget.getTitle()).isEqualTo("Late shipments");
@@ -224,10 +219,7 @@ class DashboardViewTest {
         // a chart unless the user chose a table
         assertThat(widget.getContent().getChildren()).anyMatch(Chart.class::isInstance);
         assertThat(widget.hasClassName("active")).isTrue();
-        assertThat(dashboard().getWidgets().getLast().hasClassName("new-query-widget"))
-                .isTrue();
-        assertThat(panel().getElement().getAttribute("mode")).isEqualTo("tile");
-        assertThat(descendants(dashboard().getWidgets().getLast())).contains(panel());
+        assertThat(view.getChildren().toList()).containsSubsequence(dashboard(), panel());
     }
 
     /**
@@ -270,17 +262,16 @@ class DashboardViewTest {
     }
 
     @Test
-    void theNextQuestionLandsInFrontOfTheNewQueryTileAndBecomesTheActiveOne() {
+    void theNextQuestionLandsAsTheLastAndBecomesTheActiveOne() {
         ask("Late shipments last month");
         ask("Open claims by type");
 
         var widgets = dashboard().getWidgets();
-        assertThat(widgets).hasSize(3);
+        assertThat(widgets).hasSize(2);
         assertThat(widgets.get(0)).isInstanceOf(InsightWidget.class);
-        assertThat(widgets.get(1)).isInstanceOf(InsightWidget.class);
-        assertThat(widgets.get(1).hasClassName("active")).isTrue();
+        assertThat(widgets.getLast()).isInstanceOf(InsightWidget.class);
+        assertThat(widgets.getLast().hasClassName("active")).isTrue();
         assertThat(widgets.get(0).hasClassName("active")).isFalse();
-        assertThat(widgets.getLast().hasClassName("new-query-widget")).isTrue();
     }
 
     @Test
@@ -298,7 +289,9 @@ class DashboardViewTest {
         var second = (InsightWidget) widgets.get(1);
         var first = (InsightWidget) widgets.get(0);
         assertThat(popover().getTarget()).isSameAs(second);
-        assertThat(descendants(popover())).contains(second.chat()).doesNotContain(first.chat());
+        assertThat(descendants(popover()))
+                .contains(second.chat().messageList())
+                .doesNotContain(first.chat().messageList());
     }
 
     /** The chat stays beside its widget until the user is done with it: not modal, and a click elsewhere closes it. */
@@ -370,7 +363,7 @@ class DashboardViewTest {
 
     /**
      * The page opens with the saved dashboard: its widgets in their order, each with its chat and its query run on
-     * the user's region, the New Query tile last, and nothing asked of the model.
+     * the user's region, and nothing asked of the model.
      */
     @Test
     void theSavedDashboardOpensWithItsWidgetsAndTheirChats() {
@@ -379,7 +372,7 @@ class DashboardViewTest {
         view = open();
 
         var widgets = dashboard().getWidgets();
-        assertThat(widgets).hasSize(3);
+        assertThat(widgets).hasSize(2);
         var table = (InsightWidget) widgets.get(0);
         var chart = (InsightWidget) widgets.get(1);
         assertThat(table.getTitle()).isEqualTo("Our orders");
@@ -390,8 +383,7 @@ class DashboardViewTest {
         assertThat(table.state().sql()).isEqualTo("SELECT order_number FROM orders");
         assertThat(chart.type()).isEqualTo(WidgetType.CHART);
         assertThat(chart.state()).isNotNull();
-        assertThat(widgets.getLast().hasClassName("new-query-widget")).isTrue();
-        assertThat(panel().getElement().getAttribute("mode")).isEqualTo("tile");
+        assertThat(view.getChildren().toList()).containsSubsequence(dashboard(), panel());
         verify(dashboards, atLeastOnce()).forUser(8, ZoneId.of("Europe/Helsinki"));
         verify(providers).forChat(savedTable().history());
         verify(connections, never()).templateFor(argThat(scope -> !scope.equals(Scopes.FI_EE)));
@@ -400,10 +392,11 @@ class DashboardViewTest {
                 .allSatisfy(model -> assertThat(model.requests()).isEmpty());
     }
 
-    /** Save Dashboard is not offered on an empty dashboard, is offered on a saved one, and can be pressed after a change. */
+    /** Save is disabled until the dashboard differs from the saved one. */
     @Test
     void saveDashboardCanBePressedOnceTheDashboardDiffersFromTheSavedOne() {
-        assertThat(save().isVisible()).isFalse();
+        assertThat(save().isVisible()).isTrue();
+        assertThat(save().isEnabled()).isFalse();
 
         ask("Late shipments last month");
 
@@ -445,7 +438,7 @@ class DashboardViewTest {
         assertThat(kept.getValue().get(1).history())
                 .extracting(ChatMessage::content)
                 .containsExactly("Orders by number", "One column per order.");
-        assertThat(dashboard().getWidgets()).hasSize(4);
+        assertThat(dashboard().getWidgets()).hasSize(3);
         assertThat(save().isVisible()).isTrue();
         assertThat(save().isEnabled()).isFalse();
     }
@@ -512,27 +505,16 @@ class DashboardViewTest {
         when(removal.getItem()).thenReturn(dashboard().getWidgets().getFirst());
         dashboard().getItemRemoveHandler().onItemRemove(removal);
 
-        assertThat(empty().isVisible()).isTrue();
+        assertThat(view.hasClassName("empty")).isTrue();
         assertThat(save().isVisible()).isTrue();
         assertThat(save().isEnabled()).isTrue();
     }
 
-    /** A widget moved to another place can be saved; the New Query tile, which the view keeps last, changes nothing. */
+    /** A widget moved to another place can be saved. */
     @Test
     void aMovedWidgetCanBeSaved() {
         when(dashboards.forUser(eq(8), any())).thenReturn(List.of(savedTable(), savedChart()));
         view = open();
-
-        ComponentUtil.fireEvent(
-                dashboard(),
-                new DashboardItemMovedEvent(
-                        dashboard(),
-                        true,
-                        dashboard().getWidgets().getLast(),
-                        dashboard().getChildren().toList(),
-                        null));
-
-        assertThat(save().isEnabled()).isFalse();
 
         ComponentUtil.fireEvent(
                 dashboard(),
@@ -669,7 +651,7 @@ class DashboardViewTest {
         return descendants(view)
                 .filter(Button.class::isInstance)
                 .map(Button.class::cast)
-                .filter(button -> "Save Dashboard".equals(button.getText()))
+                .filter(button -> "Save".equals(button.getText()))
                 .findFirst()
                 .orElseThrow();
     }
@@ -717,20 +699,6 @@ class DashboardViewTest {
         return descendants(view)
                 .filter(Dashboard.class::isInstance)
                 .map(Dashboard.class::cast)
-                .findFirst()
-                .orElseThrow();
-    }
-
-    private Component empty() {
-        return view.getChildren()
-                .filter(c -> c.hasClassName("dashboard-empty"))
-                .findFirst()
-                .orElseThrow();
-    }
-
-    private Component scroller() {
-        return view.getChildren()
-                .filter(c -> c.hasClassName("page-scroll"))
                 .findFirst()
                 .orElseThrow();
     }

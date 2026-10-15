@@ -131,19 +131,6 @@ class QueryPanelTest {
         assertThat(question().isInvalid()).isFalse();
     }
 
-    /** The panel says where it sits, and in the tile, where the field shares the bar, it asks in fewer words. */
-    @Test
-    void thePanelSaysWhereItSits() {
-        assertThat(panel.getElement().getAttribute("mode")).isEqualTo("center");
-        assertThat(question().getPlaceholder())
-                .isEqualTo("Ask a question about orders, shipments, claims or customers, in your own words");
-
-        panel.setMode(QueryPanel.Mode.TILE);
-
-        assertThat(panel.getElement().getAttribute("mode")).isEqualTo("tile");
-        assertThat(question().getPlaceholder()).isEqualTo("Ask about orders, shipments, claims or customers");
-    }
-
     private TextArea question() {
         return descendants()
                 .filter(TextArea.class::isInstance)
@@ -173,7 +160,8 @@ class QueryPanelTest {
 
     private List<Button> chips() {
         return descendants()
-                .filter(c -> c.getParent().map(p -> p.hasClassName("chips")).orElse(false))
+                .filter(c ->
+                        c.getParent().map(p -> p.hasClassName("suggestions")).orElse(false))
                 .filter(Button.class::isInstance)
                 .map(Button.class::cast)
                 .toList();

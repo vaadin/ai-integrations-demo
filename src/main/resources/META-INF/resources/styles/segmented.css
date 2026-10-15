@@ -1,6 +1,6 @@
 /* a radio group as one pill of segments: the radio buttons without their circles, the chosen one raised. The group
    is a surface of the fields' level only for its pill, which takes the colour; the group itself stays clear */
-vaadin-radio-group.segmented.aura-surface {
+vaadin-radio-group.segmented {
   --aura-surface-level: 4;
   --aura-surface-opacity: 0.7;
   background: none;
@@ -9,6 +9,7 @@ vaadin-radio-group.segmented.aura-surface {
     display: flex;
     flex-wrap: nowrap;
     gap: var(--vaadin-gap-xs);
+    border: 0;
     padding: 3px 7px;
     border-radius: var(--vaadin-radius-l);
     background: var(--aura-surface-color);
@@ -18,6 +19,7 @@ vaadin-radio-group.segmented.aura-surface {
   > vaadin-radio-button {
     flex: auto;
     min-width: 0;
+    padding-inline: var(--vaadin-padding-m);
     grid-template-columns: 1fr;
     column-gap: 0;
     border-radius: var(--vaadin-radius-l);

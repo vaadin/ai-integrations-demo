@@ -25,11 +25,11 @@ customElements.define('hero-title', class extends HTMLElement {
             position: absolute;
             inset-inline: calc(var(--view-padding) * -1);
             top: -100px;
-            height: 200px;
+            bottom: -20px;
             --_translucent: color-mix(in srgb, var(--aura-background-color) 70%, transparent);
-            background: linear-gradient(var(--aura-background-color) 100px, var(--_translucent) 110px, var(--_translucent) 140px, transparent);
+            background: linear-gradient(var(--aura-background-color) 100px, var(--_translucent) 110px, var(--_translucent) calc(100% - 60px), transparent);
             backdrop-filter: blur(8px);
-            mask-image: linear-gradient(#000 160px, transparent);
+            mask-image: linear-gradient(#000 calc(100% - 40px), transparent);
             opacity: 0;
             pointer-events: none;
           }

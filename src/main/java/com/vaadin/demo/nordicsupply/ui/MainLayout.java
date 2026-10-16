@@ -8,6 +8,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.SvgIcon;
 import com.vaadin.flow.component.orderedlayout.Scroller;
 import com.vaadin.flow.component.orderedlayout.ScrollerVariant;
+import com.vaadin.flow.component.shared.Tooltip;
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.AfterNavigationEvent;
@@ -75,7 +76,27 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         powered.setTarget(AnchorTarget.BLANK);
         powered.addClassName("powered-by");
 
-        addToDrawer(wordmark, scroller, foot, help, new UserSwitcher(currentUser), powered);
+        var github = new Anchor(
+                "https://github.com/vaadin/ai-integrations-demo", new SvgIcon("icons/github.svg"), new Span("GitHub"));
+        github.setTarget(AnchorTarget.BLANK);
+        github.addClassName("github");
+        var githubTooltip = Tooltip.forComponent(github);
+        githubTooltip.setText("View source code and submit issues");
+        githubTooltip.setPosition(Tooltip.TooltipPosition.END);
+
+        var forum = new Anchor(
+                "https://vaadin.com/forum/TODO", new SvgIcon("icons/messages-circle.svg"), new Span("Discussion"));
+        forum.setTarget(AnchorTarget.BLANK);
+        forum.addClassName("forum");
+        var forumTooltip = Tooltip.forComponent(forum);
+        forumTooltip.setText("Discuss the demo on the Vaadin Forum");
+        forumTooltip.setPosition(Tooltip.TooltipPosition.END);
+
+        var links = new Div();
+        links.addClassName("links");
+        links.add(github, forum, powered);
+
+        addToDrawer(wordmark, scroller, foot, help, new UserSwitcher(currentUser), links);
     }
 
     /**

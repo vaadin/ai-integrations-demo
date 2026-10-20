@@ -2,23 +2,22 @@ package com.vaadin.demo.nordicsupply.ai.budget;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
-import com.vaadin.flow.component.UI;
 import com.vaadin.flow.server.VaadinRequest;
-import com.vaadin.flow.server.VaadinSession;
 
 /**
- * Who asks for a turn: the address the question came from, as the budget counts it, and the session, as the log names
+ * Who asks for a turn: the visit, as the logs name it, and the address the question came from, as the budget counts
  * it. The demo has no login, and the employee the session is signed in as can be switched by anyone, so neither names
  * the visitor. Read on the request thread: a turn runs off it, and there is no request to read by then.
  *
- * @param session the session's id, or {@code null} when there is no session
+ * @param visit the visit's own random id, never the session's
  * @param address the address the request came from, or {@code null} when there is no request
  */
-public record Caller(String session, String address) {
+public record Caller(UUID visit, String address) {
 
-    /** What stands for an unknown session or address; the callers without an address are counted together. */
+    /** What stands for an unknown address; the callers without one are counted together. */
     static final String UNKNOWN = "-";
 
     /** The characters of an IP literal, IPv4-mapped IPv6 included; anything else is counted as it was written. */
@@ -30,26 +29,22 @@ public record Caller(String session, String address) {
     private static final int PREFIX_BYTES = 8;
 
     /**
-     * The caller of the current request: its session's own id and the address the request came from. The session is
-     * the current one, or the current UI's where only the UI is current, as it is where a test made it so.
+     * The caller of the current request in the given visit: the address the request came from.
+     *
+     * @param visit the visit the request belongs to
+     * @return the caller
      */
-    public static Caller current() {
-        var session = VaadinSession.getCurrent();
-        if (session == null && UI.getCurrent() != null) {
-            session = UI.getCurrent().getSession();
-        }
+    public static Caller current(UUID visit) {
         var request = VaadinRequest.getCurrent();
-        return new Caller(
-                session == null ? null : session.getPushId(), request == null ? null : request.getRemoteAddr());
+        return new Caller(visit, request == null ? null : request.getRemoteAddr());
     }
 
-    /** The session as the log names it: a short hash of its id, enough to tell sessions apart, and not the id. */
-    String logged() {
-        return session == null ? UNKNOWN : Integer.toHexString(session.hashCode());
-    }
-
-    /** The key the address is counted under: an IPv4 address as it is, an IPv6 address by its /64 prefix. */
-    String addressKey() {
+    /**
+     * The key the address is counted under: an IPv4 address as it is, an IPv6 address by its /64 prefix.
+     *
+     * @return the key, {@link #UNKNOWN} for a caller without an address
+     */
+    public String addressKey() {
         if (address == null) {
             return UNKNOWN;
         }

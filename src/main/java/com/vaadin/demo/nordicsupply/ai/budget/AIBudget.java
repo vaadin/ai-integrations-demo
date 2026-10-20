@@ -11,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import com.vaadin.flow.component.ai.orchestrator.ResponseListener;
 import com.vaadin.flow.component.ai.provider.ResponseMetadata;
@@ -30,9 +31,10 @@ import org.springframework.stereotype.Component;
  * tokens it reports take the allowance's place, once. The counts live in memory and start over with the instance;
  * the key's own spending limit is what holds across restarts.
  * <p>
- * Every turn and every refusal is one line in the log, with the feature, a short hash of the session, the address,
- * and for a turn its outcome, the tokens the model reported and how long it took: what is needed to see who uses the
- * model and how much, and nothing of what they asked.
+ * Every turn and every refusal is one line in the log, with the feature, the visit, the address, and for a turn its
+ * outcome, the tokens the model reported and how long it took, for a refusal the cap and the reason: what is needed to
+ * see who uses the model and how much, and nothing of what they asked. What they asked goes to the {@link UsageLog},
+ * with the same turns and refusals.
  * <p>
  * The whole budget is one lock: admitting and closing a turn touch a few counters, at the pace of people typing
  * questions.
@@ -44,11 +46,12 @@ public class AIBudget {
     public sealed interface Admission permits Turn, Refusal {}
 
     /**
-     * No turn, and the sentence that tells the visitor why.
+     * No turn, the cap that refused it, and the sentence that tells the visitor why.
      *
+     * @param cap the cap, named by its property under {@code app.ai}
      * @param reason what the visitor is told
      */
-    public record Refusal(String reason) implements Admission {}
+    public record Refusal(String cap, String reason) implements Admission {}
 
     /**
      * A turn under way: it holds one of its caller's and one of the instance's slots until it is closed, with the
@@ -67,24 +70,20 @@ public class AIBudget {
             CLOSED
         }
 
-        private final Caller caller;
-        private final String feature;
+        private final Request request;
         private final Instant started;
         private final Window address;
         private State state = State.OPEN;
 
-        private Turn(Caller caller, String feature, Instant started, Window address) {
-            this.caller = caller;
-            this.feature = feature;
+        private Turn(Request request, Instant started, Window address) {
+            this.request = request;
             this.started = started;
             this.address = address;
         }
 
         /** The turn ended, answered or failed: its slots are freed and its tokens, when the model reported them, counted. */
         public void close(ResponseListener.ResponseEvent event) {
-            end(
-                    event.getError().isPresent() ? "failed" : "answered",
-                    event.getMetadata().map(ResponseMetadata::tokenUsage).orElse(null));
+            end(event.getError().isPresent() ? "failed" : "answered", event);
         }
 
         /** The turn never ran: its slots are freed, and no tokens are counted. */
@@ -92,21 +91,22 @@ public class AIBudget {
             end(ABANDONED, null);
         }
 
-        private void end(String outcome, ResponseMetadata.TokenUsage usage) {
+        private void end(String outcome, ResponseListener.ResponseEvent ended) {
             synchronized (AIBudget.this) {
                 switch (state) {
                     case OPEN -> {
                         free();
                         state = State.CLOSED;
-                        count(outcome, usage);
+                        count(outcome, ended);
                     }
                     case LET_GO -> {
                         // the response came after all: the tokens it reports take the allowance's place
                         state = State.CLOSED;
-                        if (usage != null && usage.totalTokens() != null) {
+                        var reported = tokenUsage(ended);
+                        if (reported != null && reported.totalTokens() != null) {
                             instance.tokensInDay -= limits.instance().tokensPerUnreportedTurn();
                         }
-                        count(outcome + " late", usage);
+                        count(outcome + " late", ended);
                     }
                     case CLOSED -> {
                         // closed already; nothing more to count
@@ -128,14 +128,18 @@ public class AIBudget {
             instance.inFlight--;
         }
 
-        /** Counts the turn's tokens for the day, the reported ones or the allowance, and writes the turn's line. */
-        private void count(String outcome, ResponseMetadata.TokenUsage usage) {
+        /**
+         * Counts the turn's tokens for the day, the reported ones or the allowance, and writes the turn's line and its
+         * event in the usage log.
+         */
+        private void count(String outcome, ResponseListener.ResponseEvent ended) {
             var now = clock.instant();
             instance.roll(now, zone);
+            var reported = tokenUsage(ended);
             String tokens;
-            if (usage != null && usage.totalTokens() != null) {
-                instance.tokensInDay += usage.totalTokens();
-                tokens = usage.inputTokens() + "+" + usage.outputTokens();
+            if (reported != null && reported.totalTokens() != null) {
+                instance.tokensInDay += reported.totalTokens();
+                tokens = reported.inputTokens() + "+" + reported.outputTokens();
             } else if (ABANDONED.equals(outcome)) {
                 tokens = "none";
             } else if (outcome.endsWith(" late")) {
@@ -145,14 +149,16 @@ public class AIBudget {
                 instance.tokensInDay += allowance;
                 tokens = "unreported, counted as " + allowance;
             }
+            var took = Duration.between(started, now);
             LOG.info(
-                    "AI turn {}: feature={} session={} address={} tokens={} duration={}ms",
+                    "AI turn {}: feature={} visit={} address={} tokens={} duration={}ms",
                     outcome,
-                    feature,
-                    caller.logged(),
-                    caller.addressKey(),
+                    request.feature(),
+                    request.caller().visit(),
+                    request.caller().addressKey(),
                     tokens,
-                    Duration.between(started, now).toMillis());
+                    took.toMillis());
+            usage.turnEnded(request, outcome, ended, took);
         }
     }
 
@@ -193,6 +199,17 @@ public class AIBudget {
 
     private static final String ABANDONED = "abandoned";
 
+    /** The caps the budget refuses a turn by, named by their properties under {@code app.ai}. */
+    static final String ENABLED = "enabled";
+
+    static final String INSTANCE_TOKENS_PER_DAY = "instance.tokens-per-day";
+
+    static final String INSTANCE_CONCURRENT_TURNS = "instance.concurrent-turns";
+
+    static final String ADDRESS_TURNS_PER_DAY = "address.turns-per-day";
+
+    static final String ADDRESS_CONCURRENT_TURNS = "address.concurrent-turns";
+
     /** How many addresses the map holds before the ones idle since an earlier day are dropped. */
     static final int PRUNE_AT = 2000;
 
@@ -200,6 +217,7 @@ public class AIBudget {
     private static final Window NONE = new Window();
 
     private final AIBudgetProperties limits;
+    private final UsageLog usage;
     private final Clock clock;
     private final ZoneId zone;
     private final Map<String, Window> addresses = new HashMap<>();
@@ -212,13 +230,14 @@ public class AIBudget {
     private long lastPruned = Long.MIN_VALUE;
 
     @Autowired
-    public AIBudget(AIBudgetProperties limits) {
-        this(limits, Clock.systemDefaultZone());
+    public AIBudget(AIBudgetProperties limits, UsageLog usage) {
+        this(limits, usage, Clock.systemDefaultZone());
     }
 
     /** A budget on the given clock, whose zone decides when the day turns. */
-    AIBudget(AIBudgetProperties limits, Clock clock) {
+    AIBudget(AIBudgetProperties limits, UsageLog usage, Clock clock) {
         this.limits = limits;
+        this.usage = usage;
         this.clock = clock;
         this.zone = clock.getZone();
     }
@@ -229,47 +248,52 @@ public class AIBudget {
     }
 
     /**
-     * The guard a feature puts before its turns: it admits each against this budget and closes it when it ends.
+     * The guard a feature puts before its turns in one visit: it admits each against this budget and closes it when
+     * it ends.
      *
-     * @param feature the feature, as the log names it
+     * @param feature the feature, as the logs name it
+     * @param visit the visit whose turns it guards
      * @return a guard for one orchestrator
      */
-    public TurnGuard guard(String feature) {
-        return new TurnGuard(this, feature);
+    public TurnGuard guard(String feature, UUID visit) {
+        return new TurnGuard(this, usage, feature, visit);
     }
 
     /**
-     * Asks for a turn for the caller. Admitted, the turn counts at once and has to be closed when it ends; refused,
+     * Asks for a turn for the request. Admitted, the turn counts at once and has to be closed when it ends; refused,
      * nothing is counted and the refusal says why.
      *
-     * @param caller who asks, as read on the request thread
-     * @param feature the feature asking, named in the log
+     * @param request who asks, as read on the request thread, from which feature and what
      * @return the turn, or the refusal
      */
-    public synchronized Admission admit(Caller caller, String feature) {
+    public synchronized Admission admit(Request request) {
         var now = clock.instant();
         var today = LocalDate.ofInstant(now, zone);
         letGoOfStaleTurns(now);
         var refusal = pausedFor(now);
         if (refusal == null && instance.inFlight >= limits.instance().concurrentTurns()) {
-            refusal = BUSY;
+            refusal = new Refusal(INSTANCE_CONCURRENT_TURNS, BUSY);
         }
         if (refusal != null) {
-            return refused(caller, feature, refusal);
+            return refused(request, refusal);
         }
         prune(now, today);
+        var key = request.caller().addressKey();
         // looked up, not created: a refused request leaves no entry behind
-        var address = rolled(addresses.get(caller.addressKey()), now);
+        var address = rolled(addresses.get(key), now);
         if (address.inDay >= limits.address().turnsPerDay()) {
-            return refused(caller, feature, dayCap(limits.address().turnsPerDay()));
+            return refused(
+                    request,
+                    new Refusal(ADDRESS_TURNS_PER_DAY, dayCap(limits.address().turnsPerDay())));
         }
         if (address.inFlight >= limits.address().concurrentTurns()) {
             return refused(
-                    caller,
-                    feature,
-                    "You have " + address.inFlight + " questions in progress; wait for one to finish.");
+                    request,
+                    new Refusal(
+                            ADDRESS_CONCURRENT_TURNS,
+                            "You have " + address.inFlight + " questions in progress; wait for one to finish."));
         }
-        var turn = new Turn(caller, feature, now, started(caller.addressKey(), now));
+        var turn = new Turn(request, now, started(key, now));
         instance.start();
         running.add(turn);
         return turn;
@@ -287,14 +311,16 @@ public class AIBudget {
         stale.forEach(Turn::letGo);
     }
 
-    private static Refusal refused(Caller caller, String feature, String reason) {
+    private Refusal refused(Request request, Refusal refusal) {
         LOG.warn(
-                "AI turn refused: feature={} session={} address={} reason=\"{}\"",
-                feature,
-                caller.logged(),
-                caller.addressKey(),
-                reason);
-        return new Refusal(reason);
+                "AI turn refused: feature={} visit={} address={} cap={} reason=\"{}\"",
+                request.feature(),
+                request.caller().visit(),
+                request.caller().addressKey(),
+                refusal.cap(),
+                refusal.reason());
+        usage.refused(request, refusal.cap());
+        return refusal;
     }
 
     /**
@@ -302,18 +328,25 @@ public class AIBudget {
      * For a notice on the page; every turn is refused with the same sentence.
      */
     public synchronized Optional<String> paused() {
-        return Optional.ofNullable(pausedFor(clock.instant()));
+        return Optional.ofNullable(pausedFor(clock.instant())).map(Refusal::reason);
     }
 
-    private String pausedFor(Instant now) {
+    private Refusal pausedFor(Instant now) {
         if (!limits.enabled()) {
-            return DISABLED;
+            return new Refusal(ENABLED, DISABLED);
         }
         instance.roll(now, zone);
         if (instance.tokensInDay >= limits.instance().tokensPerDay()) {
-            return EXHAUSTED;
+            return new Refusal(INSTANCE_TOKENS_PER_DAY, EXHAUSTED);
         }
         return null;
+    }
+
+    /** The tokens a response reports, or {@code null} for a turn without one or a response without them. */
+    private static ResponseMetadata.TokenUsage tokenUsage(ResponseListener.ResponseEvent ended) {
+        return ended == null
+                ? null
+                : ended.getMetadata().map(ResponseMetadata::tokenUsage).orElse(null);
     }
 
     /** The key's counts as of now, for the checks; {@link #NONE} for a key not seen, which is never written to. */

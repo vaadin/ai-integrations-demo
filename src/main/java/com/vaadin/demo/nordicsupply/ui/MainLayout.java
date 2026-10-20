@@ -18,6 +18,7 @@ import com.vaadin.flow.server.menu.MenuConfiguration;
 
 import com.vaadin.demo.nordicsupply.session.CurrentUser;
 import com.vaadin.demo.nordicsupply.session.ShownReadmes;
+import com.vaadin.demo.nordicsupply.session.Visit;
 import com.vaadin.demo.nordicsupply.ui.components.Help;
 import com.vaadin.demo.nordicsupply.ui.components.POIIndicator;
 import com.vaadin.demo.nordicsupply.ui.components.ReadmePopover;
@@ -31,7 +32,8 @@ import com.vaadin.demo.nordicsupply.ui.views.DashboardView;
  * signed-in user, and the Vaadin mark. The log sits at the foot on purpose: it is the audit trail of what the views
  * above it do, not a place to start. No top bar: each view carries its own heading. Help opens the current view's
  * readme, which also opens by itself on the view's first visit in a session; Home has none, it is the readme, so Help
- * is not shown there. The user entry switches between the demo's users.
+ * is not shown there. The user entry switches between the demo's users. Every view shown is recorded in the visit's
+ * usage log.
  */
 @Layout
 public class MainLayout extends AppLayout implements AfterNavigationObserver {
@@ -40,8 +42,10 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     public static final String COMPANY = "Nordic Supply";
 
     private final Help help;
+    private final Visit visit;
 
-    public MainLayout(ShownReadmes shownReadmes, CurrentUser currentUser) {
+    public MainLayout(ShownReadmes shownReadmes, CurrentUser currentUser, Visit visit) {
+        this.visit = visit;
         getElement().setAttribute("no-scroll", "");
 
         var mark = new Div(new SvgIcon("icons/compass.svg"));
@@ -79,14 +83,15 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     }
 
     /**
-     * Help follows the view that navigation has just shown, under the page title the view declares. Not
-     * {@code MenuConfiguration.getPageHeader}: that goes through the application's {@code PageTitleGenerator}, which
-     * adds the application's name for the browser tab.
+     * Help follows the view that navigation has just shown, under the page title the view declares, and the visit
+     * records the view by its route. Not {@code MenuConfiguration.getPageHeader}: that goes through the application's
+     * {@code PageTitleGenerator}, which adds the application's name for the browser tab.
      */
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
         var view = getContent();
         var title = view.getClass().getAnnotation(PageTitle.class);
         help.follow(view, title != null ? title.value() : "");
+        visit.opened("/" + event.getLocation().getPath());
     }
 }

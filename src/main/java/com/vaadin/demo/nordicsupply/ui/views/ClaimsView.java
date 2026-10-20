@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import com.vaadin.demo.nordicsupply.ai.LLMProviders;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
 import com.vaadin.demo.nordicsupply.ai.budget.TurnGuard;
+import com.vaadin.demo.nordicsupply.ai.budget.UsageLog;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.data.CustomerContactRepository;
 import com.vaadin.demo.nordicsupply.data.CustomerRepository;
@@ -72,7 +73,8 @@ import com.vaadin.demo.nordicsupply.util.Pdfs;
  * the area and the examples wait while the AI works. The message reaches the model as an attachment, never as the
  * prompt, so that what a customer wrote is read as data rather than as instructions.
  * <p>
- * Every turn goes to the activity log, and so does every claim created, as the user keeping it.
+ * Every turn goes to the activity log, and so does every claim created, as the user keeping it. Every turn and every
+ * refusal also goes to the usage log, through the guard.
  */
 @Route("claims")
 @PageTitle("Claims")
@@ -98,7 +100,10 @@ public class ClaimsView extends PageView implements HasReadme {
                     """),
             new ReadmeSection("Any Language Works", """
                     **The claim is always reported in English**, regardless of the customer's language . The translation happens automatically by the AI model.
-                    """));
+                    """),
+            new ReadmeSection("What We Keep", """
+                    The team behind this demo keeps the name and size of each message you give the AI, never its contents, for %d days, to improve the demo.
+                    """.formatted(UsageLog.DAYS_KEPT)));
 
     private static final List<Link> READ_MORE = List.of(
             new Link(
@@ -210,7 +215,7 @@ public class ClaimsView extends PageView implements HasReadme {
             ExampleDocuments examples,
             Visit visit) {
         super("claims", "Claims", "Resolve Customer Issues", "Claims");
-        this.guard = budget.guard("claims");
+        this.guard = budget.guard("claims", visit.id());
         form = new ClaimForm(
                 customers,
                 contacts,
@@ -437,7 +442,8 @@ public class ClaimsView extends PageView implements HasReadme {
      * why, the message stays open to look at and the form stays empty.
      */
     private void start(String prompt, AIAttachment message) {
-        guard.admit(() -> orchestrator.prompt(prompt, List.of(message)), refusal -> {
+        var attachments = List.of(message);
+        guard.admit(prompt, attachments, () -> orchestrator.prompt(prompt, attachments), refusal -> {
             reading.set(null);
             warn(refusal);
         });

@@ -40,7 +40,6 @@ import tools.jackson.databind.json.JsonMapper;
 
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.TurnLog;
-import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
 import com.vaadin.demo.nordicsupply.ai.budget.TurnGuard;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.domain.WidgetType;
@@ -117,8 +116,6 @@ public class InsightWidget extends DashboardWidget {
     private final Chart chart;
     private final ChartAIController chartController;
     private final ChatPanel chat = new ChatPanel();
-    /** Admits each question against the budget, and closes the turn when its response comes. */
-    private final TurnGuard guard;
 
     /** The model's one-sentence description of the widget, in business terms; shown over its chat. */
     private String description = "";
@@ -146,7 +143,8 @@ public class InsightWidget extends DashboardWidget {
      * @param title the widget's title until the model names it: the question that made it, or the saved title
      * @param db the model's way into the data, on the signed-in user's connection
      * @param provider the model, with the widget's chat so far as its memory
-     * @param budget what admits a question before it is sent, and takes the turn's cost when it ends
+     * @param guard what admits a question against the budget before it is sent, and closes the turn when it ends; a
+     *     guard of this widget's own, as it serves one orchestrator
      * @param userName how the chat names the user's turns
      * @param history the chat so far, oldest first: empty for a new widget, and for a saved one its saved chat, which
      *     the chat shows and the model remembers
@@ -157,13 +155,12 @@ public class InsightWidget extends DashboardWidget {
             String title,
             JdbcDatabaseProvider db,
             LLMProvider provider,
-            AIBudget budget,
+            TurnGuard guard,
             String userName,
             List<ChatMessage> history,
             TurnLog turns) {
         super(title);
         this.type = type;
-        this.guard = budget.guard("insights");
         addClassName("insight-widget");
         Component visual;
         AIController controller;

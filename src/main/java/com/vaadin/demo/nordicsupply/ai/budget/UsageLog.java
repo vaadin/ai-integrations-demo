@@ -63,6 +63,7 @@ public class UsageLog {
     /** As much of a refused prompt as is kept: what the activity log keeps, and a question's cap by default. */
     static final int KEPT_OF_A_REFUSED_PROMPT = 500;
 
+    /** The key of the visit, the one field every event has; the other keys and the events' names are written once. */
     private static final String VISIT = "visit";
 
     private static final Logger LOG = LoggerFactory.getLogger(UsageLog.class);
@@ -152,7 +153,7 @@ public class UsageLog {
      * @param visit the visit
      */
     public void visitStarted(UUID visit) {
-        events.atInfo().setMessage(VISIT).addKeyValue(VISIT, visit).log();
+        events.atInfo().setMessage("visit").addKeyValue(VISIT, visit).log();
     }
 
     /**

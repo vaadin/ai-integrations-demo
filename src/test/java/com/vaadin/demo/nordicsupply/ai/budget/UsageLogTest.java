@@ -75,11 +75,12 @@ class UsageLogTest {
         assertThat(events).hasSize(2);
         assertThat(events.get(0))
                 .containsKey("@timestamp")
-                .containsEntry("message", "visit")
+                .containsEntry("event", "visit")
+                .containsEntry("message", null)
                 .containsEntry("visit", VISIT.toString())
                 .doesNotContainKey("address");
         assertThat(events.get(1))
-                .containsEntry("message", "view")
+                .containsEntry("event", "view")
                 .containsEntry("visit", VISIT.toString())
                 .containsEntry("view", "/dashboard");
     }
@@ -97,7 +98,7 @@ class UsageLogTest {
                 Duration.ofMillis(5300));
 
         assertThat(events().get(0))
-                .containsEntry("message", "turn")
+                .containsEntry("event", "turn")
                 .containsEntry("visit", VISIT.toString())
                 .doesNotContainKey("address")
                 .containsEntry("feature", "insights")
@@ -160,7 +161,7 @@ class UsageLogTest {
 
         var events = events();
         assertThat(events.get(0))
-                .containsEntry("message", "refusal")
+                .containsEntry("event", "refusal")
                 .containsEntry("visit", VISIT.toString())
                 .doesNotContainKey("address")
                 .containsEntry("feature", "insights")

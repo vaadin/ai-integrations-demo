@@ -35,7 +35,8 @@ import org.springframework.stereotype.Component;
  * days old, as the help of the Dashboard and the Claims view says.
  * <p>
  * Spring Boot's structured logging writes the lines in its Logstash format: beside Logstash's own fields, an event has
- * its time in {@code @timestamp}, its kind in {@code message}, and the fields of its kind:
+ * its time in {@code @timestamp}, its kind in {@code event}, and the fields of its kind; {@code message} is
+ * {@code null}, as an event has no text of its own:
  * <ul>
  * <li>{@code visit}, a visit started with its session's first page: {@code visit}.
  * <li>{@code view}, a view the visitor opened: {@code visit} and {@code view}, the view's route.
@@ -216,9 +217,9 @@ public class UsageLog {
                         request.attachments().stream().map(UsageLog::named).toList());
     }
 
-    /** An event of the given kind in the given visit, the one field every event has. */
+    /** An event of the given kind in the given visit, the two fields every event has. */
     private LoggingEventBuilder event(String kind, UUID visit) {
-        return events.atInfo().setMessage(kind).addKeyValue("visit", visit);
+        return events.atInfo().addKeyValue("event", kind).addKeyValue("visit", visit);
     }
 
     /** An attachment as the log keeps it: its name and its size, never what it holds. */

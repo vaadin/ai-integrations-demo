@@ -15,8 +15,8 @@ import com.vaadin.demo.nordicsupply.domain.ActivityView;
 /**
  * One visit to the demo, the session of one browser, and the id its rows in the activity log and its events in the
  * usage log are filed under: random, and never the session's own. A visit reads only its own rows in the activity log,
- * and they are deleted when its session ends; the usage log records that it started and each view it opened. Not
- * serializable, like {@link CurrentUser}.
+ * and they are deleted when its session ends; the usage log records that it started. Not serializable, like
+ * {@link CurrentUser}.
  */
 @Component
 @VaadinSessionScope
@@ -43,11 +43,6 @@ public class Visit {
     /** The turns of one orchestrator of the given view in this visit, while the given employee is signed in. */
     public TurnLog turns(int userId, ActivityView view) {
         return new TurnLog(log, as(userId), view);
-    }
-
-    /** The visitor has opened a view, named by its route. */
-    public void opened(String view) {
-        usage.viewOpened(id, view);
     }
 
     /** The session has started with its first page, whichever it is: the visit is recorded. */

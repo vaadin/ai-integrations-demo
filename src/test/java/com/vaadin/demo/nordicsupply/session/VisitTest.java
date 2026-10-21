@@ -12,7 +12,7 @@ import com.vaadin.demo.nordicsupply.domain.ActivityView;
 
 /**
  * A visit files its rows in the activity log under its own id, whoever is signed in, and takes them along at its
- * end. The usage log records it as it starts, and every view it opens.
+ * end. The usage log records it as it starts.
  */
 class VisitTest {
 
@@ -47,17 +47,12 @@ class VisitTest {
         verify(log).forget(visit.id());
     }
 
-    /** The visit's start goes to the usage log, and so does every view. */
     @Test
-    void aVisitAndEveryViewItOpensGoToTheUsageLog() {
+    void aVisitsStartGoesToTheUsageLog() {
         var visit = new Visit(log, usage);
 
         visit.started();
-        visit.opened("/");
-        visit.opened("/dashboard");
 
         verify(usage).visitStarted(visit.id());
-        verify(usage).viewOpened(visit.id(), "/");
-        verify(usage).viewOpened(visit.id(), "/dashboard");
     }
 }

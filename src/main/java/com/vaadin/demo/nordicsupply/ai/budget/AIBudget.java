@@ -36,8 +36,9 @@ import org.springframework.stereotype.Component;
  * the visits use the model, and nothing of what they asked or of the address they asked from. What they asked goes to
  * the {@link UsageLog}, with the same turns and refusals.
  * <p>
- * The whole budget is one lock: admitting and closing a turn touch a few counters, at the pace of people typing
- * questions.
+ * The whole budget is one lock: admitting and closing a turn touch a few counters and write the turn's or the
+ * refusal's lines to both logs, at the pace of people typing questions. A usage log stalled on its disk holds the
+ * turns up while it lasts, as it does every page, whose view it records on the request thread.
  */
 @Component
 public class AIBudget {

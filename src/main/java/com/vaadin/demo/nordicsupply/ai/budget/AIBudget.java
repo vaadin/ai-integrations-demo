@@ -31,10 +31,10 @@ import org.springframework.stereotype.Component;
  * tokens it reports take the allowance's place, once. The counts live in memory and start over with the instance;
  * the key's own spending limit is what holds across restarts.
  * <p>
- * Every turn and every refusal is one line in the log, with the feature, the visit, the address, and for a turn its
- * outcome, the tokens the model reported and how long it took, for a refusal the cap and the reason: what is needed to
- * see who uses the model and how much, and nothing of what they asked. What they asked goes to the {@link UsageLog},
- * with the same turns and refusals.
+ * Every turn and every refusal is one line in the log, with the feature, the visit, and for a turn its outcome, the
+ * tokens the model reported and how long it took, for a refusal the cap and the reason: what is needed to see how much
+ * the visits use the model, and nothing of what they asked or of the address they asked from. What they asked goes to
+ * the {@link UsageLog}, with the same turns and refusals.
  * <p>
  * The whole budget is one lock: admitting and closing a turn touch a few counters, at the pace of people typing
  * questions.
@@ -151,11 +151,10 @@ public class AIBudget {
             }
             var took = Duration.between(started, now);
             LOG.info(
-                    "AI turn {}: feature={} visit={} address={} tokens={} duration={}ms",
+                    "AI turn {}: feature={} visit={} tokens={} duration={}ms",
                     outcome,
                     request.feature(),
                     request.caller().visit(),
-                    request.caller().addressKey(),
                     tokens,
                     took.toMillis());
             usage.turnEnded(request, outcome, ended, took);
@@ -313,10 +312,9 @@ public class AIBudget {
 
     private Refusal refused(Request request, Refusal refusal) {
         LOG.warn(
-                "AI turn refused: feature={} visit={} address={} cap={} reason=\"{}\"",
+                "AI turn refused: feature={} visit={} cap={} reason=\"{}\"",
                 request.feature(),
                 request.caller().visit(),
-                request.caller().addressKey(),
                 refusal.cap(),
                 refusal.reason());
         usage.refused(request, refusal.cap());

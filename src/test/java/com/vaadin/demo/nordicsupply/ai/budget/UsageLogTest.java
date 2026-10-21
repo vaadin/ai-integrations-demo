@@ -25,9 +25,9 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Every event is one line of JSON in the day's file, with the fields the team reads back: who, what was asked, and
- * what became of it, never what an attachment holds. A day's file goes after ninety days, and without a directory
- * nothing is written.
+ * Every event is one line of JSON in the day's file, with the fields the team reads back: the visit, what was asked,
+ * and what became of it, never the caller's address or what an attachment holds. A day's file goes after ninety
+ * days, and without a directory nothing is written.
  */
 class UsageLogTest {
 
@@ -68,7 +68,7 @@ class UsageLogTest {
     void aVisitAndTheViewsItOpensAreEvents() throws IOException {
         var usage = writing();
 
-        usage.visitStarted(CALLER);
+        usage.visitStarted(VISIT);
         usage.viewOpened(VISIT, "/dashboard");
 
         var events = events();
@@ -77,7 +77,7 @@ class UsageLogTest {
                 .containsKey("@timestamp")
                 .containsEntry("message", "visit")
                 .containsEntry("visit", VISIT.toString())
-                .containsEntry("address", "2001:db8:1:2::/64");
+                .doesNotContainKey("address");
         assertThat(events.get(1))
                 .containsEntry("message", "view")
                 .containsEntry("visit", VISIT.toString())
@@ -99,7 +99,7 @@ class UsageLogTest {
         assertThat(events().get(0))
                 .containsEntry("message", "turn")
                 .containsEntry("visit", VISIT.toString())
-                .containsEntry("address", "2001:db8:1:2::/64")
+                .doesNotContainKey("address")
                 .containsEntry("feature", "insights")
                 .containsEntry("prompt", "Orders per month this year")
                 .containsEntry("attachments", List.of())
@@ -161,6 +161,8 @@ class UsageLogTest {
         var events = events();
         assertThat(events.get(0))
                 .containsEntry("message", "refusal")
+                .containsEntry("visit", VISIT.toString())
+                .doesNotContainKey("address")
                 .containsEntry("feature", "insights")
                 .containsEntry("cap", "max-question-length")
                 .containsEntry("prompt", "x".repeat(500) + "…");
@@ -190,7 +192,7 @@ class UsageLogTest {
         var off = new UsageLog("", "gpt-test", null);
 
         assertThatCode(() -> {
-                    off.visitStarted(CALLER);
+                    off.visitStarted(VISIT);
                     off.refused(new Request(CALLER, "insights", "Open claims by type", List.of()), "enabled");
                     off.close();
                 })

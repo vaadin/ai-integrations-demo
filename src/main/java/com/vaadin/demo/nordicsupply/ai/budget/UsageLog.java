@@ -37,23 +37,22 @@ import org.springframework.stereotype.Component;
  * Spring Boot's structured logging writes the lines in its Logstash format: beside Logstash's own fields, an event has
  * its time in {@code @timestamp}, its kind in {@code message}, and the fields of its kind:
  * <ul>
- * <li>{@code visit}, a visit started with its session's first page: {@code visit} and {@code address}.
+ * <li>{@code visit}, a visit started with its session's first page: {@code visit}.
  * <li>{@code view}, a view the visitor opened: {@code visit} and {@code view}, the view's route.
- * <li>{@code turn}, an AI turn ended: {@code visit}, {@code address}, {@code feature}, {@code prompt},
- *     {@code attachments}, {@code outcome}, {@code finish_reason}, {@code input_tokens}, {@code output_tokens},
- *     {@code duration_ms}, {@code model}, and for a failure {@code error_class} and {@code error_message}. The outcome
- *     is {@code answered}, {@code failed}, {@code abandoned} for a turn that never ran, or {@code let go} for one still
- *     open at the budget's deadline; should the response of a turn let go come after all, it is a second event,
- *     {@code answered late} or {@code failed late}.
- * <li>{@code refusal}, a request refused before it reached the model: {@code visit}, {@code address},
- *     {@code feature}, {@code prompt}, {@code attachments}, and {@code cap}, the property under {@code app.ai} that
- *     refused it.
+ * <li>{@code turn}, an AI turn ended: {@code visit}, {@code feature}, {@code prompt}, {@code attachments},
+ *     {@code outcome}, {@code finish_reason}, {@code input_tokens}, {@code output_tokens}, {@code duration_ms},
+ *     {@code model}, and for a failure {@code error_class} and {@code error_message}. The outcome is {@code answered},
+ *     {@code failed}, {@code abandoned} for a turn that never ran, or {@code let go} for one still open at the budget's
+ *     deadline; should the response of a turn let go come after all, it is a second event, {@code answered late} or
+ *     {@code failed late}.
+ * <li>{@code refusal}, a request refused before it reached the model: {@code visit}, {@code feature},
+ *     {@code prompt}, {@code attachments}, and {@code cap}, the property under {@code app.ai} that refused it.
  * </ul>
- * The visit is the random id of the session's {@code Visit}, never the session's own id, and the address is the key
- * the budget counts by, an IPv4 address or an IPv6 /64 prefix. The feature is {@code insights} or {@code claims}. A
- * prompt is kept in full; a refused one up to its first 500 characters, as the activity log keeps it, which by default
- * cuts only a question refused for its length. Of an attachment only its {@code name} and its size in {@code bytes}
- * are kept, never its contents.
+ * The visit is the random id of the session's {@code Visit}, never the session's own id; it tells the sessions apart
+ * and nothing names the visitor, not even the address the budget counts by. The feature is {@code insights} or
+ * {@code claims}. A prompt is kept in full; a refused one up to its first 500 characters, as the activity log keeps
+ * it, which by default cuts only a question refused for its length. Of an attachment only its {@code name} and its
+ * size in {@code bytes} are kept, never its contents.
  */
 @Component
 public class UsageLog {
@@ -65,8 +64,6 @@ public class UsageLog {
     static final int KEPT_OF_A_REFUSED_PROMPT = 500;
 
     private static final String VISIT = "visit";
-
-    private static final String ADDRESS = "address";
 
     private static final Logger LOG = LoggerFactory.getLogger(UsageLog.class);
 
@@ -152,14 +149,10 @@ public class UsageLog {
     /**
      * A visit has started, with its session's first page.
      *
-     * @param caller the visit, and the address it came from
+     * @param visit the visit
      */
-    public void visitStarted(Caller caller) {
-        events.atInfo()
-                .setMessage(VISIT)
-                .addKeyValue(VISIT, caller.visit())
-                .addKeyValue(ADDRESS, caller.addressKey())
-                .log();
+    public void visitStarted(UUID visit) {
+        events.atInfo().setMessage(VISIT).addKeyValue(VISIT, visit).log();
     }
 
     /**
@@ -219,12 +212,11 @@ public class UsageLog {
                 .log();
     }
 
-    /** An event about a request: who asked, from which feature, and what, its attachments by name and size alone. */
+    /** An event about a request: in which visit, from which feature, and what, attachments by name and size alone. */
     private LoggingEventBuilder about(String event, Request request, String prompt) {
         return events.atInfo()
                 .setMessage(event)
                 .addKeyValue(VISIT, request.caller().visit())
-                .addKeyValue(ADDRESS, request.caller().addressKey())
                 .addKeyValue("feature", request.feature())
                 .addKeyValue("prompt", prompt)
                 .addKeyValue(

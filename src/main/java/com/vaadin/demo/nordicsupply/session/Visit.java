@@ -8,7 +8,6 @@ import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 
 import com.vaadin.demo.nordicsupply.ai.TurnLog;
-import com.vaadin.demo.nordicsupply.ai.budget.Caller;
 import com.vaadin.demo.nordicsupply.ai.budget.UsageLog;
 import com.vaadin.demo.nordicsupply.data.ActivityLog;
 import com.vaadin.demo.nordicsupply.domain.ActivityView;
@@ -51,10 +50,10 @@ public class Visit {
         usage.viewOpened(id, view);
     }
 
-    /** The session has started with its first page, whichever it is: the visit is recorded with its address. */
+    /** The session has started with its first page, whichever it is: the visit is recorded. */
     @PostConstruct
     void started() {
-        usage.visitStarted(Caller.current(id));
+        usage.visitStarted(id);
     }
 
     /** The session has ended: its rows in the activity log go with it. */

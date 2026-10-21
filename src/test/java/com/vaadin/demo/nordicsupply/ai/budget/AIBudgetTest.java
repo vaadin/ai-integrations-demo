@@ -330,7 +330,10 @@ class AIBudgetTest {
         assertThat(budget.paused()).contains(AIBudget.EXHAUSTED);
     }
 
-    /** Every turn and every refusal is a line in the log: who, which feature, what became of it; never the question. */
+    /**
+     * Every turn and every refusal is a line in the log: which visit, which feature, what became of it; never the
+     * question, nor the address it came from.
+     */
     @Test
     void everyTurnAndEveryRefusalIsOneLineInTheLog(CapturedOutput output) {
         var budget = budget(new Address(1, 3), INSTANCE);
@@ -338,12 +341,12 @@ class AIBudgetTest {
         budget.admit(ask(LARS, "claims"));
 
         assertThat(output.getOut())
-                .contains("AI turn answered: feature=insights visit=" + LARS.visit()
-                        + " address=203.0.113.7 tokens=110+10 duration=0ms")
+                .contains("AI turn answered: feature=insights visit=" + LARS.visit() + " tokens=110+10 duration=0ms")
                 .contains("AI turn refused: feature=claims visit=" + LARS.visit()
-                        + " address=203.0.113.7 cap=address.turns-per-day"
+                        + " cap=address.turns-per-day"
                         + " reason=\"You have reached today's limit of 1 questions;")
-                .doesNotContain(QUESTION);
+                .doesNotContain(QUESTION)
+                .doesNotContain("203.0.113.7");
     }
 
     /**

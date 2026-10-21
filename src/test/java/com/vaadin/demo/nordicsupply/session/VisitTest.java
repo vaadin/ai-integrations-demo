@@ -6,7 +6,6 @@ import static org.mockito.Mockito.verify;
 
 import org.junit.jupiter.api.Test;
 
-import com.vaadin.demo.nordicsupply.ai.budget.Caller;
 import com.vaadin.demo.nordicsupply.ai.budget.UsageLog;
 import com.vaadin.demo.nordicsupply.data.ActivityLog;
 import com.vaadin.demo.nordicsupply.domain.ActivityView;
@@ -48,7 +47,7 @@ class VisitTest {
         verify(log).forget(visit.id());
     }
 
-    /** The visit's start goes to the usage log with its address, unknown without a request, and so does every view. */
+    /** The visit's start goes to the usage log, and so does every view. */
     @Test
     void aVisitAndEveryViewItOpensGoToTheUsageLog() {
         var visit = new Visit(log, usage);
@@ -57,7 +56,7 @@ class VisitTest {
         visit.opened("/");
         visit.opened("/dashboard");
 
-        verify(usage).visitStarted(new Caller(visit.id(), null));
+        verify(usage).visitStarted(visit.id());
         verify(usage).viewOpened(visit.id(), "/");
         verify(usage).viewOpened(visit.id(), "/dashboard");
     }

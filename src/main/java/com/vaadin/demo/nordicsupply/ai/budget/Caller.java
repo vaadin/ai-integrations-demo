@@ -9,8 +9,9 @@ import com.vaadin.flow.server.VaadinRequest;
 
 /**
  * Who asks for a turn: the visit, as the logs name it, and the address the question came from, as the budget counts
- * it. The demo has no login, and the employee the session is signed in as can be switched by anyone, so neither names
- * the visitor. Read on the request thread: a turn runs off it, and there is no request to read by then.
+ * it and no log writes it. The demo has no login, and the employee the session is signed in as can be switched by
+ * anyone, so neither names the visitor. Read on the request thread: a turn runs off it, and there is no request to
+ * read by then.
  *
  * @param visit the visit's own random id, never the session's
  * @param address the address the request came from, or {@code null} when there is no request

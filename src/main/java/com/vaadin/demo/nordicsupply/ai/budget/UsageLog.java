@@ -63,9 +63,6 @@ public class UsageLog {
     /** As much of a refused prompt as is kept: what the activity log keeps, and a question's cap by default. */
     static final int KEPT_OF_A_REFUSED_PROMPT = 500;
 
-    /** The key of the visit, the one field every event has; the other keys and the events' names are written once. */
-    private static final String VISIT = "visit";
-
     private static final Logger LOG = LoggerFactory.getLogger(UsageLog.class);
 
     /** Where the events go: the day's file, or nowhere. */
@@ -153,7 +150,7 @@ public class UsageLog {
      * @param visit the visit
      */
     public void visitStarted(UUID visit) {
-        events.atInfo().setMessage("visit").addKeyValue(VISIT, visit).log();
+        event("visit", visit).log();
     }
 
     /**
@@ -163,11 +160,7 @@ public class UsageLog {
      * @param view the view's route
      */
     public void viewOpened(UUID visit, String view) {
-        events.atInfo()
-                .setMessage("view")
-                .addKeyValue(VISIT, visit)
-                .addKeyValue("view", view)
-                .log();
+        event("view", visit).addKeyValue("view", view).log();
     }
 
     /**
@@ -214,15 +207,18 @@ public class UsageLog {
     }
 
     /** An event about a request: in which visit, from which feature, and what, attachments by name and size alone. */
-    private LoggingEventBuilder about(String event, Request request, String prompt) {
-        return events.atInfo()
-                .setMessage(event)
-                .addKeyValue(VISIT, request.caller().visit())
+    private LoggingEventBuilder about(String kind, Request request, String prompt) {
+        return event(kind, request.caller().visit())
                 .addKeyValue("feature", request.feature())
                 .addKeyValue("prompt", prompt)
                 .addKeyValue(
                         "attachments",
                         request.attachments().stream().map(UsageLog::named).toList());
+    }
+
+    /** An event of the given kind in the given visit, the one field every event has. */
+    private LoggingEventBuilder event(String kind, UUID visit) {
+        return events.atInfo().setMessage(kind).addKeyValue("visit", visit);
     }
 
     /** An attachment as the log keeps it: its name and its size, never what it holds. */

@@ -83,7 +83,7 @@ class DashboardViewTest {
     private final ScopedConnections connections = mock(ScopedConnections.class);
     private final SavedDashboards dashboards = mock(SavedDashboards.class);
     private final ActivityLog log = mock(ActivityLog.class);
-    private final Visit visit = new Visit(log);
+    private final Visit visit = new Visit(log, Budgets.NO_USAGE_LOG);
 
     /** The session's country filter, as the session bean holds it for every tab. */
     private final SharedValueSignal<Scope> countries = new SharedValueSignal<>(Scopes.FI_EE);
@@ -625,6 +625,11 @@ class DashboardViewTest {
                 .extracting(section -> section.content())
                 .asString()
                 .contains("Only the database schema", "No data ever leaves your network");
+        assertThat(view.readmeSections())
+                .last()
+                .extracting(section -> section.content())
+                .asString()
+                .contains("keeps the questions you ask for 90 days");
         assertThat(view.readMore()).extracting(link -> link.text()).contains("AI-powered Grid", "AI-powered Chart");
     }
 

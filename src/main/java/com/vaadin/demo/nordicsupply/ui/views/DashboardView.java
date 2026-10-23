@@ -24,6 +24,7 @@ import com.vaadin.flow.signals.Signal;
 import com.vaadin.demo.nordicsupply.ai.JdbcDatabaseProvider;
 import com.vaadin.demo.nordicsupply.ai.LLMProviders;
 import com.vaadin.demo.nordicsupply.ai.budget.AIBudget;
+import com.vaadin.demo.nordicsupply.ai.budget.UsageLog;
 import com.vaadin.demo.nordicsupply.config.DemoClock;
 import com.vaadin.demo.nordicsupply.config.PackData;
 import com.vaadin.demo.nordicsupply.config.ScopedConnections;
@@ -53,7 +54,7 @@ import com.vaadin.demo.nordicsupply.ui.components.QueryPanel;
  * their region. It is the session's, so every tab follows it, and a change runs every widget's query again on that
  * scope's connection; the model is not asked, and the dashboard stays as saved, since a saved query names no country.
  * <p>
- * Every widget's turns go to the activity log.
+ * Every widget's turns go to the activity log, and to the usage log with the budget's own record of them.
  * <p>
  * The dashboard's own selection (the state its move, resize and remove controls need) follows keyboard focus and is
  * cleared as soon as focus leaves the widget, which it does when the user types into the chat. The view therefore
@@ -91,7 +92,10 @@ public class DashboardView extends PageView implements HasReadme {
                     Move, resize and remove widgets
                     as you like, and press **Save** in the page header to keep the dashboard as it is, chats included, for the rest of
                     your visit.
-                    """));
+                    """),
+            new ReadmeSection("What We Keep", """
+                    The team behind this demo keeps the questions you ask for %d days, to improve the demo.
+                    """.formatted(UsageLog.DAYS_KEPT)));
 
     private static final List<Link> READ_MORE = List.of(
             new Link(
@@ -332,7 +336,14 @@ public class DashboardView extends PageView implements HasReadme {
         var db = new JdbcDatabaseProvider(() -> connections.templateFor(user.filter()), pack);
         var turns = visit.turns(ownerId, ActivityView.DASHBOARD);
         var widget = new InsightWidget(
-                type, title, db, providers.forChat(history), budget, user.get().name(), history, turns);
+                type,
+                title,
+                db,
+                providers.forChat(history),
+                budget.guard("insights", visit.id()),
+                user.get().name(),
+                history,
+                turns);
         widget.onAsk(this::activate);
         widget.onChanged(changed -> markDirty());
         return widget;

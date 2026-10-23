@@ -145,7 +145,14 @@ class InsightWidgetTest {
     /** A widget with the given model, whose questions the given budget admits. */
     private InsightWidget widget(WidgetType type, LLMProvider model, AIBudget admitting) {
         var widget = new InsightWidget(
-                type, "Late shipments last month", weeklyDb(), model, admitting, "Lars", List.of(), turns);
+                type,
+                "Late shipments last month",
+                weeklyDb(),
+                model,
+                admitting.guard("insights", UUID.randomUUID()),
+                "Lars",
+                List.of(),
+                turns);
         ui.add(widget);
         return widget;
     }
@@ -450,7 +457,7 @@ class InsightWidgetTest {
                     "Orders per week",
                     new JdbcDatabaseProvider(connection::get, new PackData()),
                     model,
-                    budget,
+                    budget.guard("insights", UUID.randomUUID()),
                     "Lars",
                     List.of(),
                     turns);
@@ -594,7 +601,14 @@ class InsightWidgetTest {
     void aSavedWidgetsChatIsShownAndContinued() {
         answers.add(new ScriptedProvider("Grouped by carrier.", named("Late shipments by carrier", "Per carrier.")));
         var widget = new InsightWidget(
-                WidgetType.GRID, "Late shipments", weeklyDb(), answering, budget, "Lars", savedChat(), turns);
+                WidgetType.GRID,
+                "Late shipments",
+                weeklyDb(),
+                answering,
+                budget.guard("insights", UUID.randomUUID()),
+                "Lars",
+                savedChat(),
+                turns);
         ui.add(widget);
 
         assertThat(widget.chat().messageList().getItems())

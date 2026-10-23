@@ -341,7 +341,8 @@ class ClaimsViewTest {
                         introduction -> assertThat(introduction).contains("customer message", "AI model"),
                         confidence ->
                                 assertThat(confidence).contains("AI badge", "confidence indicator", "exact match"),
-                        languages -> assertThat(languages).contains("always reported in English", "translation"));
+                        languages -> assertThat(languages).contains("always reported in English", "translation"),
+                        kept -> assertThat(kept).contains("name and size", "never its contents", "90 days"));
     }
 
     @Test
@@ -380,7 +381,7 @@ class ClaimsViewTest {
                 budget,
                 currentUser,
                 EXAMPLES,
-                new Visit(log));
+                new Visit(log, Budgets.NO_USAGE_LOG));
     }
 
     /** The notices shown on the UI, oldest first. */

@@ -29,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import tools.jackson.databind.ObjectMapper;
 
+import com.vaadin.demo.nordicsupply.ai.budget.Budgets;
 import com.vaadin.demo.nordicsupply.config.DisplayLocale;
 import com.vaadin.demo.nordicsupply.data.ActivityEntryRepository;
 import com.vaadin.demo.nordicsupply.data.ActivityEntryRepository.Row;
@@ -56,7 +57,7 @@ class ActivityLogViewTest {
 
     private final ActivityEntryRepository entries = mock(ActivityEntryRepository.class);
     private final CurrentUser currentUser = mock(CurrentUser.class);
-    private final Visit visit = new Visit(mock(ActivityLog.class));
+    private final Visit visit = new Visit(mock(ActivityLog.class), Budgets.NO_USAGE_LOG);
 
     /** Held here, since the current UI is kept only weakly and a garbage collection would clear it mid-test. */
     private UI ui;

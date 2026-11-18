@@ -91,6 +91,35 @@ vaadin-button.rail-button {
   }
 }
 
+/* the Give Feedback button above the Activity Log, drawn as a card with a title and a hint */
+vaadin-button.feedback-button {
+  margin: var(--vaadin-gap-s) var(--app-rail-inset) 0;
+  padding: var(--vaadin-padding-m);
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: start;
+
+  &::part(label) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vaadin-gap-xs);
+  }
+
+  .title {
+    font-size: var(--aura-font-size-l);
+  }
+
+  .hint {
+    font-size: var(--aura-font-size-s);
+    font-weight: var(--aura-font-weight-regular);
+
+    /* a short window needs the room for the views' entries */
+    @media (max-height: 720px) {
+      display: none;
+    }
+  }
+}
+
 /* one employee in the switcher: the initials, then the name over the region */
 .user-item {
   display: flex;
@@ -234,6 +263,47 @@ vaadin-popover.help {
     }
   }
 
+}
+
+/* the dialog that the rail's Give Feedback button opens */
+vaadin-dialog.feedback {
+  &::part(content) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vaadin-gap-m);
+  }
+
+  p {
+    margin: 0;
+  }
+
+  /* the text area takes the height that the fixed dialog height leaves, and scrolls inside it */
+  vaadin-text-area {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  /* an extra gap, so that the notice does not read as the email field's helper text */
+  .notice {
+    margin-top: var(--vaadin-gap-m);
+    color: var(--vaadin-text-color-secondary);
+    font-size: var(--aura-font-size-s);
+  }
+
+  .send-error {
+    color: var(--aura-red-text);
+  }
+
+  /* "Sending…" in the default button colors, because Aura fades a disabled primary button to about 2:1 contrast */
+  vaadin-button[theme~='primary'][disabled] {
+    opacity: 1;
+    --vaadin-button-background: var(--aura-accent-surface);
+    --vaadin-button-text-color: var(--aura-accent-text-color);
+
+    &::part(label) {
+      color: inherit;
+    }
+  }
 }
 
 /* the "start here" marker on the rail's Dashboard entry */

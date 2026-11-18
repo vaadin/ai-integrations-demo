@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -13,7 +14,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import com.vaadin.experimental.FeatureFlags;
 import com.vaadin.experimental.TestFeatureFlags;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.page.ExtendedClientDetails;
+import com.vaadin.flow.function.DeploymentConfiguration;
+import com.vaadin.flow.router.Location;
 import com.vaadin.flow.server.Command;
 import com.vaadin.flow.server.VaadinContext;
 import com.vaadin.flow.server.VaadinService;
@@ -68,5 +72,12 @@ public final class TestUi {
                 .setExtendedClientDetails(new ExtendedClientDetails(
                         ui, null, null, null, null, null, null, null, null, null, null, zoneId, null, null, null, null,
                         null, null, null));
+    }
+
+    /** Makes a UI from {@link #withSession} show an empty view at the given path, as a navigation does. */
+    public static void showRoute(UI ui, String path) {
+        // showRouteTarget reads the configuration, which the mocked service does not have
+        when(ui.getSession().getService().getDeploymentConfiguration()).thenReturn(mock(DeploymentConfiguration.class));
+        ui.getInternals().showRouteTarget(new Location(path), new Div(), List.of());
     }
 }

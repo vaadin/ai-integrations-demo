@@ -32,13 +32,13 @@ import com.vaadin.demo.nordicsupply.ui.views.ActivityLogView;
 import com.vaadin.demo.nordicsupply.ui.views.DashboardView;
 
 /**
- * The app shell, the layout of every view: a left rail with the Nordic Supply wordmark, the views that list
- * themselves with {@code @Menu} in the order they are to be tried, and at its foot the Activity Log, Help, Demo
- * Feedback, the signed-in user, and the Vaadin mark. Demo Feedback shows only when a Slack webhook URL is set. The log
- * sits at the foot on purpose: it is the audit trail of what the views above it do, not a place to start. No top bar:
- * each view carries its own heading. Help opens the current view's readme, which also opens by itself on the view's
- * first visit in a session; Home has none, it is the readme, so Help is not shown there. The user entry switches
- * between the demo's users. Every view shown goes to the usage log, under the visit.
+ * The app shell, the layout of every view: a left rail with the Nordic Supply wordmark, the views that list themselves
+ * with {@code @Menu} in the order they are to be tried, and at its foot the Give Feedback button, the Activity Log,
+ * Help, the signed-in user, and the Vaadin mark. Give Feedback shows only with a valid Slack webhook URL. The log sits
+ * at the foot on purpose, as the audit trail of what the views above it do, not as a place to start. There is no top
+ * bar, because each view carries its own heading. Help opens the current view's readme, which also opens by itself on
+ * the view's first visit in a session; Home has none, it is the readme, so Help is not shown there. The user entry
+ * switches between the demo's users. Every view shown goes to the usage log, under the visit.
  */
 @Layout
 public class MainLayout extends AppLayout implements AfterNavigationObserver {
@@ -92,12 +92,12 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         powered.setTarget(AnchorTarget.BLANK);
         powered.addClassName("powered-by");
 
-        addToDrawer(wordmark, scroller, foot, help);
+        addToDrawer(wordmark, scroller);
         if (slackFeedback.isOn()) {
             // one dialog for the page, so that a closed dialog keeps the draft
             addToDrawer(new FeedbackButton(new FeedbackDialog(slackFeedback, feedbackLimit, visit, currentUser)));
         }
-        addToDrawer(new UserSwitcher(currentUser), powered);
+        addToDrawer(foot, help, new UserSwitcher(currentUser), powered);
     }
 
     /**

@@ -66,7 +66,7 @@ public class FeedbackDialog extends Dialog {
         this.currentUser = currentUser;
         this.executor = executor;
         addClassName("feedback");
-        setHeaderTitle("Send Feedback");
+        setHeaderTitle("Give Feedback");
         setWidth("32rem");
         // a fixed height, so that the dialog and its buttons stay put while the text grows
         setHeight("36rem");

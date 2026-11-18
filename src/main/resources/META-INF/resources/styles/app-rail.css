@@ -91,6 +91,35 @@ vaadin-button.rail-button {
   }
 }
 
+/* the Give Feedback button above the Activity Log, drawn as a card with a title and a hint */
+vaadin-button.feedback-button {
+  margin: var(--vaadin-gap-s) var(--app-rail-inset) 0;
+  padding: var(--vaadin-padding-m);
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: start;
+
+  &::part(label) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vaadin-gap-xs);
+  }
+
+  .title {
+    font-size: var(--aura-font-size-l);
+  }
+
+  .hint {
+    font-size: var(--aura-font-size-s);
+    font-weight: var(--aura-font-weight-regular);
+
+    /* a short window needs the room for the views' entries */
+    @media (max-height: 720px) {
+      display: none;
+    }
+  }
+}
+
 /* one employee in the switcher: the initials, then the name over the region */
 .user-item {
   display: flex;
@@ -236,7 +265,7 @@ vaadin-popover.help {
 
 }
 
-/* the dialog that the rail's Demo Feedback button opens */
+/* the dialog that the rail's Give Feedback button opens */
 vaadin-dialog.feedback {
   &::part(content) {
     display: flex;

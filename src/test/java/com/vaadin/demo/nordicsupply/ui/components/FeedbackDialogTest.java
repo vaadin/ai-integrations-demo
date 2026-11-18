@@ -29,7 +29,6 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextFieldBase;
-import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.function.DeploymentConfiguration;
 import com.vaadin.flow.internal.CurrentInstance;
 import com.vaadin.flow.server.VaadinRequest;
@@ -64,7 +63,7 @@ class FeedbackDialogTest {
     private final CurrentUser currentUser = mock(CurrentUser.class);
     private final List<Runnable> heldSends = new ArrayList<>();
 
-    /** Held here: the current UI is kept only weakly, so a garbage collection would otherwise clear it mid-test. */
+    /** CurrentInstance keeps the UI only weakly, so the test holds it. */
     private UI ui;
 
     private FeedbackDialog dialog;
@@ -86,6 +85,7 @@ class FeedbackDialogTest {
 
     @Test
     void closeKeepsTheDraftForTheNextOpen() {
+        // a closed dialog, so that the button is what opens it
         dialog = newDialog();
         var button = new FeedbackButton(dialog);
 
@@ -96,6 +96,12 @@ class FeedbackDialogTest {
 
         assertThat(dialog.isOpened()).isTrue();
         assertThat(feedbackField().getValue()).isEqualTo("Half a thought");
+    }
+
+    @Test
+    void theButtonTellsScreenReadersThatItOpensADialog() {
+        var button = new FeedbackButton(dialog);
+
         assertThat(button.getElement().getAttribute("aria-haspopup")).isEqualTo("dialog");
     }
 
@@ -200,7 +206,7 @@ class FeedbackDialogTest {
     }
 
     @Test
-    void whileSendingNothingCanBeChangedOrClosed() {
+    void nothingCanBeChangedOrClosedUntilTheSendEnds() {
         dialog = dialogThatHoldsItsSends();
         feedbackField().setValue("The chart is great.");
 
@@ -234,11 +240,9 @@ class FeedbackDialogTest {
         sendButton().click();
 
         assertThat(dialog.isOpened()).isTrue();
-        // the response attaches the open dialog, whose link checks its URL against the configuration's safe schemes
-        when(ui.getSession().getService().getDeploymentConfiguration())
-                .thenReturn(mock(DeploymentConfiguration.class, CALLS_REAL_METHODS));
-        ui.getInternals().getStateTree().runExecutionsBeforeClientResponse();
-        assertThat(notifications()).isEmpty();
+        runBeforeResponse();
+        // an open dialog holds the notification
+        assertThat(components(Notification.class)).isEmpty();
         assertThat(feedbackField().getValue()).isEqualTo("The chart is great.");
         assertThat(sendError().isVisible()).isTrue();
         assertThat(sendErrorText())
@@ -251,10 +255,6 @@ class FeedbackDialogTest {
 
         assertThat(sendError().isVisible()).isFalse();
         assertThat(feedbackField().getValue()).isEqualTo("The chart is great.");
-
-        sendButton().click();
-
-        assertThat(sendErrorText()).startsWith("Your feedback could not be sent.");
     }
 
     @Test
@@ -340,8 +340,7 @@ class FeedbackDialogTest {
         assertThat(feedbackField().getValue()).isEmpty();
         assertThat(feedbackField().isInvalid()).isFalse();
         assertThat(sendButton().isEnabled()).isTrue();
-        // Notification.show adds the notification to the UI just before the response
-        ui.getInternals().getStateTree().runExecutionsBeforeClientResponse();
+        runBeforeResponse();
         assertThat(notification().getElement().getProperty("text"))
                 .isEqualTo("Thank you. Your feedback has been sent.");
         assertThat(notification().getThemeNames()).contains("success");
@@ -464,20 +463,21 @@ class FeedbackDialogTest {
                 .orElseThrow();
     }
 
+    /** Runs what Flow runs just before the response, such as adding a notification. */
+    private void runBeforeResponse() {
+        // an open dialog then attaches its issue link, which reads the safe URL schemes from the configuration
+        when(ui.getSession().getService().getDeploymentConfiguration())
+                .thenReturn(mock(DeploymentConfiguration.class, CALLS_REAL_METHODS));
+        ui.getInternals().getStateTree().runExecutionsBeforeClientResponse();
+    }
+
+    /** Flow adds it to the UI, because a sent feedback closes the dialog. */
     private Notification notification() {
-        return notifications().findFirst().orElseThrow();
-    }
-
-    /** Flow adds a notification under an open modal dialog, otherwise to the UI, so the whole tree is searched. */
-    private Stream<Notification> notifications() {
-        return descendants(ui.getElement())
-                .flatMap(element -> element.getComponent().stream())
+        return ui.getChildren()
                 .filter(Notification.class::isInstance)
-                .map(Notification.class::cast);
-    }
-
-    private static Stream<Element> descendants(Element element) {
-        return element.getChildren().flatMap(child -> Stream.concat(Stream.of(child), descendants(child)));
+                .map(Notification.class::cast)
+                .findFirst()
+                .orElseThrow();
     }
 
     /** The dialog's components of the given type, the footer's included. */

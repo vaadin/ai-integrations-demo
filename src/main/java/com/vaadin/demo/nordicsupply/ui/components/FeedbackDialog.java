@@ -53,7 +53,7 @@ public class FeedbackDialog extends Dialog {
         this(slackFeedback, feedbackLimit, visit, currentUser, Thread::startVirtualThread);
     }
 
-    /** Tests pass an executor that runs each send at once or holds it. */
+    /** For tests, which control when a send runs. */
     FeedbackDialog(
             SlackFeedback slackFeedback,
             FeedbackLimit feedbackLimit,
@@ -68,10 +68,8 @@ public class FeedbackDialog extends Dialog {
         addClassName("feedback");
         setHeaderTitle("Send Feedback");
         setWidth("32rem");
-        setMaxWidth("100%");
-        // a fixed top, so that the dialog does not move while the text area grows. app-rail.css shortens its
-        // max-height to match.
-        setTop("10vh");
+        // a fixed height, so that the dialog and its buttons stay put while the text grows
+        setHeight("36rem");
 
         var intro = new Paragraph(
                 "Tell the Vaadin team behind this demo what works, what does not, or what you would like.");
@@ -82,8 +80,6 @@ public class FeedbackDialog extends Dialog {
         feedbackField.setI18n(new TextArea.TextAreaI18n()
                 .setRequiredErrorMessage("Write your feedback first")
                 .setMaxLengthErrorMessage("At most " + MAX_FEEDBACK_LENGTH + " characters"));
-        feedbackField.setMinRows(4);
-        feedbackField.setMaxRows(10);
         feedbackField.setWidthFull();
         // the dialog moves the focus to a field with autofocus each time it opens
         feedbackField.setAutofocus(true);
@@ -125,7 +121,7 @@ public class FeedbackDialog extends Dialog {
             if (event.isOpened()) {
                 sendError.setVisible(false);
                 lastSendFailed = false;
-                // clear the mark that a blank Send left, but keep the mark on a text that is too long
+                // clear an old required error, but not the error on a text over the limit
                 if (feedbackField.isEmpty()) {
                     feedbackField.setInvalid(false);
                 }
@@ -161,12 +157,12 @@ public class FeedbackDialog extends Dialog {
             return;
         }
         // the background thread has no current UI, session or request, so read everything here
-        var text = feedbackField.getValue().trim();
+        var text = feedbackField.getValue().strip();
         var email = emailField.isEmpty() ? null : emailField.getValue();
         var page = startPage;
         var demoUser = currentUser.get();
         SerializableConsumer<Boolean> showOutcome = UI.getCurrent().accessLater(this::showOutcome, () -> {
-            // a closed page has nobody to tell
+            // an empty handler, because null makes accessLater throw UIDetachedException on a closed page
         });
         setSending(true);
         executor.execute(() -> {
@@ -177,7 +173,7 @@ public class FeedbackDialog extends Dialog {
             } catch (FeedbackNotSentException e) {
                 // SlackFeedback has logged why
             } finally {
-                // also after any other exception, which then goes on to the thread's default handler
+                // also after an unexpected exception, so that the dialog unlocks
                 showOutcome.accept(sent);
             }
         });
@@ -185,13 +181,13 @@ public class FeedbackDialog extends Dialog {
 
     private boolean validateAndAdmit() {
         sendError.setVisible(false);
-        if (feedbackField.getValue().trim().isEmpty()) {
-            // clear() drops the spaces. On an empty field it changes no value, so the field runs no required check
-            // by itself.
+        if (feedbackField.getValue().isBlank()) {
+            // the required check counts spaces as text
             feedbackField.clear();
+            // clear() does not check a field that was already empty
             feedbackField.validate();
         }
-        // The fields check their length and the email pattern on the server, whatever the browser sent.
+        // Flow sets invalid on the server, so a modified browser cannot skip the checks
         if (feedbackField.isInvalid()) {
             feedbackField.focus();
             return false;
@@ -201,14 +197,14 @@ public class FeedbackDialog extends Dialog {
             return false;
         }
         if (!feedbackLimit.admit(Caller.current(visit.id()))) {
-            showSendError("Too much feedback was sent from your network in the last hour. Try again later, or");
+            showErrorWithIssueLink(
+                    "Too much feedback was sent from your network in the last hour. Try again later, or");
             return false;
         }
         return true;
     }
 
-    /** Shows the sentence with the link to the GitHub issues at its end. */
-    private void showSendError(String textBeforeLink) {
+    private void showErrorWithIssueLink(String textBeforeLink) {
         sendError.removeAll();
         sendError.add(
                 new Text(textBeforeLink + " "),
@@ -234,7 +230,7 @@ public class FeedbackDialog extends Dialog {
         setSending(false);
         if (!sent) {
             // other words for a repeated failure, because the same line again looks as if nothing happened
-            showSendError(
+            showErrorWithIssueLink(
                     lastSendFailed
                             ? "Your feedback still could not be sent. Try again later, or"
                             : "Your feedback could not be sent. Try again in a moment, or");
@@ -242,7 +238,7 @@ public class FeedbackDialog extends Dialog {
             return;
         }
         feedbackField.clear();
-        // clear() runs the required check, which marks the empty field invalid
+        // clear() marks the empty field invalid, which would show during the close animation
         feedbackField.setInvalid(false);
         close();
         Notification.show("Thank you. Your feedback has been sent.").addThemeVariants(NotificationVariant.SUCCESS);

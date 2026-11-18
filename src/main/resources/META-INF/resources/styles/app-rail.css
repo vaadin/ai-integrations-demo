@@ -238,11 +238,6 @@ vaadin-popover.help {
 
 /* the dialog that the rail's Demo Feedback button opens */
 vaadin-dialog.feedback {
-  /* setTop moves the dialog 10vh down, so a max-height 10vh shorter keeps the footer in the window */
-  &::part(overlay) {
-    max-height: calc(100% - 10vh);
-  }
-
   &::part(content) {
     display: flex;
     flex-direction: column;
@@ -253,7 +248,13 @@ vaadin-dialog.feedback {
     margin: 0;
   }
 
-  /* apart from the email field, so that it does not read as its helper text */
+  /* the text area takes the height that the fixed dialog height leaves, and scrolls inside it */
+  vaadin-text-area {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  /* an extra gap, so that the notice does not read as the email field's helper text */
   .notice {
     margin-top: var(--vaadin-gap-m);
     color: var(--vaadin-text-color-secondary);
@@ -264,7 +265,7 @@ vaadin-dialog.feedback {
     color: var(--aura-red-text);
   }
 
-  /* "Sending…": Aura fades a disabled primary button to about 2:1 contrast, so it looks like a secondary one here */
+  /* "Sending…" in the default button colors, because Aura fades a disabled primary button to about 2:1 contrast */
   vaadin-button[theme~='primary'][disabled] {
     opacity: 1;
     --vaadin-button-background: var(--aura-accent-surface);

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 import com.vaadin.flow.component.ai.common.AIAttachment;
@@ -148,6 +149,19 @@ class LLMProvidersTest {
         var prompts = ArgumentCaptor.forClass(Prompt.class);
         verify(model, times(2)).stream(prompts.capture());
         assertThat(texts(prompts.getValue().getInstructions())).containsExactly("The missing cartons");
+    }
+
+    /** A restored conversation, as an orchestrator reconnecting after a session restore passes it, is not sent. */
+    @Test
+    void aSingleTurnIgnoresARestoredConversation() {
+        var provider = providers.forSingleTurns();
+
+        provider.setHistory(List.of(said(ChatMessage.Role.USER, "The damaged pallet")), Map.of());
+        ask(provider, "The missing cartons");
+
+        var prompt = ArgumentCaptor.forClass(Prompt.class);
+        verify(model).stream(prompt.capture());
+        assertThat(texts(prompt.getValue().getInstructions())).containsExactly("The missing cartons");
     }
 
     /** The model is shown the memory's window, the last twenty messages; the message list keeps the rest. */

@@ -1,7 +1,9 @@
 package com.vaadin.demo.nordicsupply.ai;
 
 import java.util.List;
+import java.util.Map;
 
+import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.ai.common.ChatMessage;
 import com.vaadin.flow.component.ai.provider.LLMProvider;
 import com.vaadin.flow.component.ai.provider.SpringAILLMProvider;
@@ -67,13 +69,37 @@ public class LLMProviders {
      * @return a provider without memory
      */
     public LLMProvider forSingleTurns() {
-        return new SpringAILLMProvider(clients.clone().build());
+        return new SingleTurnProvider(clients.clone().build());
     }
 
     private static Message toMessage(ChatMessage turn) {
         return turn.role() == ChatMessage.Role.USER
                 ? new UserMessage(turn.content())
                 : new AssistantMessage(turn.content());
+    }
+
+    /**
+     * The kit's provider for turns that stand alone. Since Vaadin 25.4 a {@link SpringAILLMProvider} over a client
+     * without a memory advisor keeps a memory of its own, so every turn is sent by a provider of its own, which has
+     * seen no turn before it. There is no memory to restore, so history is not passed on.
+     */
+    private static final class SingleTurnProvider implements LLMProvider {
+
+        private final transient ChatClient client;
+
+        SingleTurnProvider(ChatClient client) {
+            this.client = client;
+        }
+
+        @Override
+        public Flux<String> stream(LLMRequest request) {
+            return new SpringAILLMProvider(client).stream(request);
+        }
+
+        @Override
+        public void setHistory(List<ChatMessage> history, Map<String, List<AIAttachment>> attachmentsByMessageId) {
+            // every turn stands alone: there is no memory to restore the chat into
+        }
     }
 
     /**

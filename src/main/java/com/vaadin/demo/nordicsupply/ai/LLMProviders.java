@@ -1,9 +1,7 @@
 package com.vaadin.demo.nordicsupply.ai;
 
 import java.util.List;
-import java.util.Map;
 
-import com.vaadin.flow.component.ai.common.AIAttachment;
 import com.vaadin.flow.component.ai.common.ChatMessage;
 import com.vaadin.flow.component.ai.provider.LLMProvider;
 import com.vaadin.flow.component.ai.provider.SpringAILLMProvider;
@@ -26,7 +24,8 @@ import reactor.core.publisher.Flux;
  * <p>
  * A chat that goes on, such as a widget's, needs the model to remember its earlier turns: {@link #forChat} gives it
  * a client with a {@link ChatMemory} of its own, holding the turns so far. A form filled from one message after
- * another has no such chat, and {@link #forSingleTurns} gives it a client without memory.
+ * another has no such chat, and {@link #forSingleTurns} gives it a client whose memory is empty again after every
+ * turn.
  */
 @Component
 public class LLMProviders {
@@ -65,41 +64,27 @@ public class LLMProviders {
     /**
      * A provider whose every turn stands alone, with no memory of the turns before it: for a form filled from one
      * message after another, where an earlier message would only be sent again and read into the next.
+     * <p>
+     * The kit's provider keeps a memory of its own unless the client has a memory advisor, so this client has one, as
+     * a chat's has, over a window of a single message. Spring AI cuts a window so that it starts at a question, which
+     * leaves a window of one empty after every answer, and the question of a turn that fails is dropped as a chat's
+     * is.
      *
-     * @return a provider without memory
+     * @return a provider that sends every message alone
      */
     public LLMProvider forSingleTurns() {
-        return new SingleTurnProvider(clients.clone().build());
+        var memory = MessageWindowChatMemory.builder().maxMessages(1).build();
+        var client = clients.clone()
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
+                .defaultAdvisors(advisors -> advisors.param(ChatMemory.CONVERSATION_ID, CHAT))
+                .build();
+        return new ChatProvider(client, memory);
     }
 
     private static Message toMessage(ChatMessage turn) {
         return turn.role() == ChatMessage.Role.USER
                 ? new UserMessage(turn.content())
                 : new AssistantMessage(turn.content());
-    }
-
-    /**
-     * The kit's provider for turns that stand alone. Since Vaadin 25.4 a {@link SpringAILLMProvider} over a client
-     * without a memory advisor keeps a memory of its own, so every turn is sent by a provider of its own, which has
-     * seen no turn before it. There is no memory to restore, so history is not passed on.
-     */
-    private static final class SingleTurnProvider implements LLMProvider {
-
-        private final transient ChatClient client;
-
-        SingleTurnProvider(ChatClient client) {
-            this.client = client;
-        }
-
-        @Override
-        public Flux<String> stream(LLMRequest request) {
-            return new SpringAILLMProvider(client).stream(request);
-        }
-
-        @Override
-        public void setHistory(List<ChatMessage> history, Map<String, List<AIAttachment>> attachmentsByMessageId) {
-            // every turn stands alone: there is no memory to restore the chat into
-        }
     }
 
     /**

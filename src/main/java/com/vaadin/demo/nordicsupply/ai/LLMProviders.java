@@ -24,7 +24,8 @@ import reactor.core.publisher.Flux;
  * <p>
  * A chat that goes on, such as a widget's, needs the model to remember its earlier turns: {@link #forChat} gives it
  * a client with a {@link ChatMemory} of its own, holding the turns so far. A form filled from one message after
- * another has no such chat, and {@link #forSingleTurns} gives it a client without memory.
+ * another has no such chat, and {@link #forSingleTurns} gives it a client whose memory is empty again after every
+ * turn.
  */
 @Component
 public class LLMProviders {
@@ -53,21 +54,31 @@ public class LLMProviders {
         if (!history.isEmpty()) {
             memory.add(CHAT, history.stream().map(LLMProviders::toMessage).toList());
         }
-        var client = clients.clone()
-                .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
-                .defaultAdvisors(advisors -> advisors.param(ChatMemory.CONVERSATION_ID, CHAT))
-                .build();
-        return new ChatProvider(client, memory);
+        return withMemory(memory);
     }
 
     /**
      * A provider whose every turn stands alone, with no memory of the turns before it: for a form filled from one
      * message after another, where an earlier message would only be sent again and read into the next.
+     * <p>
+     * The kit's provider keeps a memory of its own unless the client has a memory advisor, so this client has one, as
+     * a chat's has, over a window of a single message. Spring AI cuts a window so that it starts at a question, which
+     * leaves a window of one empty after every answer, and the question of a turn that fails is dropped as a chat's
+     * is.
      *
-     * @return a provider without memory
+     * @return a provider that sends every message alone
      */
     public LLMProvider forSingleTurns() {
-        return new SpringAILLMProvider(clients.clone().build());
+        return withMemory(MessageWindowChatMemory.builder().maxMessages(1).build());
+    }
+
+    /** The kit's provider over a client that reads and writes the given memory, under the one conversation id. */
+    private LLMProvider withMemory(ChatMemory memory) {
+        var client = clients.clone()
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
+                .defaultAdvisors(advisors -> advisors.param(ChatMemory.CONVERSATION_ID, CHAT))
+                .build();
+        return new ChatProvider(client, memory);
     }
 
     private static Message toMessage(ChatMessage turn) {

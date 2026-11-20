@@ -54,11 +54,7 @@ public class LLMProviders {
         if (!history.isEmpty()) {
             memory.add(CHAT, history.stream().map(LLMProviders::toMessage).toList());
         }
-        var client = clients.clone()
-                .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
-                .defaultAdvisors(advisors -> advisors.param(ChatMemory.CONVERSATION_ID, CHAT))
-                .build();
-        return new ChatProvider(client, memory);
+        return withMemory(memory);
     }
 
     /**
@@ -73,7 +69,11 @@ public class LLMProviders {
      * @return a provider that sends every message alone
      */
     public LLMProvider forSingleTurns() {
-        var memory = MessageWindowChatMemory.builder().maxMessages(1).build();
+        return withMemory(MessageWindowChatMemory.builder().maxMessages(1).build());
+    }
+
+    /** The kit's provider over a client that reads and writes the given memory, under the one conversation id. */
+    private LLMProvider withMemory(ChatMemory memory) {
         var client = clients.clone()
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
                 .defaultAdvisors(advisors -> advisors.param(ChatMemory.CONVERSATION_ID, CHAT))

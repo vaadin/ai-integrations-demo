@@ -22,11 +22,14 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.tool.annotation.Tool;
 import reactor.core.publisher.Flux;
 
 /**
@@ -54,7 +57,7 @@ class LLMProvidersTest {
         return messages.stream().map(Message::getText).toList();
     }
 
-    private static void ask(LLMProvider provider, String question) {
+    private static void ask(LLMProvider provider, String question, Object... tools) {
         provider.stream(new LLMProvider.LLMRequest() {
                     @Override
                     public String userMessage() {
@@ -73,7 +76,7 @@ class LLMProvidersTest {
 
                     @Override
                     public Object[] tools() {
-                        return new Object[0];
+                        return tools;
                     }
                 })
                 .blockLast();
@@ -149,6 +152,55 @@ class LLMProvidersTest {
         var prompts = ArgumentCaptor.forClass(Prompt.class);
         verify(model, times(2)).stream(prompts.capture());
         assertThat(texts(prompts.getValue().getInstructions())).containsExactly("The missing cartons");
+    }
+
+    /** A turn that fails leaves nothing behind either: its message is not sent again with the next one. */
+    @Test
+    void aSingleTurnThatFailsIsNotSentWithTheNext() {
+        var provider = providers.forSingleTurns();
+        when(model.stream(any(Prompt.class)))
+                .thenReturn(Flux.error(new IllegalStateException("429: Rate limit reached")))
+                .thenReturn(Flux.just(done));
+
+        assertThatThrownBy(() -> ask(provider, "The damaged pallet")).hasMessageContaining("429");
+        ask(provider, "The missing cartons");
+
+        var prompts = ArgumentCaptor.forClass(Prompt.class);
+        verify(model, times(2)).stream(prompts.capture());
+        assertThat(texts(prompts.getValue().getInstructions())).containsExactly("The missing cartons");
+    }
+
+    /**
+     * A turn that calls a tool, as the claim form's do, goes back to the model with its question, the call and the
+     * tool's result, and the next message is still sent alone.
+     */
+    @Test
+    void aSingleTurnThatCallsAToolIsSentBackWholeAndTheNextAlone() {
+        var call = new AssistantMessage.ToolCall("call-1", "function", "findCarrier", "{}");
+        var calling = new ChatResponse(List.of(new Generation(
+                AssistantMessage.builder().content("").toolCalls(List.of(call)).build())));
+        when(model.getOptions()).thenReturn(ToolCallingChatOptions.builder().build());
+        when(model.stream(any(Prompt.class))).thenReturn(Flux.just(calling), Flux.just(done), Flux.just(done));
+        var provider = providers.forSingleTurns();
+
+        ask(provider, "The damaged pallet", new Carriers());
+        ask(provider, "The missing cartons", new Carriers());
+
+        var prompts = ArgumentCaptor.forClass(Prompt.class);
+        verify(model, times(3)).stream(prompts.capture());
+        assertThat(prompts.getAllValues().get(1).getInstructions())
+                .extracting(Message::getMessageType)
+                .containsExactly(MessageType.USER, MessageType.ASSISTANT, MessageType.TOOL);
+        assertThat(texts(prompts.getValue().getInstructions())).containsExactly("The missing cartons");
+    }
+
+    /** A tool for a turn to call. */
+    public static class Carriers {
+
+        @Tool(description = "Finds the carrier of a shipment")
+        public String findCarrier() {
+            return "Posti";
+        }
     }
 
     /** A restored conversation, as an orchestrator reconnecting after a session restore passes it, is not sent. */
